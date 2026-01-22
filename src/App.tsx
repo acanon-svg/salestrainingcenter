@@ -16,6 +16,7 @@ import Feedback from "@/pages/Feedback";
 import CreateCourse from "@/pages/CreateCourse";
 import MyCourses from "@/pages/MyCourses";
 import Reports from "@/pages/Reports";
+import UserManagement from "@/pages/UserManagement";
 import NotFound from "@/pages/NotFound";
 import { Loader2 } from "lucide-react";
 
@@ -198,6 +199,14 @@ const AppRoutes = () => {
         element={
           <RoleRoute allowedRoles={["admin"]}>
             <Reports />
+          </RoleRoute>
+        }
+      />
+      <Route
+        path="/users"
+        element={
+          <RoleRoute allowedRoles={["admin"]}>
+            <UserManagement />
           </RoleRoute>
         }
       />

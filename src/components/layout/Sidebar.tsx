@@ -14,6 +14,7 @@ import {
   PlusCircle,
   Award,
   Trophy,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -42,6 +43,7 @@ const creatorItems: NavItem[] = [
 ];
 
 const adminItems: NavItem[] = [
+  { label: "Usuarios", icon: Users, href: "/users", roles: ["admin"] },
   { label: "Reportes", icon: BarChart3, href: "/reports", roles: ["admin"] },
   { label: "Configuración", icon: Settings, href: "/settings", roles: ["admin"] },
 ];
