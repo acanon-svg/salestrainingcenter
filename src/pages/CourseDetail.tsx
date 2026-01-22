@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import DOMPurify from "dompurify";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useCourse, useCourseMaterials, useCourseQuizzes, useUpdateEnrollmentProgress, useMyEnrollments } from "@/hooks/useCourses";
 import { useMaterialProgress, useMarkMaterialComplete } from "@/hooks/useMaterialProgress";
@@ -398,7 +399,7 @@ const CourseDetail: React.FC = () => {
                   {selectedMaterial.type === "documento" && (
                     <div className="prose max-w-none">
                       {selectedMaterial.content_text && (
-                        <div dangerouslySetInnerHTML={{ __html: selectedMaterial.content_text }} />
+                        <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(selectedMaterial.content_text) }} />
                       )}
                       {selectedMaterial.content_url && (
                         <Button asChild className="mt-4">
