@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Users, Eye, Shield, Loader2, Mail, Building, MapPin, UserCheck, Calendar, Trophy } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Search, Users, Eye, Shield, Loader2, Mail, Building, MapPin, UserCheck, Calendar, Trophy, Settings, UserPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
@@ -42,6 +44,7 @@ interface UserRole {
 const UserManagement: React.FC = () => {
   const { hasRole } = useAuth();
   const { toast } = useToast();
+  const { getSetting, updateSetting, isLoading: settingsLoading } = useAppSettings();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserProfile[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
@@ -51,8 +54,16 @@ const UserManagement: React.FC = () => {
   const [filterTeam, setFilterTeam] = useState<string>("all");
   const [filterRegional, setFilterRegional] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isUpdatingSettings, setIsUpdatingSettings] = useState(false);
 
   const isAdmin = hasRole("admin");
+  const registrationEnabled = getSetting("registration_enabled", false);
+
+  const handleToggleRegistration = async () => {
+    setIsUpdatingSettings(true);
+    await updateSetting("registration_enabled", !registrationEnabled);
+    setIsUpdatingSettings(false);
+  };
 
   useEffect(() => {
     if (isAdmin) {
@@ -206,6 +217,42 @@ const UserManagement: React.FC = () => {
             {users.length} usuarios registrados
           </Badge>
         </div>
+
+        {/* Platform Settings Card */}
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Settings className="h-5 w-5 text-primary" />
+              Configuración de la Plataforma
+            </CardTitle>
+            <CardDescription>
+              Ajustes globales que afectan a todos los usuarios
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <UserPlus className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="font-medium">Permitir Registro de Usuarios</p>
+                  <p className="text-sm text-muted-foreground">
+                    {registrationEnabled 
+                      ? "Los usuarios pueden crear cuentas nuevas desde la página de login" 
+                      : "Solo los administradores pueden crear usuarios (registro deshabilitado)"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {isUpdatingSettings && <Loader2 className="h-4 w-4 animate-spin" />}
+                <Switch 
+                  checked={registrationEnabled} 
+                  onCheckedChange={handleToggleRegistration}
+                  disabled={isUpdatingSettings || settingsLoading}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Filters */}
         <Card>
