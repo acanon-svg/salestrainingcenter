@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import addiTrainingLogo from "@/assets/addi-training-logo.svg";
 
 interface NavItem {
   label: string;
@@ -76,11 +77,14 @@ export const Sidebar: React.FC = () => {
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
       <div className="flex h-full flex-col">
         {/* Logo */}
-        <div className="flex h-16 items-center gap-3 px-6 border-b border-sidebar-border">
-          <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-sidebar-primary">
-            <span className="text-lg font-bold text-sidebar-primary-foreground">TC</span>
-          </div>
-          <span className="text-lg font-semibold">Training Center</span>
+        <div className="flex h-16 items-center gap-3 px-4 border-b border-sidebar-border">
+          <Link to="/dashboard" className="flex items-center gap-2">
+            <img 
+              src={addiTrainingLogo} 
+              alt="Addi Training Center" 
+              className="h-10 w-auto"
+            />
+          </Link>
         </div>
 
         {/* Navigation */}
