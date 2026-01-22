@@ -236,6 +236,10 @@ const App = () => (
         <AuthProvider>
           <ErrorBoundary fallbackTitle="No pudimos cargar la plataforma">
             <AppRoutes />
+          </ErrorBoundary>
+
+          {/* The chatbot is optional; if it crashes it should not break the whole app */}
+          <ErrorBoundary fallbackTitle="No pudimos cargar el chatbot">
             <ChatbotBubble />
           </ErrorBoundary>
         </AuthProvider>
