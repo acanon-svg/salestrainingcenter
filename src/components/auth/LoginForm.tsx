@@ -61,9 +61,9 @@ export const LoginForm: React.FC = () => {
         {/* Logo and Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary mb-4">
-            <span className="text-2xl font-bold text-primary-foreground">A</span>
+            <span className="text-2xl font-bold text-primary-foreground">TC</span>
           </div>
-          <h1 className="text-3xl font-bold text-foreground">ADDI Training</h1>
+          <h1 className="text-3xl font-bold text-foreground">Training Center</h1>
           <p className="text-muted-foreground mt-2">
             Plataforma de entrenamiento corporativo
           </p>
