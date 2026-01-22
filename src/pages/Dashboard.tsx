@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import addiTrainingLogo from "@/assets/addi-training-logo.svg";
 
 const Dashboard: React.FC = () => {
   const { profile, roles } = useAuth();
@@ -51,16 +52,23 @@ const Dashboard: React.FC = () => {
   return (
     <DashboardLayout>
       <div className="space-y-8 animate-fade-in">
-        {/* Header */}
-        <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-bold text-foreground">
-            ¡Hola, {profile?.full_name?.split(" ")[0] || "Usuario"}! 👋
-          </h1>
-          <p className="text-muted-foreground">
-            {profile?.last_login
-              ? `Último acceso: ${format(new Date(profile.last_login), "d 'de' MMMM, HH:mm", { locale: es })}`
-              : "Bienvenido a Training Center"}
-          </p>
+        {/* Header with Logo */}
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-2">
+            <h1 className="text-3xl font-bold text-foreground">
+              ¡Hola, {profile?.full_name?.split(" ")[0] || "Usuario"}! 👋
+            </h1>
+            <p className="text-muted-foreground">
+              {profile?.last_login
+                ? `Último acceso: ${format(new Date(profile.last_login), "d 'de' MMMM, HH:mm", { locale: es })}`
+                : "Bienvenido a Training Center"}
+            </p>
+          </div>
+          <img 
+            src={addiTrainingLogo} 
+            alt="Addi Training Center" 
+            className="h-12 w-auto hidden md:block"
+          />
         </div>
 
         {/* Stats Grid */}
