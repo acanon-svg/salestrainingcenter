@@ -68,16 +68,18 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
-        // ADDI Custom Colors
+        // ADDI Official Brand Colors
         addi: {
-          coral: "hsl(var(--addi-coral))",
-          "coral-light": "hsl(var(--addi-coral-light))",
-          "coral-dark": "hsl(var(--addi-coral-dark))",
-          navy: "hsl(var(--addi-navy))",
-          "navy-light": "hsl(var(--addi-navy-light))",
-          cream: "hsl(var(--addi-cream))",
-          mint: "hsl(var(--addi-mint))",
-          yellow: "hsl(var(--addi-yellow))",
+          blue: "hsl(var(--addi-blue))",
+          "blue-light": "hsl(var(--addi-blue-light))",
+          "blue-dark": "hsl(var(--addi-blue-dark))",
+          gray: "hsl(var(--addi-gray))",
+          cyan: "hsl(var(--addi-cyan))",
+          "cyan-dark": "hsl(var(--addi-cyan-dark))",
+          orange: "hsl(var(--addi-orange))",
+          "orange-light": "hsl(var(--addi-orange-light))",
+          dark: "hsl(var(--addi-dark))",
+          white: "hsl(var(--addi-white))",
         },
       },
       borderRadius: {
