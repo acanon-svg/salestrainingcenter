@@ -4,6 +4,8 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useCourse, useCourseMaterials, useCourseQuizzes, useUpdateEnrollmentProgress, useMyEnrollments } from "@/hooks/useCourses";
 import { useMaterialProgress, useMarkMaterialComplete } from "@/hooks/useMaterialProgress";
 import { useQuizAttempts, useSubmitQuizAttempt } from "@/hooks/useQuizAttempts";
+import { useAuth } from "@/contexts/AuthContext";
+import { generateDiploma } from "@/lib/generateDiploma";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +28,8 @@ import {
   Video,
   FileQuestion,
   ChevronRight,
-  Award
+  Award,
+  Download
 } from "lucide-react";
 import { dimensionLabels, difficultyLabels, contentTypeLabels, CourseMaterial, Quiz, QuizQuestion } from "@/lib/types";
 
@@ -34,6 +37,7 @@ const CourseDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { profile } = useAuth();
 
   const { data: course, isLoading: loadingCourse } = useCourse(id || "");
   const { data: materials, isLoading: loadingMaterials } = useCourseMaterials(id || "");
@@ -44,6 +48,24 @@ const CourseDetail: React.FC = () => {
   const markComplete = useMarkMaterialComplete();
   const updateProgress = useUpdateEnrollmentProgress();
   const submitQuiz = useSubmitQuizAttempt();
+
+  const handleDownloadDiploma = () => {
+    if (!course || !profile) return;
+    
+    generateDiploma({
+      userName: profile.full_name || profile.email || "Usuario",
+      courseName: course.title,
+      completionDate: enrollment?.completed_at ? new Date(enrollment.completed_at) : new Date(),
+      score: enrollment?.score || undefined,
+      points: course.points,
+      duration: course.estimated_duration_minutes || undefined,
+    });
+    
+    toast({
+      title: "¡Diploma descargado!",
+      description: "Tu certificado se ha descargado correctamente.",
+    });
+  };
 
   const [selectedMaterial, setSelectedMaterial] = useState<CourseMaterial | null>(null);
   const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
@@ -218,11 +240,20 @@ const CourseDetail: React.FC = () => {
             <CardContent className="py-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="font-medium">Tu progreso</span>
-                <span className="text-lg font-bold text-primary">{progressPercentage}%</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-lg font-bold text-primary">{progressPercentage}%</span>
+                  {enrollment.status === "completed" && (
+                    <Button size="sm" onClick={handleDownloadDiploma} className="gap-2">
+                      <Download className="w-4 h-4" />
+                      Descargar Diploma
+                    </Button>
+                  )}
+                </div>
               </div>
               <Progress value={progressPercentage} className="h-3" />
               <p className="text-sm text-muted-foreground mt-2">
                 {completedMaterials} de {totalMaterials} materiales completados
+                {enrollment.status === "completed" && " • ¡Curso completado!"}
               </p>
             </CardContent>
           </Card>
