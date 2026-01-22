@@ -59,6 +59,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return email.endsWith("@addi.com");
   };
 
+  const withTimeout = async <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+    let timeoutId: number | undefined;
+    const timeoutPromise = new Promise<T>((_, reject) => {
+      timeoutId = window.setTimeout(() => {
+        reject(new Error(`Timeout after ${ms}ms: ${label}`));
+      }, ms);
+    });
+
+    try {
+      return await Promise.race([promise, timeoutPromise]);
+    } finally {
+      if (timeoutId) window.clearTimeout(timeoutId);
+    }
+  };
+
   const fetchUserProfile = async (userId: string) => {
     try {
       const client = getSupabaseClient();
@@ -109,7 +124,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Get initial session first
     const initializeAuth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const { data: { session }, error } = await withTimeout(
+          supabase.auth.getSession(),
+          7000,
+          "auth.getSession"
+        );
         
         if (!mounted) return;
         
@@ -128,7 +147,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           setSession(session);
           setUser(session.user);
-          await fetchUserProfile(session.user.id);
+
+          // IMPORTANT: don't block initial render on profile/roles.
+          // A slow/blocked profile query would keep the whole app stuck in "Cargando...".
+          void withTimeout(fetchUserProfile(session.user.id), 7000, "fetchUserProfile").catch((e) => {
+            console.error("Profile bootstrap failed:", e);
+          });
         }
         
         setIsLoading(false);
@@ -163,7 +187,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return;
           }
 
-          await fetchUserProfile(newSession.user.id);
+          // Keep UI responsive; load profile/roles in background.
+          void withTimeout(fetchUserProfile(newSession.user.id), 7000, "fetchUserProfile").catch((e) => {
+            console.error("Profile refresh failed:", e);
+          });
         } else {
           setProfile(null);
           setRoles([]);
