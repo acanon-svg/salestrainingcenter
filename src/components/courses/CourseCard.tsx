@@ -30,9 +30,9 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   const getDimensionColor = (dimension: string) => {
     switch (dimension) {
       case "onboarding":
-        return "bg-addi-mint text-secondary";
+        return "bg-addi-cyan text-secondary";
       case "refuerzo":
-        return "bg-addi-yellow text-secondary";
+        return "bg-addi-orange text-secondary";
       case "taller":
         return "bg-primary text-primary-foreground";
       case "entrenamiento":
@@ -87,7 +87,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
 
         {/* Points badge */}
         <div className="absolute top-3 right-3">
-          <Badge className="bg-addi-yellow text-secondary gap-1">
+          <Badge className="bg-addi-orange text-secondary gap-1">
             <Trophy className="w-3 h-3" />
             {course.points} pts
           </Badge>

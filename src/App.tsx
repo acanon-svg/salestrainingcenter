@@ -8,6 +8,7 @@ import { LoginForm } from "@/components/auth/LoginForm";
 import Dashboard from "@/pages/Dashboard";
 import Profile from "@/pages/Profile";
 import Courses from "@/pages/Courses";
+import CourseDetail from "@/pages/CourseDetail";
 import Ranking from "@/pages/Ranking";
 import Badges from "@/pages/Badges";
 import Notifications from "@/pages/Notifications";
@@ -129,6 +130,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Courses />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/courses/:id"
+        element={
+          <ProtectedRoute>
+            <CourseDetail />
           </ProtectedRoute>
         }
       />
