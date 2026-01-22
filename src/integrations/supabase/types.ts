@@ -157,6 +157,42 @@ export type Database = {
         }
         Relationships: []
       }
+      chatbot_config: {
+        Row: {
+          avatar_url: string | null
+          bot_name: string
+          enabled: boolean
+          id: string
+          primary_color: string | null
+          system_prompt: string
+          updated_at: string
+          updated_by: string | null
+          welcome_message: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          bot_name?: string
+          enabled?: boolean
+          id?: string
+          primary_color?: string | null
+          system_prompt?: string
+          updated_at?: string
+          updated_by?: string | null
+          welcome_message?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          bot_name?: string
+          enabled?: boolean
+          id?: string
+          primary_color?: string | null
+          system_prompt?: string
+          updated_at?: string
+          updated_by?: string | null
+          welcome_message?: string
+        }
+        Relationships: []
+      }
       course_enrollments: {
         Row: {
           completed_at: string | null

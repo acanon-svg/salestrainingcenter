@@ -1,0 +1,85 @@
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { SupabaseClient } from "@supabase/supabase-js";
+import { useToast } from "@/hooks/use-toast";
+
+const getSupabaseClient = () => supabase as unknown as SupabaseClient;
+
+export interface ChatbotConfig {
+  id: string;
+  enabled: boolean;
+  bot_name: string;
+  welcome_message: string;
+  avatar_url: string | null;
+  system_prompt: string;
+  primary_color: string;
+  updated_at: string;
+}
+
+export const useChatbotConfig = () => {
+  const [config, setConfig] = useState<ChatbotConfig | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  const fetchConfig = async () => {
+    try {
+      const client = getSupabaseClient();
+      const { data, error } = await client
+        .from("chatbot_config")
+        .select("*")
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      setConfig(data as ChatbotConfig);
+    } catch (error) {
+      console.error("Error fetching chatbot config:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateConfig = async (updates: Partial<ChatbotConfig>) => {
+    if (!config?.id) return false;
+
+    try {
+      const client = getSupabaseClient();
+      const { error } = await client
+        .from("chatbot_config")
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", config.id);
+
+      if (error) throw error;
+
+      setConfig((prev) => prev ? { ...prev, ...updates } : null);
+      
+      toast({
+        title: "Configuración guardada",
+        description: "Los cambios del chatbot han sido aplicados.",
+      });
+
+      return true;
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    fetchConfig();
+  }, []);
+
+  return {
+    config,
+    isLoading,
+    updateConfig,
+    refetch: fetchConfig,
+  };
+};

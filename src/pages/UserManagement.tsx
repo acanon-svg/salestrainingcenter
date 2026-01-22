@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { ChatbotSettings } from "@/components/chatbot/ChatbotSettings";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +13,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Search, Users, Eye, Shield, Loader2, Mail, Building, MapPin, UserCheck, Calendar, Trophy, Settings, UserPlus } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Search, Users, Eye, Shield, Loader2, Mail, Building, MapPin, UserCheck, Calendar, Trophy, Settings, UserPlus, Bot } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
@@ -206,17 +208,32 @@ const UserManagement: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
-              <Users className="h-8 w-8 text-primary" />
-              Gestión de Usuarios
+              <Settings className="h-8 w-8 text-primary" />
+              Administración
             </h1>
             <p className="text-muted-foreground mt-1">
-              Visualiza y administra todos los usuarios de la plataforma
+              Gestiona usuarios, configuraciones y el chatbot de la plataforma
             </p>
           </div>
           <Badge variant="outline" className="text-lg px-4 py-2">
             {users.length} usuarios registrados
           </Badge>
         </div>
+
+        {/* Main Tabs */}
+        <Tabs defaultValue="users" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 max-w-md">
+            <TabsTrigger value="users" className="gap-2">
+              <Users className="h-4 w-4" />
+              Usuarios
+            </TabsTrigger>
+            <TabsTrigger value="chatbot" className="gap-2">
+              <Bot className="h-4 w-4" />
+              Chatbot
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="users" className="space-y-6 mt-6">
 
         {/* Platform Settings Card */}
         <Card className="border-primary/20 bg-primary/5">
@@ -481,6 +498,12 @@ const UserManagement: React.FC = () => {
             )}
           </DialogContent>
         </Dialog>
+          </TabsContent>
+
+          <TabsContent value="chatbot" className="mt-6">
+            <ChatbotSettings />
+          </TabsContent>
+        </Tabs>
       </div>
     </DashboardLayout>
   );
