@@ -23,6 +23,14 @@ export const useChatbotConfig = () => {
 
   const fetchConfig = async () => {
     try {
+      // Only query when there is an authenticated session.
+      // Otherwise the backend will return an empty result due to RLS (and we would cache null forever).
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setConfig(null);
+        return;
+      }
+
       const client = getSupabaseClient();
       const { data, error } = await client
         .from("chatbot_config")
@@ -34,8 +42,6 @@ export const useChatbotConfig = () => {
       setConfig(data as ChatbotConfig);
     } catch (error) {
       console.error("Error fetching chatbot config:", error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -73,7 +79,33 @@ export const useChatbotConfig = () => {
   };
 
   useEffect(() => {
-    fetchConfig();
+    let mounted = true;
+
+    const safeFetch = async () => {
+      if (!mounted) return;
+      setIsLoading(true);
+      await fetchConfig();
+      if (!mounted) return;
+      setIsLoading(false);
+    };
+
+    // Initial load
+    safeFetch();
+
+    // Re-fetch when auth state changes (fixes refresh/F5 scenario)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        safeFetch();
+      }
+      if (event === "SIGNED_OUT") {
+        setConfig(null);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   return {
