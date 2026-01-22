@@ -76,9 +76,9 @@ export const Sidebar: React.FC = () => {
         {/* Logo */}
         <div className="flex h-16 items-center gap-3 px-6 border-b border-sidebar-border">
           <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-sidebar-primary">
-            <span className="text-lg font-bold text-sidebar-primary-foreground">A</span>
+            <span className="text-lg font-bold text-sidebar-primary-foreground">TC</span>
           </div>
-          <span className="text-lg font-semibold">ADDI Training</span>
+          <span className="text-lg font-semibold">Training Center</span>
         </div>
 
         {/* Navigation */}
