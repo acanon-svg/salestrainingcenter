@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LoginForm } from "@/components/auth/LoginForm";
+import { ChatbotBubble } from "@/components/chatbot/ChatbotBubble";
 import Dashboard from "@/pages/Dashboard";
 import Profile from "@/pages/Profile";
 import Courses from "@/pages/Courses";
@@ -233,6 +234,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <AppRoutes />
+          <ChatbotBubble />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
