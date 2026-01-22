@@ -7,6 +7,14 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LoginForm } from "@/components/auth/LoginForm";
 import Dashboard from "@/pages/Dashboard";
 import Profile from "@/pages/Profile";
+import Courses from "@/pages/Courses";
+import Ranking from "@/pages/Ranking";
+import Badges from "@/pages/Badges";
+import Notifications from "@/pages/Notifications";
+import Feedback from "@/pages/Feedback";
+import CreateCourse from "@/pages/CreateCourse";
+import MyCourses from "@/pages/MyCourses";
+import Reports from "@/pages/Reports";
 import NotFound from "@/pages/NotFound";
 import { Loader2 } from "lucide-react";
 
@@ -29,6 +37,36 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
   if (!user) {
     return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+// Role-based Route Component
+const RoleRoute: React.FC<{ 
+  children: React.ReactNode; 
+  allowedRoles: ("student" | "creator" | "admin")[];
+}> = ({ children, allowedRoles }) => {
+  const { user, roles, isLoading, hasRole } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
+
+  const hasAllowedRole = allowedRoles.some(role => hasRole(role));
+  if (!hasAllowedRole) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
@@ -69,7 +107,7 @@ const AppRoutes = () => {
         }
       />
       
-      {/* Protected Routes */}
+      {/* Protected Routes - All Users */}
       <Route
         path="/dashboard"
         element={
@@ -86,13 +124,11 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-      
-      {/* Placeholder routes - will be implemented later */}
       <Route
         path="/courses"
         element={
           <ProtectedRoute>
-            <Dashboard />
+            <Courses />
           </ProtectedRoute>
         }
       />
@@ -100,7 +136,7 @@ const AppRoutes = () => {
         path="/ranking"
         element={
           <ProtectedRoute>
-            <Dashboard />
+            <Ranking />
           </ProtectedRoute>
         }
       />
@@ -108,7 +144,7 @@ const AppRoutes = () => {
         path="/badges"
         element={
           <ProtectedRoute>
-            <Dashboard />
+            <Badges />
           </ProtectedRoute>
         }
       />
@@ -116,7 +152,7 @@ const AppRoutes = () => {
         path="/notifications"
         element={
           <ProtectedRoute>
-            <Dashboard />
+            <Notifications />
           </ProtectedRoute>
         }
       />
@@ -124,40 +160,44 @@ const AppRoutes = () => {
         path="/feedback"
         element={
           <ProtectedRoute>
-            <Dashboard />
+            <Feedback />
           </ProtectedRoute>
         }
       />
+      
+      {/* Creator/Admin Routes */}
       <Route
         path="/courses/create"
         element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
+          <RoleRoute allowedRoles={["creator", "admin"]}>
+            <CreateCourse />
+          </RoleRoute>
         }
       />
       <Route
         path="/my-courses"
         element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
+          <RoleRoute allowedRoles={["creator", "admin"]}>
+            <MyCourses />
+          </RoleRoute>
         }
       />
+      
+      {/* Admin Routes */}
       <Route
         path="/reports"
         element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
+          <RoleRoute allowedRoles={["admin"]}>
+            <Reports />
+          </RoleRoute>
         }
       />
       <Route
         path="/settings"
         element={
-          <ProtectedRoute>
+          <RoleRoute allowedRoles={["admin"]}>
             <Dashboard />
-          </ProtectedRoute>
+          </RoleRoute>
         }
       />
       
