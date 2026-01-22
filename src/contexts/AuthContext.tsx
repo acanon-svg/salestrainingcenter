@@ -104,56 +104,77 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // Set up auth state listener BEFORE getting session
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-
+    let mounted = true;
+    
+    // Get initial session first
+    const initializeAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
+        
+        if (error) {
+          console.error("Error getting session:", error);
+          setIsLoading(false);
+          return;
+        }
+        
         if (session?.user) {
-          // Validate email domain
           if (!validateEmailDomain(session.user.email || "")) {
+            await supabase.auth.signOut();
+            setIsLoading(false);
+            return;
+          }
+          
+          setSession(session);
+          setUser(session.user);
+          await fetchUserProfile(session.user.id);
+        }
+        
+        setIsLoading(false);
+      } catch (err) {
+        console.error("Auth initialization error:", err);
+        if (mounted) setIsLoading(false);
+      }
+    };
+
+    initializeAuth();
+
+    // Set up auth state listener for subsequent changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, newSession) => {
+        if (!mounted) return;
+        
+        // Skip if this is the initial session
+        if (event === 'INITIAL_SESSION') return;
+        
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+
+        if (newSession?.user) {
+          // Validate email domain
+          if (!validateEmailDomain(newSession.user.email || "")) {
             await supabase.auth.signOut();
             toast({
               title: "Acceso denegado",
               description: "Solo se permiten correos con dominio @addi.com",
               variant: "destructive",
             });
-            setIsLoading(false);
             return;
           }
 
-          // Use setTimeout to avoid state update conflicts
-          setTimeout(() => {
-            fetchUserProfile(session.user.id);
-          }, 0);
+          await fetchUserProfile(newSession.user.id);
         } else {
           setProfile(null);
           setRoles([]);
         }
-
-        setIsLoading(false);
       }
     );
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        if (!validateEmailDomain(session.user.email || "")) {
-          supabase.auth.signOut();
-          setIsLoading(false);
-          return;
-        }
-        fetchUserProfile(session.user.id);
-      } else {
-        setIsLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signInWithGoogle = async () => {

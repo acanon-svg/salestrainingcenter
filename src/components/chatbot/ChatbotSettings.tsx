@@ -7,11 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bot, Save, Loader2, MessageCircle, Palette, FileText, User } from "lucide-react";
+import { Bot, Save, Loader2, MessageCircle, Palette, FileText, User, RefreshCw } from "lucide-react";
 
 export const ChatbotSettings: React.FC = () => {
-  const { config, isLoading, updateConfig } = useChatbotConfig();
+  const { config, isLoading, updateConfig, refetch } = useChatbotConfig();
   const [isSaving, setIsSaving] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [formData, setFormData] = useState({
     enabled: false,
     bot_name: "",
@@ -40,6 +41,12 @@ export const ChatbotSettings: React.FC = () => {
     setIsSaving(false);
   };
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await refetch();
+    setIsRefreshing(false);
+  };
+
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -60,13 +67,27 @@ export const ChatbotSettings: React.FC = () => {
   return (
     <Card className="border-primary/20">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Bot className="h-5 w-5 text-primary" />
-          Configuración del Chatbot
-        </CardTitle>
-        <CardDescription>
-          Configura el asistente virtual que aparecerá en la plataforma
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Bot className="h-5 w-5 text-primary" />
+              Configuración del Chatbot
+            </CardTitle>
+            <CardDescription>
+              Configura el asistente virtual que aparecerá en la plataforma
+            </CardDescription>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleRefresh} 
+            disabled={isRefreshing}
+            className="gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Actualizar
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Enable/Disable Toggle */}

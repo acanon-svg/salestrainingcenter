@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageCircle, X, Send, Loader2, Bot, User } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, Bot, User, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
   role: "user" | "assistant";
@@ -17,15 +18,35 @@ interface Message {
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chatbot`;
 
 export const ChatbotBubble: React.FC = () => {
-  const { config, isLoading: configLoading } = useChatbotConfig();
-  const { user } = useAuth();
+  const { config, isLoading: configLoading, refetch: refetchConfig } = useChatbotConfig();
+  const { user, session } = useAuth();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [hasNewUpdate, setHasNewUpdate] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const lastConfigUpdate = useRef<string | null>(null);
+
+  // Check for config updates periodically
+  useEffect(() => {
+    if (config?.updated_at) {
+      if (lastConfigUpdate.current && lastConfigUpdate.current !== config.updated_at) {
+        setHasNewUpdate(true);
+      }
+      lastConfigUpdate.current = config.updated_at;
+    }
+  }, [config?.updated_at]);
+
+  // Poll for updates every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refetchConfig();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [refetchConfig]);
 
   // Only show for logged in users when enabled
   if (configLoading || !config?.enabled || !user) {
@@ -48,12 +69,17 @@ export const ChatbotBubble: React.FC = () => {
     }
   }, [isOpen]);
 
-  // Add welcome message when first opened
+  // Add welcome message when first opened, include update notification
   useEffect(() => {
     if (isOpen && messages.length === 0 && config?.welcome_message) {
-      setMessages([{ role: "assistant", content: config.welcome_message }]);
+      let welcomeContent = config.welcome_message;
+      if (hasNewUpdate) {
+        welcomeContent += "\n\n✨ **¡Hay nuevas actualizaciones!** He sido configurado con información nueva. ¿En qué puedo ayudarte?";
+        setHasNewUpdate(false);
+      }
+      setMessages([{ role: "assistant", content: welcomeContent }]);
     }
-  }, [isOpen, config?.welcome_message]);
+  }, [isOpen, config?.welcome_message, hasNewUpdate]);
 
   const handleSend = async () => {
     if (!input.trim() || isStreaming) return;
@@ -77,18 +103,25 @@ export const ChatbotBubble: React.FC = () => {
     };
 
     try {
+      // Get the current session token
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      const token = currentSession?.access_token;
+      
+      if (!token) {
+        throw new Error("No se encontró sesión activa. Por favor, inicia sesión nuevamente.");
+      }
+
       const response = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           messages: [...messages, userMessage].map((m) => ({
             role: m.role,
             content: m.content,
           })),
-          systemPrompt: config?.system_prompt,
         }),
       });
 
