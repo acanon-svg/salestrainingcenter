@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { ChatbotBubble } from "@/components/chatbot/ChatbotBubble";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Dashboard from "@/pages/Dashboard";
 import Profile from "@/pages/Profile";
 import Courses from "@/pages/Courses";
@@ -233,8 +234,10 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <AppRoutes />
-          <ChatbotBubble />
+          <ErrorBoundary fallbackTitle="No pudimos cargar la plataforma">
+            <AppRoutes />
+            <ChatbotBubble />
+          </ErrorBoundary>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
