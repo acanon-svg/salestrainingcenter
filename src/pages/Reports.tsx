@@ -9,6 +9,14 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
+import {
   BarChart3,
   Users,
   BookOpen,
@@ -20,6 +28,9 @@ import {
   Target,
   CheckCircle,
   AlertCircle,
+  FileSpreadsheet,
+  FileText,
+  ChevronDown,
 } from "lucide-react";
 import {
   useOverviewStats,
@@ -36,6 +47,15 @@ import { ComplianceBarChart } from "@/components/reports/ComplianceBarChart";
 import { TrendLineChart } from "@/components/reports/TrendLineChart";
 import { StatusPieChart } from "@/components/reports/StatusPieChart";
 import { MonthlyComparisonChart } from "@/components/reports/MonthlyComparisonChart";
+import {
+  exportRegionalData,
+  exportTeamData,
+  exportCourseData,
+  exportMonthlyData,
+  exportFullComplianceReport,
+  type ExportFormat,
+} from "@/lib/exportUtils";
+import { toast } from "sonner";
 
 const Reports: React.FC = () => {
   const [dateRange, setDateRange] = useState("30");
@@ -57,23 +77,55 @@ const Reports: React.FC = () => {
   const { data: monthlyData, isLoading: loadingMonthly } = useMonthlyComparison();
   const { data: availableTeams } = useAvailableTeams();
   const { data: availableRegionals } = useAvailableRegionals();
-  const handleExport = () => {
-    const reportData = {
-      generatedAt: new Date().toISOString(),
-      filters,
-      overview: overviewStats,
-      regional: regionalData,
-      teams: teamData,
-      courses: courseData,
-    };
-    
-    const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `reporte-${new Date().toISOString().split("T")[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+
+  const handleExport = (type: "regional" | "teams" | "courses" | "monthly" | "full", format: ExportFormat) => {
+    try {
+      switch (type) {
+        case "regional":
+          if (regionalData && regionalData.length > 0) {
+            exportRegionalData(regionalData, format);
+            toast.success(`Reporte regional exportado como ${format.toUpperCase()}`);
+          } else {
+            toast.error("No hay datos regionales para exportar");
+          }
+          break;
+        case "teams":
+          if (teamData && teamData.length > 0) {
+            exportTeamData(teamData, format);
+            toast.success(`Reporte de equipos exportado como ${format.toUpperCase()}`);
+          } else {
+            toast.error("No hay datos de equipos para exportar");
+          }
+          break;
+        case "courses":
+          if (courseData && courseData.length > 0) {
+            exportCourseData(courseData, format);
+            toast.success(`Reporte de cursos exportado como ${format.toUpperCase()}`);
+          } else {
+            toast.error("No hay datos de cursos para exportar");
+          }
+          break;
+        case "monthly":
+          if (monthlyData && monthlyData.length > 0) {
+            exportMonthlyData(monthlyData, format);
+            toast.success(`Comparativa mensual exportada como ${format.toUpperCase()}`);
+          } else {
+            toast.error("No hay datos mensuales para exportar");
+          }
+          break;
+        case "full":
+          if (regionalData && teamData) {
+            exportFullComplianceReport(regionalData, teamData, format);
+            toast.success(`Reporte completo exportado como ${format.toUpperCase()}`);
+          } else {
+            toast.error("No hay datos suficientes para exportar");
+          }
+          break;
+      }
+    } catch (error) {
+      toast.error("Error al exportar el reporte");
+      console.error("Export error:", error);
+    }
   };
 
   return (
@@ -91,12 +143,70 @@ const Reports: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex gap-3">
-            <Button variant="outline" onClick={handleExport}>
-              <Download className="w-4 h-4 mr-2" />
-              Exportar JSON
-            </Button>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Download className="w-4 h-4 mr-2" />
+                Exportar
+                <ChevronDown className="w-4 h-4 ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Reporte Completo</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => handleExport("full", "csv")}>
+                <FileText className="w-4 h-4 mr-2" />
+                Exportar todo a CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("full", "excel")}>
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Exportar todo a Excel
+              </DropdownMenuItem>
+              
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>Por Regional</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => handleExport("regional", "csv")}>
+                <FileText className="w-4 h-4 mr-2" />
+                Regional - CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("regional", "excel")}>
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Regional - Excel
+              </DropdownMenuItem>
+              
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>Por Equipo</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => handleExport("teams", "csv")}>
+                <FileText className="w-4 h-4 mr-2" />
+                Equipos - CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("teams", "excel")}>
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Equipos - Excel
+              </DropdownMenuItem>
+              
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>Por Curso</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => handleExport("courses", "csv")}>
+                <FileText className="w-4 h-4 mr-2" />
+                Cursos - CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("courses", "excel")}>
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Cursos - Excel
+              </DropdownMenuItem>
+              
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>Comparativa Mensual</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => handleExport("monthly", "csv")}>
+                <FileText className="w-4 h-4 mr-2" />
+                Mensual - CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("monthly", "excel")}>
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Mensual - Excel
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Filters */}
