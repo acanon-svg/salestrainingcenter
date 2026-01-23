@@ -9,13 +9,15 @@ import {
   Trophy,
   Award,
   Clock,
-  TrendingUp,
   Star,
   Calendar,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import addiTrainingLogo from "@/assets/addi-training-logo.svg";
+import { LevelBadge } from "@/components/gamification/LevelBadge";
+import { LevelCard } from "@/components/gamification/LevelCard";
+import { getLevelProgress, getPointsToNextLevel } from "@/lib/userLevel";
 
 const Dashboard: React.FC = () => {
   const { profile, roles } = useAuth();
@@ -106,13 +108,18 @@ const Dashboard: React.FC = () => {
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Puntos Acumulados
               </CardTitle>
-              <TrendingUp className="h-5 w-5 text-success" />
+              <LevelBadge points={stats.totalPoints} size="sm" />
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">{stats.totalPoints.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Nivel: Avanzado
-              </p>
+              <div className="mt-2 space-y-1">
+                <Progress value={getLevelProgress(stats.totalPoints)} className="h-2" />
+                <p className="text-xs text-muted-foreground">
+                  {getPointsToNextLevel(stats.totalPoints) 
+                    ? `${getPointsToNextLevel(stats.totalPoints)?.toLocaleString()} pts para subir de nivel`
+                    : "¡Nivel máximo!"}
+                </p>
+              </div>
             </CardContent>
           </Card>
 
@@ -193,35 +200,41 @@ const Dashboard: React.FC = () => {
           </Card>
         </div>
 
-        {/* Badges Section */}
-        <Card className="border-border/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Award className="h-5 w-5 text-primary" />
-              Mis Insignias
-            </CardTitle>
-            <CardDescription>
-              Has obtenido {badges.filter((b) => b.earned).length} de {badges.length} insignias
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-4">
-              {badges.map((badge) => (
-                <div
-                  key={badge.id}
-                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all ${
-                    badge.earned
-                      ? "border-primary/20 bg-primary/5"
-                      : "border-border opacity-40 grayscale"
-                  }`}
-                >
-                  <span className="text-3xl">{badge.icon}</span>
-                  <span className="text-xs font-medium text-center">{badge.name}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Level and Badges Row */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Level Card */}
+          <LevelCard points={stats.totalPoints} />
+
+          {/* Badges Section */}
+          <Card className="border-border/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Award className="h-5 w-5 text-primary" />
+                Mis Insignias
+              </CardTitle>
+              <CardDescription>
+                Has obtenido {badges.filter((b) => b.earned).length} de {badges.length} insignias
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-4">
+                {badges.map((badge) => (
+                  <div
+                    key={badge.id}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all ${
+                      badge.earned
+                        ? "border-primary/20 bg-primary/5"
+                        : "border-border opacity-40 grayscale"
+                    }`}
+                  >
+                    <span className="text-3xl">{badge.icon}</span>
+                    <span className="text-xs font-medium text-center">{badge.name}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Role indicators */}
         {roles.length > 0 && (

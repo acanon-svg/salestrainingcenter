@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Trophy, Medal, Award, TrendingUp, Crown, Star } from "lucide-react";
+import { LevelBadge } from "@/components/gamification/LevelBadge";
 
 const Ranking: React.FC = () => {
   const { profile } = useAuth();
@@ -82,8 +83,9 @@ const Ranking: React.FC = () => {
                   <p className="text-sm text-muted-foreground">{profile?.team || "Sin equipo"}</p>
                 </div>
               </div>
-              <div className="text-right">
-                <div className="flex items-center gap-2 justify-end">
+              <div className="flex flex-col items-end gap-2">
+                <LevelBadge points={profile?.points || 0} size="md" />
+                <div className="flex items-center gap-2">
                   <Star className="w-5 h-5 text-addi-orange" />
                   <span className="text-2xl font-bold">{profile?.points?.toLocaleString() || 0}</span>
                 </div>
@@ -124,7 +126,8 @@ const Ranking: React.FC = () => {
                       </AvatarFallback>
                     </Avatar>
                     <h3 className="font-semibold text-lg">{user.full_name || "Usuario"}</h3>
-                    <p className="text-sm text-muted-foreground mb-3">{user.team || "Sin equipo"}</p>
+                    <p className="text-sm text-muted-foreground mb-2">{user.team || "Sin equipo"}</p>
+                    <LevelBadge points={user.points} size="sm" className="mb-3" />
                     <div className="flex justify-center gap-4">
                       <div className="text-center">
                         <p className="text-2xl font-bold text-primary">
@@ -211,6 +214,7 @@ const Ranking: React.FC = () => {
                       </div>
 
                       <div className="flex items-center gap-4 text-right">
+                        <LevelBadge points={user.points} size="sm" />
                         <div>
                           <p className="font-semibold">{user.points.toLocaleString()}</p>
                           <p className="text-xs text-muted-foreground">puntos</p>
