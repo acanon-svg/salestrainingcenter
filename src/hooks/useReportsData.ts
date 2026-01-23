@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { subDays } from "date-fns";
+import { subDays, format, eachDayOfInterval, startOfDay } from "date-fns";
+import { es } from "date-fns/locale";
 
 export interface OverviewStats {
   totalCourses: number;
@@ -283,6 +284,95 @@ export const useAvailableRegionals = () => {
 
       const regionals = [...new Set(data?.map(p => p.regional).filter(Boolean))];
       return regionals as string[];
+    },
+  });
+};
+
+export interface TrendDataPoint {
+  date: string;
+  completions: number;
+  enrollments: number;
+}
+
+export const useTrendData = (filters: ReportsFilters) => {
+  return useQuery({
+    queryKey: ["reports-trend", filters],
+    queryFn: async (): Promise<TrendDataPoint[]> => {
+      const endDate = new Date();
+      const startDate = subDays(endDate, filters.dateRange);
+
+      // Get all enrollments in the date range
+      const { data: enrollments } = await supabase
+        .from("course_enrollments")
+        .select("created_at, completed_at, status")
+        .gte("created_at", startDate.toISOString());
+
+      if (!enrollments) return [];
+
+      // Generate all days in the range
+      const days = eachDayOfInterval({ start: startDate, end: endDate });
+
+      const trendData: TrendDataPoint[] = days.map(day => {
+        const dayStart = startOfDay(day);
+        const dayEnd = new Date(dayStart);
+        dayEnd.setDate(dayEnd.getDate() + 1);
+
+        const dayEnrollments = enrollments.filter(e => {
+          const createdAt = new Date(e.created_at);
+          return createdAt >= dayStart && createdAt < dayEnd;
+        }).length;
+
+        const dayCompletions = enrollments.filter(e => {
+          if (!e.completed_at) return false;
+          const completedAt = new Date(e.completed_at);
+          return completedAt >= dayStart && completedAt < dayEnd;
+        }).length;
+
+        return {
+          date: format(day, "dd MMM", { locale: es }),
+          enrollments: dayEnrollments,
+          completions: dayCompletions,
+        };
+      });
+
+      return trendData;
+    },
+  });
+};
+
+export interface StatusDistribution {
+  name: string;
+  value: number;
+  color: string;
+}
+
+export const useStatusDistribution = (filters: ReportsFilters) => {
+  return useQuery({
+    queryKey: ["reports-status-distribution", filters],
+    queryFn: async (): Promise<StatusDistribution[]> => {
+      const { data: enrollments } = await supabase
+        .from("course_enrollments")
+        .select("status");
+
+      if (!enrollments) return [];
+
+      const statusCounts = enrollments.reduce((acc, e) => {
+        acc[e.status] = (acc[e.status] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const statusConfig: Record<string, { label: string; color: string }> = {
+        enrolled: { label: "Inscrito", color: "hsl(var(--primary))" },
+        in_progress: { label: "En Progreso", color: "hsl(var(--addi-yellow))" },
+        completed: { label: "Completado", color: "hsl(var(--success))" },
+        failed: { label: "No Aprobado", color: "hsl(var(--destructive))" },
+      };
+
+      return Object.entries(statusCounts).map(([status, count]) => ({
+        name: statusConfig[status]?.label || status,
+        value: count,
+        color: statusConfig[status]?.color || "hsl(var(--muted))",
+      }));
     },
   });
 };
