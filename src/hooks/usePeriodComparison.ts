@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, subDays, startOfYear, endOfMonth, startOfMonth } from "date-fns";
+import { format, subDays, endOfMonth, startOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
 
 interface PeriodDefinition {
@@ -10,6 +10,9 @@ interface PeriodDefinition {
   // For days-based comparisons
   daysAgo?: number;
   daysLength?: number;
+  // For custom date range
+  customStart?: Date;
+  customEnd?: Date;
   // Label for display
   label: string;
 }
@@ -34,6 +37,11 @@ export interface PeriodComparisonResult {
 }
 
 const calculatePeriodDates = (period: PeriodDefinition, currentYear: number) => {
+  // Custom date range takes priority
+  if (period.customStart && period.customEnd) {
+    return { start: period.customStart, end: period.customEnd };
+  }
+  
   if (period.startMonth !== undefined && period.endMonth !== undefined) {
     // Month-based period (quarters, semesters)
     const start = startOfMonth(new Date(currentYear, period.startMonth, 1));
@@ -55,7 +63,7 @@ const formatDateRange = (start: Date, end: Date) => {
 
 export const usePeriodComparison = (config: PeriodConfig) => {
   return useQuery({
-    queryKey: ["period-comparison", config],
+    queryKey: ["period-comparison", JSON.stringify(config)],
     queryFn: async (): Promise<PeriodComparisonResult> => {
       const currentYear = new Date().getFullYear();
       

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Select,
   SelectContent,
@@ -12,19 +13,35 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   ArrowRight,
   TrendingUp,
   TrendingDown,
   Minus,
-  Calendar,
+  Calendar as CalendarIcon,
   BarChart3,
   Users,
   Target,
   Trophy,
 } from "lucide-react";
-import { usePeriodComparison, PeriodConfig, PeriodComparisonResult } from "@/hooks/usePeriodComparison";
+import { usePeriodComparison, PeriodConfig } from "@/hooks/usePeriodComparison";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 const PERIOD_PRESETS: { value: string; label: string; config: PeriodConfig }[] = [
+  {
+    value: "custom",
+    label: "Personalizado",
+    config: {
+      period1: { label: "Período 1" },
+      period2: { label: "Período 2" },
+    },
+  },
   {
     value: "q1_vs_q2",
     label: "Q1 vs Q2",
@@ -75,6 +92,11 @@ const PERIOD_PRESETS: { value: string; label: string; config: PeriodConfig }[] =
   },
 ];
 
+interface DateRange {
+  from: Date | undefined;
+  to: Date | undefined;
+}
+
 interface MetricCardProps {
   label: string;
   period1Value: number;
@@ -91,7 +113,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
   period2Value,
   period1Label,
   period2Label,
-  format = "number",
+  format: formatType = "number",
   icon: Icon,
 }) => {
   const diff = period2Value - period1Value;
@@ -100,7 +122,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
   const isNeutral = diff === 0;
 
   const formatValue = (value: number) =>
-    format === "percentage" ? `${value}%` : value.toLocaleString();
+    formatType === "percentage" ? `${value}%` : value.toLocaleString();
 
   return (
     <div className="p-4 rounded-lg border border-border/50 bg-card space-y-3">
@@ -151,48 +173,168 @@ const MetricCard: React.FC<MetricCardProps> = ({
   );
 };
 
-export const PeriodComparisonCard: React.FC = () => {
-  const [selectedPreset, setSelectedPreset] = useState(PERIOD_PRESETS[0].value);
+interface DateRangePickerProps {
+  label: string;
+  dateRange: DateRange;
+  onDateRangeChange: (range: DateRange) => void;
+}
 
+const DateRangePicker: React.FC<DateRangePickerProps> = ({
+  label,
+  dateRange,
+  onDateRangeChange,
+}) => {
+  return (
+    <div className="space-y-2">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <div className="flex gap-2">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn(
+                "justify-start text-left font-normal flex-1",
+                !dateRange.from && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {dateRange.from ? format(dateRange.from, "dd/MM/yyyy", { locale: es }) : "Inicio"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={dateRange.from}
+              onSelect={(date) => onDateRangeChange({ ...dateRange, from: date })}
+              initialFocus
+              className={cn("p-3 pointer-events-auto")}
+            />
+          </PopoverContent>
+        </Popover>
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn(
+                "justify-start text-left font-normal flex-1",
+                !dateRange.to && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {dateRange.to ? format(dateRange.to, "dd/MM/yyyy", { locale: es }) : "Fin"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={dateRange.to}
+              onSelect={(date) => onDateRangeChange({ ...dateRange, to: date })}
+              disabled={(date) => dateRange.from ? date < dateRange.from : false}
+              initialFocus
+              className={cn("p-3 pointer-events-auto")}
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+    </div>
+  );
+};
+
+export const PeriodComparisonCard: React.FC = () => {
+  const [selectedPreset, setSelectedPreset] = useState(PERIOD_PRESETS[1].value);
+  const [period1Range, setPeriod1Range] = useState<DateRange>({ from: undefined, to: undefined });
+  const [period2Range, setPeriod2Range] = useState<DateRange>({ from: undefined, to: undefined });
+
+  const isCustom = selectedPreset === "custom";
   const currentPreset = PERIOD_PRESETS.find((p) => p.value === selectedPreset);
-  const { data, isLoading } = usePeriodComparison(currentPreset?.config || PERIOD_PRESETS[0].config);
+
+  // Build config based on selection
+  const config: PeriodConfig = isCustom
+    ? {
+        period1: {
+          customStart: period1Range.from,
+          customEnd: period1Range.to,
+          label: "Período 1",
+        },
+        period2: {
+          customStart: period2Range.from,
+          customEnd: period2Range.to,
+          label: "Período 2",
+        },
+      }
+    : currentPreset?.config || PERIOD_PRESETS[1].config;
+
+  const hasValidCustomDates = !isCustom || 
+    (period1Range.from && period1Range.to && period2Range.from && period2Range.to);
+
+  const { data, isLoading } = usePeriodComparison(config);
 
   return (
     <Card className="border-border/50">
       <CardHeader>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-primary" />
-              Comparativa de Períodos
-            </CardTitle>
-            <CardDescription>
-              Compara métricas clave entre dos períodos específicos
-            </CardDescription>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-primary" />
+                Comparativa de Períodos
+              </CardTitle>
+              <CardDescription>
+                Compara métricas clave entre dos períodos específicos
+              </CardDescription>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Label className="text-xs text-muted-foreground whitespace-nowrap">
+                <CalendarIcon className="w-3 h-3 inline mr-1" />
+                Período:
+              </Label>
+              <Select value={selectedPreset} onValueChange={setSelectedPreset}>
+                <SelectTrigger className="w-56">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PERIOD_PRESETS.map((preset) => (
+                    <SelectItem key={preset.value} value={preset.value}>
+                      {preset.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Label className="text-xs text-muted-foreground whitespace-nowrap">
-              <Calendar className="w-3 h-3 inline mr-1" />
-              Período:
-            </Label>
-            <Select value={selectedPreset} onValueChange={setSelectedPreset}>
-              <SelectTrigger className="w-56">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PERIOD_PRESETS.map((preset) => (
-                  <SelectItem key={preset.value} value={preset.value}>
-                    {preset.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Custom Date Pickers */}
+          {isCustom && (
+            <div className="grid gap-4 sm:grid-cols-2 p-4 rounded-lg bg-muted/30 border border-border/30">
+              <DateRangePicker
+                label="Período 1 (Base)"
+                dateRange={period1Range}
+                onDateRangeChange={setPeriod1Range}
+              />
+              <DateRangePicker
+                label="Período 2 (Comparación)"
+                dateRange={period2Range}
+                onDateRangeChange={setPeriod2Range}
+              />
+              {!hasValidCustomDates && (
+                <p className="col-span-2 text-xs text-muted-foreground text-center">
+                  Selecciona fechas de inicio y fin para ambos períodos
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
+        {!hasValidCustomDates ? (
+          <div className="text-center py-8 text-muted-foreground">
+            Selecciona fechas para ver la comparación
+          </div>
+        ) : isLoading ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {[1, 2, 3, 4].map((i) => (
               <Skeleton key={i} className="h-40 w-full" />
