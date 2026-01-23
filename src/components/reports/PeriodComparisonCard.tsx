@@ -32,6 +32,16 @@ import { usePeriodComparison, PeriodConfig } from "@/hooks/usePeriodComparison";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 
 const PERIOD_PRESETS: { value: string; label: string; config: PeriodConfig }[] = [
   {
@@ -389,6 +399,75 @@ export const PeriodComparisonCard: React.FC = () => {
                 format="percentage"
                 icon={Trophy}
               />
+            </div>
+
+            {/* Bar Chart Comparison */}
+            <div className="mt-6 p-4 rounded-lg bg-muted/30 border border-border/30">
+              <h4 className="font-medium mb-4 flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-primary" />
+                Gráfico Comparativo
+              </h4>
+              <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={[
+                      {
+                        metric: "Inscripciones",
+                        [data.period1.label]: data.period1.enrollments,
+                        [data.period2.label]: data.period2.enrollments,
+                      },
+                      {
+                        metric: "Completados",
+                        [data.period1.label]: data.period1.completions,
+                        [data.period2.label]: data.period2.completions,
+                      },
+                      {
+                        metric: "Tasa Completado (%)",
+                        [data.period1.label]: data.period1.completionRate,
+                        [data.period2.label]: data.period2.completionRate,
+                      },
+                      {
+                        metric: "Promedio (%)",
+                        [data.period1.label]: data.period1.avgScore,
+                        [data.period2.label]: data.period2.avgScore,
+                      },
+                    ]}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
+                    <XAxis 
+                      dataKey="metric" 
+                      tick={{ fontSize: 12 }}
+                      className="fill-muted-foreground"
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 12 }}
+                      className="fill-muted-foreground"
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
+                      }}
+                      labelStyle={{ color: "hsl(var(--foreground))" }}
+                    />
+                    <Legend />
+                    <Bar 
+                      dataKey={data.period1.label} 
+                      fill="hsl(var(--muted-foreground))" 
+                      radius={[4, 4, 0, 0]}
+                      name={data.period1.label}
+                    />
+                    <Bar 
+                      dataKey={data.period2.label} 
+                      fill="hsl(var(--primary))" 
+                      radius={[4, 4, 0, 0]}
+                      name={data.period2.label}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
 
             {/* Summary */}
