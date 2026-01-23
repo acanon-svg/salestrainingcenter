@@ -376,3 +376,75 @@ export const useStatusDistribution = (filters: ReportsFilters) => {
     },
   });
 };
+
+export interface MonthlyComparison {
+  month: string;
+  enrollments: number;
+  completions: number;
+  avgScore: number;
+  completionRate: number;
+}
+
+export const useMonthlyComparison = () => {
+  return useQuery({
+    queryKey: ["reports-monthly-comparison"],
+    queryFn: async (): Promise<MonthlyComparison[]> => {
+      // Get data for the last 6 months
+      const endDate = new Date();
+      const startDate = subDays(endDate, 180);
+
+      const { data: enrollments } = await supabase
+        .from("course_enrollments")
+        .select("created_at, completed_at, status, score")
+        .gte("created_at", startDate.toISOString());
+
+      if (!enrollments) return [];
+
+      // Group by month
+      const monthlyData: Record<string, {
+        enrollments: number;
+        completions: number;
+        scores: number[];
+      }> = {};
+
+      // Initialize last 6 months
+      for (let i = 5; i >= 0; i--) {
+        const date = subDays(endDate, i * 30);
+        const monthKey = format(date, "yyyy-MM");
+        monthlyData[monthKey] = { enrollments: 0, completions: 0, scores: [] };
+      }
+
+      enrollments.forEach(enrollment => {
+        const monthKey = format(new Date(enrollment.created_at), "yyyy-MM");
+        
+        if (monthlyData[monthKey]) {
+          monthlyData[monthKey].enrollments++;
+          
+          if (enrollment.status === "completed") {
+            monthlyData[monthKey].completions++;
+            if (enrollment.score !== null) {
+              monthlyData[monthKey].scores.push(enrollment.score);
+            }
+          }
+        }
+      });
+
+      return Object.entries(monthlyData)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([monthKey, data]) => {
+          const date = new Date(monthKey + "-01");
+          return {
+            month: format(date, "MMM yyyy", { locale: es }),
+            enrollments: data.enrollments,
+            completions: data.completions,
+            avgScore: data.scores.length > 0
+              ? Math.round(data.scores.reduce((a, b) => a + b, 0) / data.scores.length)
+              : 0,
+            completionRate: data.enrollments > 0
+              ? Math.round((data.completions / data.enrollments) * 100)
+              : 0,
+          };
+        });
+    },
+  });
+};
