@@ -12,6 +12,7 @@ import { User, Mail, Building, MapPin, Users, Moon, Sun, Save, Loader2 } from "l
 import { supabase } from "@/integrations/supabase/client";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
+import { LevelBadge } from "@/components/gamification/LevelBadge";
 
 // Helper to get untyped supabase client for tables not yet in types
 const getSupabaseClient = () => supabase as unknown as SupabaseClient;
@@ -252,7 +253,10 @@ const Profile: React.FC = () => {
             <CardDescription>Tu rendimiento en la plataforma</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-4">
+              <div className="text-center p-4 rounded-lg bg-muted/50">
+                <LevelBadge points={profile?.points || 0} size="lg" />
+              </div>
               <div className="text-center p-4 rounded-lg bg-muted/50">
                 <p className="text-3xl font-bold text-primary">
                   {profile?.points?.toLocaleString() || 0}
