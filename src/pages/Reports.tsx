@@ -47,6 +47,7 @@ import { ComplianceBarChart } from "@/components/reports/ComplianceBarChart";
 import { TrendLineChart } from "@/components/reports/TrendLineChart";
 import { StatusPieChart } from "@/components/reports/StatusPieChart";
 import { MonthlyComparisonChart } from "@/components/reports/MonthlyComparisonChart";
+import { PeriodComparisonCard } from "@/components/reports/PeriodComparisonCard";
 import {
   exportRegionalData,
   exportTeamData,
@@ -359,6 +360,9 @@ const Reports: React.FC = () => {
           <TrendLineChart data={trendData} isLoading={loadingTrend} dateRange={dateRange} />
           <MonthlyComparisonChart data={monthlyData} isLoading={loadingMonthly} />
         </div>
+
+        {/* Period Comparison */}
+        <PeriodComparisonCard />
 
         {/* Detailed Reports Tabs */}
         <Tabs defaultValue="regional" className="w-full">
