@@ -30,10 +30,12 @@ import {
   useAvailableRegionals,
   useTrendData,
   useStatusDistribution,
+  useMonthlyComparison,
 } from "@/hooks/useReportsData";
 import { ComplianceBarChart } from "@/components/reports/ComplianceBarChart";
 import { TrendLineChart } from "@/components/reports/TrendLineChart";
 import { StatusPieChart } from "@/components/reports/StatusPieChart";
+import { MonthlyComparisonChart } from "@/components/reports/MonthlyComparisonChart";
 
 const Reports: React.FC = () => {
   const [dateRange, setDateRange] = useState("30");
@@ -52,6 +54,7 @@ const Reports: React.FC = () => {
   const { data: courseData, isLoading: loadingCourses } = useCoursePerformance(filters);
   const { data: trendData, isLoading: loadingTrend } = useTrendData(filters);
   const { data: statusData, isLoading: loadingStatus } = useStatusDistribution(filters);
+  const { data: monthlyData, isLoading: loadingMonthly } = useMonthlyComparison();
   const { data: availableTeams } = useAvailableTeams();
   const { data: availableRegionals } = useAvailableRegionals();
   const handleExport = () => {
@@ -242,7 +245,10 @@ const Reports: React.FC = () => {
           <StatusPieChart data={statusData} isLoading={loadingStatus} />
         </div>
 
-        <TrendLineChart data={trendData} isLoading={loadingTrend} dateRange={dateRange} />
+        <div className="grid gap-6 lg:grid-cols-2">
+          <TrendLineChart data={trendData} isLoading={loadingTrend} dateRange={dateRange} />
+          <MonthlyComparisonChart data={monthlyData} isLoading={loadingMonthly} />
+        </div>
 
         {/* Detailed Reports Tabs */}
         <Tabs defaultValue="regional" className="w-full">
