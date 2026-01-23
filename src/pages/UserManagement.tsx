@@ -12,9 +12,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Users, Eye, Shield, Loader2, Mail, Building, MapPin, UserCheck, Calendar, Trophy, Settings, UserPlus, Bot } from "lucide-react";
+import { Search, Users, Eye, Shield, Loader2, Mail, Building, MapPin, UserCheck, Calendar, Trophy, Settings, UserPlus, Bot, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
@@ -57,6 +58,10 @@ const UserManagement: React.FC = () => {
   const [filterRegional, setFilterRegional] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isUpdatingSettings, setIsUpdatingSettings] = useState(false);
+  const [isSavingRoles, setIsSavingRoles] = useState(false);
+  const [pendingRoles, setPendingRoles] = useState<string[]>([]);
+
+  const ALL_ROLES = ["student", "creator", "admin"] as const;
 
   const isAdmin = hasRole("admin");
   const registrationEnabled = getSetting("registration_enabled", false);
@@ -143,7 +148,84 @@ const UserManagement: React.FC = () => {
     setSelectedUser(user);
     const roles = await fetchUserRoles(user.user_id);
     setSelectedUserRoles(roles);
+    setPendingRoles(roles);
     setIsDialogOpen(true);
+  };
+
+  const handleRoleToggle = (role: string, checked: boolean) => {
+    if (checked) {
+      setPendingRoles((prev) => [...prev, role]);
+    } else {
+      // Don't allow removing all roles - at least student must remain
+      if (pendingRoles.length > 1 || role !== "student") {
+        setPendingRoles((prev) => prev.filter((r) => r !== role));
+      }
+    }
+  };
+
+  const handleSaveRoles = async () => {
+    if (!selectedUser) return;
+
+    // Prevent removing all roles
+    if (pendingRoles.length === 0) {
+      toast({
+        title: "Error",
+        description: "El usuario debe tener al menos un rol asignado",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSavingRoles(true);
+    try {
+      const client = getSupabaseClient();
+
+      // Calculate roles to add and remove
+      const rolesToAdd = pendingRoles.filter((r) => !selectedUserRoles.includes(r));
+      const rolesToRemove = selectedUserRoles.filter((r) => !pendingRoles.includes(r));
+
+      // Remove old roles
+      for (const role of rolesToRemove) {
+        const { error } = await client
+          .from("user_roles")
+          .delete()
+          .eq("user_id", selectedUser.user_id)
+          .eq("role", role);
+
+        if (error) throw error;
+      }
+
+      // Add new roles
+      for (const role of rolesToAdd) {
+        const { error } = await client
+          .from("user_roles")
+          .insert({ user_id: selectedUser.user_id, role });
+
+        if (error) throw error;
+      }
+
+      setSelectedUserRoles([...pendingRoles]);
+      toast({
+        title: "Roles actualizados",
+        description: `Los roles de ${selectedUser.full_name || selectedUser.email} han sido actualizados correctamente`,
+      });
+    } catch (error: any) {
+      console.error("Error updating roles:", error);
+      toast({
+        title: "Error",
+        description: "No se pudieron actualizar los roles del usuario",
+        variant: "destructive",
+      });
+      // Revert pending roles on error
+      setPendingRoles(selectedUserRoles);
+    } finally {
+      setIsSavingRoles(false);
+    }
+  };
+
+  const hasRoleChanges = () => {
+    if (pendingRoles.length !== selectedUserRoles.length) return true;
+    return !pendingRoles.every((r) => selectedUserRoles.includes(r));
   };
 
   const getInitials = (name: string | null) => {
@@ -458,6 +540,75 @@ const UserManagement: React.FC = () => {
                     <p className="font-medium">{selectedUser.regional || "No especificado"}</p>
                   </div>
                 </div>
+
+                {/* Role Management Section */}
+                <Card className="border-primary/20">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-primary" />
+                      Gestión de Roles
+                    </CardTitle>
+                    <CardDescription>
+                      Asigna o quita roles para controlar el acceso del usuario
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex flex-wrap gap-4">
+                      {ALL_ROLES.map((role) => (
+                        <div
+                          key={role}
+                          className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                            pendingRoles.includes(role)
+                              ? "border-primary bg-primary/5"
+                              : "border-border"
+                          }`}
+                        >
+                          <Checkbox
+                            id={`role-${role}`}
+                            checked={pendingRoles.includes(role)}
+                            onCheckedChange={(checked) =>
+                              handleRoleToggle(role, checked as boolean)
+                            }
+                            disabled={isSavingRoles}
+                          />
+                          <div className="flex flex-col">
+                            <label
+                              htmlFor={`role-${role}`}
+                              className="font-medium cursor-pointer"
+                            >
+                              {getRoleName(role)}
+                            </label>
+                            <span className="text-xs text-muted-foreground">
+                              {role === "student" && "Acceso a cursos y contenido"}
+                              {role === "creator" && "Crear y gestionar cursos"}
+                              {role === "admin" && "Administración completa"}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {hasRoleChanges() && (
+                      <Button
+                        onClick={handleSaveRoles}
+                        disabled={isSavingRoles}
+                        className="w-full gap-2"
+                      >
+                        {isSavingRoles ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Guardando...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="h-4 w-4" />
+                            Guardar cambios de roles
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
 
                 <div className="grid gap-4 md:grid-cols-3">
                   <Card className="bg-muted/50">
