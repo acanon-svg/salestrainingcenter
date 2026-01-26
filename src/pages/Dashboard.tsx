@@ -18,6 +18,7 @@ import addiTrainingLogo from "@/assets/addi-training-logo.svg";
 import { LevelBadge } from "@/components/gamification/LevelBadge";
 import { LevelCard } from "@/components/gamification/LevelCard";
 import { getLevelProgress, getPointsToNextLevel } from "@/lib/userLevel";
+import { AnnouncementCarousel } from "@/components/announcements/AnnouncementCarousel";
 
 const Dashboard: React.FC = () => {
   const { profile, roles } = useAuth();
@@ -72,6 +73,9 @@ const Dashboard: React.FC = () => {
             className="h-12 w-auto hidden md:block"
           />
         </div>
+
+        {/* Announcements Carousel */}
+        <AnnouncementCarousel />
 
         {/* Stats Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
