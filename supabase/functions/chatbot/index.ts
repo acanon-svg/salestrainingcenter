@@ -6,6 +6,65 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Input validation constants
+const MAX_MESSAGES = 20;
+const MAX_MESSAGE_LENGTH = 4000;
+const VALID_ROLES = ["user", "assistant"];
+
+interface ChatMessage {
+  role: string;
+  content: string;
+}
+
+function validateMessages(messages: unknown): { valid: boolean; error?: string } {
+  // Check if messages is an array
+  if (!Array.isArray(messages)) {
+    return { valid: false, error: "El formato de mensajes es inválido." };
+  }
+
+  // Check if array is empty
+  if (messages.length === 0) {
+    return { valid: false, error: "Se requiere al menos un mensaje." };
+  }
+
+  // Check message count limit
+  if (messages.length > MAX_MESSAGES) {
+    return { valid: false, error: `Demasiados mensajes. Máximo ${MAX_MESSAGES} mensajes permitidos.` };
+  }
+
+  // Validate each message
+  for (let i = 0; i < messages.length; i++) {
+    const msg = messages[i];
+
+    // Check message structure
+    if (!msg || typeof msg !== "object") {
+      return { valid: false, error: `Mensaje ${i + 1} tiene formato inválido.` };
+    }
+
+    // Check role
+    if (!msg.role || typeof msg.role !== "string" || !VALID_ROLES.includes(msg.role)) {
+      return { valid: false, error: `Rol de mensaje ${i + 1} es inválido.` };
+    }
+
+    // Check content
+    if (typeof msg.content !== "string") {
+      return { valid: false, error: `Contenido del mensaje ${i + 1} es inválido.` };
+    }
+
+    // Check content length
+    if (msg.content.length > MAX_MESSAGE_LENGTH) {
+      return { valid: false, error: `Mensaje ${i + 1} excede el límite de ${MAX_MESSAGE_LENGTH} caracteres.` };
+    }
+
+    // Check for empty content in user messages
+    if (msg.role === "user" && msg.content.trim().length === 0) {
+      return { valid: false, error: `El mensaje ${i + 1} no puede estar vacío.` };
+    }
+  }
+
+  return { valid: true };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -42,7 +101,34 @@ serve(async (req) => {
       );
     }
 
-    const { messages } = await req.json();
+    // Parse request body with size limit check
+    let body: { messages?: unknown };
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: "Formato de solicitud inválido." }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const { messages } = body;
+
+    // Validate messages input
+    const validation = validateMessages(messages);
+    if (!validation.valid) {
+      return new Response(
+        JSON.stringify({ error: validation.error }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
@@ -58,6 +144,12 @@ serve(async (req) => {
     const systemPrompt = config?.system_prompt || 
       "Eres un asistente virtual experto en procesos comerciales. Responde de manera clara, concisa y profesional en español.";
 
+    // Sanitize messages before sending to AI (only keep role and content)
+    const sanitizedMessages = (messages as ChatMessage[]).map((msg) => ({
+      role: msg.role,
+      content: msg.content.slice(0, MAX_MESSAGE_LENGTH), // Extra safety trim
+    }));
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -71,7 +163,7 @@ serve(async (req) => {
             role: "system", 
             content: systemPrompt 
           },
-          ...messages,
+          ...sanitizedMessages,
         ],
         stream: true,
       }),
