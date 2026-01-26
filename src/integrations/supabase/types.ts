@@ -489,6 +489,33 @@ export type Database = {
         }
         Relationships: []
       }
+      leader_regions: {
+        Row: {
+          assigned_by: string | null
+          created_at: string
+          id: string
+          regional: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          created_at?: string
+          id?: string
+          regional: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_by?: string | null
+          created_at?: string
+          id?: string
+          regional?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       material_feedback: {
         Row: {
           created_at: string
@@ -946,7 +973,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "student" | "creator" | "admin"
+      app_role: "student" | "creator" | "admin" | "lider"
       content_type: "video" | "documento" | "link" | "quiz" | "encuesta"
       course_status: "draft" | "published" | "archived"
       difficulty_level: "basico" | "medio" | "avanzado"
@@ -1078,7 +1105,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["student", "creator", "admin"],
+      app_role: ["student", "creator", "admin", "lider"],
       content_type: ["video", "documento", "link", "quiz", "encuesta"],
       course_status: ["draft", "published", "archived"],
       difficulty_level: ["basico", "medio", "avanzado"],

@@ -27,7 +27,7 @@ interface NavItem {
   label: string;
   icon: React.ElementType;
   href: string;
-  roles?: ("student" | "creator" | "admin")[];
+  roles?: ("student" | "creator" | "admin" | "lider")[];
 }
 
 const navItems: NavItem[] = [
@@ -43,6 +43,11 @@ const navItems: NavItem[] = [
 const creatorItems: NavItem[] = [
   { label: "Crear Curso", icon: PlusCircle, href: "/courses/create", roles: ["creator", "admin"] },
   { label: "Mis Creaciones", icon: BookOpen, href: "/my-courses", roles: ["creator", "admin"] },
+];
+
+const leaderItems: NavItem[] = [
+  { label: "Mi Equipo", icon: Users, href: "/team", roles: ["lider"] },
+  { label: "Reportes Regional", icon: BarChart3, href: "/reports", roles: ["lider"] },
 ];
 
 const adminItems: NavItem[] = [
@@ -71,9 +76,14 @@ export const Sidebar: React.FC = () => {
     (item) => !item.roles || item.roles.some((role) => hasRole(role))
   );
 
+  const visibleLeaderItems = leaderItems.filter(
+    (item) => !item.roles || item.roles.some((role) => hasRole(role))
+  );
+
   const visibleAdminItems = adminItems.filter(
     (item) => !item.roles || item.roles.some((role) => hasRole(role))
   );
+
 
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
@@ -118,6 +128,33 @@ export const Sidebar: React.FC = () => {
                   Creador
                 </p>
                 {visibleCreatorItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.href}
+                      to={item.href}
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                        isActive(item.href)
+                          ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                          : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                      )}
+                    >
+                      <Icon className="h-5 w-5" />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </>
+            )}
+
+            {visibleLeaderItems.length > 0 && (
+              <>
+                <Separator className="my-4 bg-sidebar-border" />
+                <p className="px-3 mb-2 text-xs font-semibold uppercase text-sidebar-foreground/50">
+                  Líder
+                </p>
+                {visibleLeaderItems.map((item) => {
                   const Icon = item.icon;
                   return (
                     <Link
