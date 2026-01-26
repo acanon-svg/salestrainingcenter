@@ -5,8 +5,8 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Clock, Users, Star, BookOpen, Trophy, Calendar } from "lucide-react";
-import { format, isPast } from "date-fns";
+import { Clock, Users, Star, BookOpen, Trophy, Calendar, Timer } from "lucide-react";
+import { format, isPast, isFuture } from "date-fns";
 import { es } from "date-fns/locale";
 
 interface CourseCardProps {
@@ -26,6 +26,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   onEnroll,
 }) => {
   const isExpired = course.expires_at && isPast(new Date(course.expires_at));
+  const isScheduled = course.scheduled_at && isFuture(new Date(course.scheduled_at)) && course.status === "draft";
 
   const getDimensionColor = (dimension: string) => {
     switch (dimension) {
@@ -100,6 +101,18 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             </Badge>
           </div>
         )}
+
+        {isScheduled && (
+          <div className="absolute inset-0 bg-background/80 flex items-center justify-center flex-col gap-2">
+            <Badge className="bg-addi-cyan text-secondary text-sm gap-1">
+              <Timer className="w-3 h-3" />
+              Programado
+            </Badge>
+            <span className="text-xs text-muted-foreground">
+              {format(new Date(course.scheduled_at!), "d MMM yyyy, HH:mm", { locale: es })}
+            </span>
+          </div>
+        )}
       </div>
 
       <CardHeader className="pb-2">
@@ -129,6 +142,12 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             <span className="flex items-center gap-1">
               <Calendar className="w-3 h-3" />
               Vence: {format(new Date(course.expires_at), "d MMM", { locale: es })}
+            </span>
+          )}
+          {isScheduled && (
+            <span className="flex items-center gap-1 text-addi-cyan">
+              <Timer className="w-3 h-3" />
+              Publica: {format(new Date(course.scheduled_at!), "d MMM", { locale: es })}
             </span>
           )}
         </div>

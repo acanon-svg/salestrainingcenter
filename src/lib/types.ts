@@ -56,6 +56,7 @@ export interface Course {
   tags: string[] | null;
   objectives: string[] | null;
   expires_at: string | null;
+  scheduled_at: string | null;
   published_at: string | null;
   created_by: string | null;
   created_at: string;

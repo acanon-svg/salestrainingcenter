@@ -17,6 +17,7 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
+  Timer,
 } from "lucide-react";
 import { statusLabels, dimensionLabels } from "@/lib/types";
 import { format } from "date-fns";
@@ -33,6 +34,7 @@ const mockMyCourses = [
     avg_score: 87,
     created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30).toISOString(),
     published_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 25).toISOString(),
+    scheduled_at: null,
   },
   {
     id: "2",
@@ -43,6 +45,7 @@ const mockMyCourses = [
     avg_score: 92,
     created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 60).toISOString(),
     published_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 55).toISOString(),
+    scheduled_at: null,
   },
   {
     id: "3",
@@ -53,6 +56,7 @@ const mockMyCourses = [
     avg_score: null,
     created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(),
     published_at: null,
+    scheduled_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 3).toISOString(), // Scheduled in 3 days
   },
   {
     id: "4",
@@ -63,13 +67,38 @@ const mockMyCourses = [
     avg_score: 78,
     created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 90).toISOString(),
     published_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 85).toISOString(),
+    scheduled_at: null,
+  },
+  {
+    id: "5",
+    title: "Nuevas Políticas de Crédito",
+    status: "draft",
+    dimension: "refuerzo",
+    enrolled_count: 0,
+    avg_score: null,
+    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
+    published_at: null,
+    scheduled_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(), // Scheduled in 7 days
   },
 ];
 
 const MyCourses: React.FC = () => {
   const { profile } = useAuth();
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, scheduled_at?: string | null) => {
+    // Check if it's a scheduled course
+    if (status === "draft" && scheduled_at) {
+      const scheduledDate = new Date(scheduled_at);
+      if (scheduledDate > new Date()) {
+        return (
+          <Badge className="bg-addi-cyan text-secondary gap-1">
+            <Timer className="w-3 h-3" />
+            Programado
+          </Badge>
+        );
+      }
+    }
+
     switch (status) {
       case "published":
         return (
@@ -98,7 +127,8 @@ const MyCourses: React.FC = () => {
   };
 
   const publishedCourses = mockMyCourses.filter((c) => c.status === "published");
-  const draftCourses = mockMyCourses.filter((c) => c.status === "draft");
+  const draftCourses = mockMyCourses.filter((c) => c.status === "draft" && !c.scheduled_at);
+  const scheduledCourses = mockMyCourses.filter((c) => c.status === "draft" && c.scheduled_at && new Date(c.scheduled_at) > new Date());
   const archivedCourses = mockMyCourses.filter((c) => c.status === "archived");
 
   const totalEnrolled = mockMyCourses.reduce((sum, c) => sum + c.enrolled_count, 0);
@@ -194,6 +224,10 @@ const MyCourses: React.FC = () => {
             <TabsTrigger value="published">
               Publicados ({publishedCourses.length})
             </TabsTrigger>
+            <TabsTrigger value="scheduled">
+              <Timer className="w-3 h-3 mr-1" />
+              Programados ({scheduledCourses.length})
+            </TabsTrigger>
             <TabsTrigger value="draft">
               Borradores ({draftCourses.length})
             </TabsTrigger>
@@ -202,13 +236,17 @@ const MyCourses: React.FC = () => {
             </TabsTrigger>
           </TabsList>
 
-          {["all", "published", "draft", "archived"].map((tab) => (
+          {["all", "published", "scheduled", "draft", "archived"].map((tab) => (
             <TabsContent key={tab} value={tab} className="mt-6">
               <Card className="border-border/50">
                 <CardContent className="p-0">
                   <div className="divide-y divide-border">
                     {(tab === "all"
                       ? mockMyCourses
+                      : tab === "scheduled"
+                      ? scheduledCourses
+                      : tab === "draft"
+                      ? draftCourses
                       : mockMyCourses.filter((c) => c.status === tab)
                     ).map((course) => (
                       <div
@@ -218,7 +256,7 @@ const MyCourses: React.FC = () => {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-3 mb-1">
                             <h3 className="font-medium truncate">{course.title}</h3>
-                            {getStatusBadge(course.status)}
+                            {getStatusBadge(course.status, course.scheduled_at)}
                             <Badge variant="outline" className="text-xs">
                               {dimensionLabels[course.dimension as keyof typeof dimensionLabels]}
                             </Badge>
@@ -228,6 +266,12 @@ const MyCourses: React.FC = () => {
                               Creado:{" "}
                               {format(new Date(course.created_at), "d MMM yyyy", { locale: es })}
                             </span>
+                            {course.scheduled_at && new Date(course.scheduled_at) > new Date() && (
+                              <span className="flex items-center gap-1 text-addi-cyan">
+                                <Timer className="w-3 h-3" />
+                                Publica: {format(new Date(course.scheduled_at), "d MMM yyyy, HH:mm", { locale: es })}
+                              </span>
+                            )}
                             {course.enrolled_count > 0 && (
                               <span className="flex items-center gap-1">
                                 <Users className="w-3 h-3" />
