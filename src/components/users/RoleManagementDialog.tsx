@@ -24,11 +24,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Shield, BookOpen, Crown, Users, Check, ChevronsUpDown, Plus } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Loader2, Shield, BookOpen, Crown, Users, Check, ChevronsUpDown, Plus, Building, MapPin, UsersRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUserRoles, useAddRole, useRemoveRole, AppRole } from "@/hooks/useUserRoles";
 import { useLeaderRegion, useAssignLeaderRegion, useRemoveLeaderRegion } from "@/hooks/useLeaderRegion";
 import { useRegionals } from "@/hooks/useRegionals";
+import { useUpdateProfile } from "@/hooks/useUpdateProfile";
 
 interface RoleManagementDialogProps {
   open: boolean;
@@ -37,7 +39,11 @@ interface RoleManagementDialogProps {
     user_id: string;
     full_name: string | null;
     email: string;
+    company_role?: string | null;
+    team?: string | null;
+    regional?: string | null;
   } | null;
+  onProfileUpdated?: () => void;
 }
 
 const roleConfig: { role: AppRole; label: string; description: string; icon: React.ElementType }[] = [
@@ -71,6 +77,7 @@ export const RoleManagementDialog: React.FC<RoleManagementDialogProps> = ({
   open,
   onOpenChange,
   user,
+  onProfileUpdated,
 }) => {
   const { data: userRoles, isLoading: rolesLoading } = useUserRoles(user?.user_id);
   const { data: leaderRegion, isLoading: regionLoading } = useLeaderRegion(user?.user_id);
@@ -80,10 +87,30 @@ export const RoleManagementDialog: React.FC<RoleManagementDialogProps> = ({
   const removeRole = useRemoveRole();
   const assignRegion = useAssignLeaderRegion();
   const removeRegion = useRemoveLeaderRegion();
+  const updateProfile = useUpdateProfile();
 
+  // Profile fields state
+  const [companyRole, setCompanyRole] = useState<string>("");
+  const [team, setTeam] = useState<string>("");
+  const [profileRegional, setProfileRegional] = useState<string>("");
+  
+  // Leader region state
   const [selectedRegional, setSelectedRegional] = useState<string>("");
   const [regionalOpen, setRegionalOpen] = useState(false);
   const [newRegionalInput, setNewRegionalInput] = useState("");
+  
+  // Profile region combobox state
+  const [profileRegionalOpen, setProfileRegionalOpen] = useState(false);
+  const [newProfileRegionalInput, setNewProfileRegionalInput] = useState("");
+
+  // Initialize profile fields when user changes
+  useEffect(() => {
+    if (user) {
+      setCompanyRole(user.company_role || "");
+      setTeam(user.team || "");
+      setProfileRegional(user.regional || "");
+    }
+  }, [user]);
 
   useEffect(() => {
     if (leaderRegion?.regional) {
@@ -101,12 +128,26 @@ export const RoleManagementDialog: React.FC<RoleManagementDialogProps> = ({
   const canCreateNew = newRegionalInput.trim() && 
     !regionals?.some((r) => r.toLowerCase() === newRegionalInput.toLowerCase().trim());
 
+  // For profile regional field
+  const matchingProfileRegionals = regionals?.filter((r) =>
+    r.toLowerCase().includes(newProfileRegionalInput.toLowerCase())
+  ) || [];
+  
+  const canCreateNewProfileRegional = newProfileRegionalInput.trim() && 
+    !regionals?.some((r) => r.toLowerCase() === newProfileRegionalInput.toLowerCase().trim());
+
   if (!user) return null;
 
   const currentRoles = userRoles?.map((r) => r.role) || [];
   const isLeader = currentRoles.includes("lider");
   const isLoading = rolesLoading || regionLoading || regionalsLoading;
-  const isSaving = addRole.isPending || removeRole.isPending || assignRegion.isPending || removeRegion.isPending;
+  const isSaving = addRole.isPending || removeRole.isPending || assignRegion.isPending || removeRegion.isPending || updateProfile.isPending;
+
+  // Check if profile has changed
+  const profileChanged = 
+    companyRole !== (user.company_role || "") ||
+    team !== (user.team || "") ||
+    profileRegional !== (user.regional || "");
 
   const handleRoleToggle = async (role: AppRole, checked: boolean) => {
     if (checked) {
@@ -129,11 +170,25 @@ export const RoleManagementDialog: React.FC<RoleManagementDialogProps> = ({
     }
   };
 
+  const handleProfileRegionalChange = (value: string) => {
+    setProfileRegional(value);
+  };
+
+  const handleSaveProfile = async () => {
+    await updateProfile.mutateAsync({
+      userId: user.user_id,
+      company_role: companyRole || null,
+      team: team || null,
+      regional: profileRegional || null,
+    });
+    onProfileUpdated?.();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Gestionar Roles</DialogTitle>
+          <DialogTitle>Gestionar Usuario</DialogTitle>
           <DialogDescription>
             {user.full_name || user.email}
           </DialogDescription>
@@ -145,9 +200,157 @@ export const RoleManagementDialog: React.FC<RoleManagementDialogProps> = ({
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Roles */}
+            {/* Profile Information Section */}
             <div className="space-y-4">
-              <Label className="text-sm font-medium">Roles asignados</Label>
+              <div className="flex items-center gap-2">
+                <Building className="h-4 w-4 text-primary" />
+                <Label className="text-sm font-medium">Información del Perfil</Label>
+              </div>
+              
+              {/* Cargo Field */}
+              <div className="space-y-2">
+                <Label htmlFor="company_role" className="text-sm text-muted-foreground">
+                  Cargo
+                </Label>
+                <Input
+                  id="company_role"
+                  placeholder="Ej: Ejecutivo Comercial, Gerente..."
+                  value={companyRole}
+                  onChange={(e) => setCompanyRole(e.target.value)}
+                  disabled={isSaving}
+                />
+              </div>
+
+              {/* Equipo Field */}
+              <div className="space-y-2">
+                <Label htmlFor="team" className="text-sm text-muted-foreground flex items-center gap-1">
+                  <UsersRound className="h-3 w-3" />
+                  Equipo
+                </Label>
+                <Input
+                  id="team"
+                  placeholder="Ej: Ventas B2B, Marketing..."
+                  value={team}
+                  onChange={(e) => setTeam(e.target.value)}
+                  disabled={isSaving}
+                />
+              </div>
+
+              {/* Regional Field (Profile) */}
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  Regional
+                </Label>
+                <Popover open={profileRegionalOpen} onOpenChange={setProfileRegionalOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={profileRegionalOpen}
+                      className="w-full justify-between font-normal"
+                      disabled={isSaving}
+                    >
+                      {profileRegional || "Seleccionar o crear regional..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" align="start">
+                    <Command>
+                      <CommandInput
+                        placeholder="Buscar o crear regional..."
+                        value={newProfileRegionalInput}
+                        onValueChange={setNewProfileRegionalInput}
+                      />
+                      <CommandList>
+                        <CommandEmpty>
+                          {newProfileRegionalInput.trim() ? (
+                            <div className="p-2 text-sm text-muted-foreground">
+                              No se encontró "{newProfileRegionalInput}"
+                            </div>
+                          ) : (
+                            <div className="p-2 text-sm text-muted-foreground">
+                              No hay regionales. Escribe para crear una.
+                            </div>
+                          )}
+                        </CommandEmpty>
+                        
+                        {/* Create new option */}
+                        {canCreateNewProfileRegional && (
+                          <CommandGroup heading="Crear nueva">
+                            <CommandItem
+                              value={`create-profile-${newProfileRegionalInput.trim()}`}
+                              onSelect={() => {
+                                const newRegion = newProfileRegionalInput.trim();
+                                handleProfileRegionalChange(newRegion);
+                                setNewProfileRegionalInput("");
+                                setProfileRegionalOpen(false);
+                              }}
+                            >
+                              <Plus className="mr-2 h-4 w-4" />
+                              Crear "{newProfileRegionalInput.trim()}"
+                            </CommandItem>
+                          </CommandGroup>
+                        )}
+                        
+                        {/* Existing regionals */}
+                        {matchingProfileRegionals.length > 0 && (
+                          <CommandGroup heading="Regionales existentes">
+                            {matchingProfileRegionals.map((regional) => (
+                              <CommandItem
+                                key={regional}
+                                value={regional}
+                                onSelect={() => {
+                                  handleProfileRegionalChange(regional);
+                                  setNewProfileRegionalInput("");
+                                  setProfileRegionalOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    profileRegional === regional ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {regional}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        )}
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Save Profile Button */}
+              {profileChanged && (
+                <Button 
+                  onClick={handleSaveProfile} 
+                  disabled={isSaving}
+                  className="w-full"
+                  variant="secondary"
+                >
+                  {updateProfile.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Guardando...
+                    </>
+                  ) : (
+                    "Guardar cambios del perfil"
+                  )}
+                </Button>
+              )}
+            </div>
+
+            <Separator />
+
+            {/* Roles Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-primary" />
+                <Label className="text-sm font-medium">Roles asignados</Label>
+              </div>
               
               {roleConfig.map(({ role, label, description, icon: Icon }) => (
                 <div
@@ -184,9 +387,9 @@ export const RoleManagementDialog: React.FC<RoleManagementDialogProps> = ({
             {/* Regional assignment for leaders */}
             {isLeader && (
               <div className="space-y-3 pt-4 border-t">
-                <Label className="text-sm font-medium">Región del Líder</Label>
+                <Label className="text-sm font-medium">Región del Líder (supervisión)</Label>
                 <p className="text-xs text-muted-foreground">
-                  Selecciona una región existente o escribe para crear una nueva
+                  Define qué región puede supervisar este líder
                 </p>
                 <Popover open={regionalOpen} onOpenChange={setRegionalOpen}>
                   <PopoverTrigger asChild>
@@ -269,7 +472,7 @@ export const RoleManagementDialog: React.FC<RoleManagementDialogProps> = ({
                 </Popover>
                 {selectedRegional && (
                   <p className="text-xs text-green-600">
-                    ✓ Región asignada: {selectedRegional}
+                    ✓ Región de supervisión: {selectedRegional}
                   </p>
                 )}
               </div>
