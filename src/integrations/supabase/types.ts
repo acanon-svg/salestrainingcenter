@@ -555,6 +555,47 @@ export type Database = {
         }
         Relationships: []
       }
+      material_categories: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          order_index: number | null
+          parent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          order_index?: number | null
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          order_index?: number | null
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "material_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "material_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       material_feedback: {
         Row: {
           created_at: string
@@ -905,6 +946,7 @@ export type Database = {
       }
       training_materials: {
         Row: {
+          category_id: string | null
           content_text: string | null
           content_url: string | null
           created_at: string
@@ -919,6 +961,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          category_id?: string | null
           content_text?: string | null
           content_url?: string | null
           created_at?: string
@@ -933,6 +976,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          category_id?: string | null
           content_text?: string | null
           content_url?: string | null
           created_at?: string
@@ -946,7 +990,15 @@ export type Database = {
           type?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "training_materials_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "material_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_badges: {
         Row: {
