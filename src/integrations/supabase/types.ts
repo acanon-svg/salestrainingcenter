@@ -538,6 +538,39 @@ export type Database = {
         }
         Relationships: []
       }
+      glossary_terms: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          definition: string
+          example: string | null
+          id: string
+          related_terms: string[] | null
+          term: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          definition: string
+          example?: string | null
+          id?: string
+          related_terms?: string[] | null
+          term: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          definition?: string
+          example?: string | null
+          id?: string
+          related_terms?: string[] | null
+          term?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       leader_regions: {
         Row: {
           assigned_by: string | null

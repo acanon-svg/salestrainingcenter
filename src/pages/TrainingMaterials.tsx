@@ -9,6 +9,7 @@ import { MaterialViewer } from "@/components/materials/MaterialViewer";
 import { MaterialForm } from "@/components/materials/MaterialForm";
 import { CategoryManager } from "@/components/materials/CategoryManager";
 import { TagManager } from "@/components/materials/TagManager";
+import { GlossaryManager } from "@/components/glossary/GlossaryManager";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -31,7 +32,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, Video, FileText, Link as LinkIcon, FolderOpen, Loader2, Folder, ChevronRight, ChevronDown, Settings, Tag, X, List } from "lucide-react";
+import { Plus, Search, Video, FileText, Link as LinkIcon, FolderOpen, Loader2, Folder, ChevronRight, ChevronDown, Settings, Tag, X, List, BookOpen } from "lucide-react";
 
 const TrainingMaterials: React.FC = () => {
   const { hasRole } = useAuth();
@@ -53,6 +54,7 @@ const TrainingMaterials: React.FC = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
   const [isTagManagerOpen, setIsTagManagerOpen] = useState(false);
+  const [isGlossaryOpen, setIsGlossaryOpen] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   // Search by keywords in title, description, content, and keywords array
@@ -218,6 +220,10 @@ const TrainingMaterials: React.FC = () => {
           <div className="flex gap-2">
             {isCreator && (
               <>
+                <Button variant="outline" onClick={() => setIsGlossaryOpen(true)}>
+                  <BookOpen className="h-4 w-4 mr-2" />
+                  Glosario
+                </Button>
                 <Button variant="outline" onClick={() => setIsTagManagerOpen(true)}>
                   <Tag className="h-4 w-4 mr-2" />
                   Etiquetas
@@ -565,6 +571,12 @@ const TrainingMaterials: React.FC = () => {
       <TagManager
         open={isTagManagerOpen}
         onOpenChange={setIsTagManagerOpen}
+      />
+
+      {/* Glossary Manager Modal */}
+      <GlossaryManager
+        open={isGlossaryOpen}
+        onOpenChange={setIsGlossaryOpen}
       />
 
       {/* Delete Confirmation Dialog */}
