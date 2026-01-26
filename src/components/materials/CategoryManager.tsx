@@ -40,6 +40,28 @@ import {
   useDeleteMaterialCategory,
 } from "@/hooks/useMaterialCategories";
 
+// Predefined colors for categories
+const CATEGORY_COLORS = [
+  "#6366f1", // Indigo
+  "#8b5cf6", // Violet
+  "#a855f7", // Purple
+  "#d946ef", // Fuchsia
+  "#ec4899", // Pink
+  "#f43f5e", // Rose
+  "#ef4444", // Red
+  "#f97316", // Orange
+  "#f59e0b", // Amber
+  "#eab308", // Yellow
+  "#84cc16", // Lime
+  "#22c55e", // Green
+  "#10b981", // Emerald
+  "#14b8a6", // Teal
+  "#06b6d4", // Cyan
+  "#0ea5e9", // Sky
+  "#3b82f6", // Blue
+  "#6b7280", // Gray
+];
+
 interface CategoryManagerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -71,6 +93,7 @@ const CategoryItem: React.FC<CategoryItemProps> = ({
             "flex items-center gap-2 py-2 px-2 rounded-md hover:bg-accent group",
             level > 0 && "ml-4"
           )}
+          style={{ borderLeft: level > 0 ? `3px solid ${category.color}` : undefined }}
         >
           <CollapsibleTrigger asChild disabled={!hasChildren}>
             <Button variant="ghost" size="icon" className="h-6 w-6 p-0">
@@ -86,10 +109,15 @@ const CategoryItem: React.FC<CategoryItemProps> = ({
             </Button>
           </CollapsibleTrigger>
 
+          <div 
+            className="w-4 h-4 rounded-full shrink-0" 
+            style={{ backgroundColor: category.color }}
+          />
+
           {isOpen && hasChildren ? (
-            <FolderOpen className="h-4 w-4 text-amber-500" />
+            <FolderOpen className="h-4 w-4" style={{ color: category.color }} />
           ) : (
-            <Folder className="h-4 w-4 text-amber-500" />
+            <Folder className="h-4 w-4" style={{ color: category.color }} />
           )}
 
           <span className="flex-1 text-sm font-medium truncate">{category.name}</span>
@@ -159,12 +187,14 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formName, setFormName] = useState("");
   const [formDescription, setFormDescription] = useState("");
+  const [formColor, setFormColor] = useState(CATEGORY_COLORS[0]);
 
   const handleAddRoot = () => {
     setEditingCategory(null);
     setParentIdForNew(null);
     setFormName("");
     setFormDescription("");
+    setFormColor(CATEGORY_COLORS[Math.floor(Math.random() * CATEGORY_COLORS.length)]);
     setIsFormOpen(true);
   };
 
@@ -173,6 +203,9 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
     setParentIdForNew(parentId);
     setFormName("");
     setFormDescription("");
+    // Inherit parent color or random
+    const parentCat = categories?.flat.find(c => c.id === parentId);
+    setFormColor(parentCat?.color || CATEGORY_COLORS[Math.floor(Math.random() * CATEGORY_COLORS.length)]);
     setIsFormOpen(true);
   };
 
@@ -181,6 +214,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
     setParentIdForNew(null);
     setFormName(category.name);
     setFormDescription(category.description || "");
+    setFormColor(category.color || CATEGORY_COLORS[0]);
     setIsFormOpen(true);
   };
 
@@ -192,18 +226,21 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
         id: editingCategory.id,
         name: formName,
         description: formDescription || undefined,
+        color: formColor,
       });
     } else {
       await createMutation.mutateAsync({
         name: formName,
         description: formDescription || undefined,
         parent_id: parentIdForNew || undefined,
+        color: formColor,
       });
     }
 
     setIsFormOpen(false);
     setFormName("");
     setFormDescription("");
+    setFormColor(CATEGORY_COLORS[0]);
     setEditingCategory(null);
     setParentIdForNew(null);
   };
@@ -224,7 +261,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
           <DialogHeader>
             <DialogTitle>Gestionar Categorías</DialogTitle>
             <DialogDescription>
-              Organiza el material formativo en categorías y subcategorías.
+              Organiza el material formativo en categorías y subcategorías con colores distintivos.
             </DialogDescription>
           </DialogHeader>
 
@@ -298,6 +335,24 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
                 onChange={(e) => setFormDescription(e.target.value)}
                 placeholder="Descripción opcional"
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Color de la categoría</Label>
+              <div className="flex flex-wrap gap-2">
+                {CATEGORY_COLORS.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    className={cn(
+                      "w-8 h-8 rounded-full border-2 transition-all hover:scale-110",
+                      formColor === color ? "border-foreground ring-2 ring-offset-2 ring-foreground" : "border-transparent"
+                    )}
+                    style={{ backgroundColor: color }}
+                    onClick={() => setFormColor(color)}
+                    title={color}
+                  />
+                ))}
+              </div>
             </div>
           </div>
 
