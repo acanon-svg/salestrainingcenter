@@ -12,6 +12,7 @@ import { ThumbsUp, ThumbsDown, ExternalLink, Video, FileText, Link as LinkIcon }
 import { TrainingMaterial, useMaterialFeedback } from "@/hooks/useTrainingMaterials";
 import { useMaterialTags } from "@/hooks/useMaterialTags";
 import { GoogleDocEmbed, isGoogleUrl } from "./GoogleDocEmbed";
+import { KeywordsGlossary } from "@/components/glossary/KeywordsGlossary";
 import { cn } from "@/lib/utils";
 
 interface MaterialViewerProps {
@@ -244,6 +245,9 @@ export const MaterialViewer: React.FC<MaterialViewerProps> = ({
         <div className="mt-4">
           {renderContent()}
         </div>
+
+        {/* Glossary Section */}
+        <KeywordsGlossary keywords={material.keywords} className="mt-4" />
 
         {showFeedback && (
           <div className="flex items-center justify-center gap-4 mt-6 pt-6 border-t">

@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { KeywordsGlossary } from "@/components/glossary/KeywordsGlossary";
 import { 
   ArrowLeft, 
   Play, 
@@ -466,6 +467,11 @@ const CourseDetail: React.FC = () => {
                   )}
                 </CardContent>
               </Card>
+            )}
+
+            {/* Glossary Section */}
+            {course && (
+              <KeywordsGlossary keywords={course.tags} className="mt-4" />
             )}
           </div>
 
