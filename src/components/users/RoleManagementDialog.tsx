@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, Shield, BookOpen, Crown, Users, Check, ChevronsUpDown, Plus, Building, MapPin, UsersRound } from "lucide-react";
+import { Loader2, Shield, BookOpen, Crown, Users, Check, ChevronsUpDown, Plus, Building, MapPin, UsersRound, LineChart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUserRoles, useAddRole, useRemoveRole, AppRole } from "@/hooks/useUserRoles";
 import { useLeaderRegion, useAssignLeaderRegion, useRemoveLeaderRegion } from "@/hooks/useLeaderRegion";
@@ -58,6 +58,12 @@ const roleConfig: { role: AppRole; label: string; description: string; icon: Rea
     label: "Líder",
     description: "Supervisión de equipo y métricas regionales",
     icon: Users,
+  },
+  {
+    role: "analista",
+    label: "Analista",
+    description: "Acceso de solo lectura a reportes de todos los equipos",
+    icon: LineChart,
   },
   {
     role: "creator",

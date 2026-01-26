@@ -51,7 +51,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 // Role-based Route Component
 const RoleRoute: React.FC<{ 
   children: React.ReactNode; 
-  allowedRoles: ("student" | "creator" | "admin" | "lider")[];
+  allowedRoles: ("student" | "creator" | "admin" | "lider" | "analista")[];
 }> = ({ children, allowedRoles }) => {
   const { user, roles, isLoading, hasRole } = useAuth();
 
@@ -219,7 +219,7 @@ const AppRoutes = () => {
       <Route
         path="/reports"
         element={
-          <RoleRoute allowedRoles={["admin", "lider"]}>
+          <RoleRoute allowedRoles={["admin", "lider", "analista"]}>
             <Reports />
           </RoleRoute>
         }

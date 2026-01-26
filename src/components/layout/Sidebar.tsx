@@ -27,7 +27,7 @@ interface NavItem {
   label: string;
   icon: React.ElementType;
   href: string;
-  roles?: ("student" | "creator" | "admin" | "lider")[];
+  roles?: ("student" | "creator" | "admin" | "lider" | "analista")[];
 }
 
 const navItems: NavItem[] = [
@@ -48,6 +48,10 @@ const creatorItems: NavItem[] = [
 const leaderItems: NavItem[] = [
   { label: "Mi Equipo", icon: Users, href: "/team", roles: ["lider"] },
   { label: "Reportes Regional", icon: BarChart3, href: "/reports", roles: ["lider"] },
+];
+
+const analistaItems: NavItem[] = [
+  { label: "Reportes", icon: BarChart3, href: "/reports", roles: ["analista"] },
 ];
 
 const adminItems: NavItem[] = [
@@ -77,6 +81,10 @@ export const Sidebar: React.FC = () => {
   );
 
   const visibleLeaderItems = leaderItems.filter(
+    (item) => !item.roles || item.roles.some((role) => hasRole(role))
+  );
+
+  const visibleAnalistaItems = analistaItems.filter(
     (item) => !item.roles || item.roles.some((role) => hasRole(role))
   );
 
@@ -159,6 +167,33 @@ export const Sidebar: React.FC = () => {
                   return (
                     <Link
                       key={item.href}
+                      to={item.href}
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                        isActive(item.href)
+                          ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                          : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                      )}
+                    >
+                      <Icon className="h-5 w-5" />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </>
+            )}
+
+            {visibleAnalistaItems.length > 0 && (
+              <>
+                <Separator className="my-4 bg-sidebar-border" />
+                <p className="px-3 mb-2 text-xs font-semibold uppercase text-sidebar-foreground/50">
+                  Analista
+                </p>
+                {visibleAnalistaItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={`analista-${item.href}`}
                       to={item.href}
                       className={cn(
                         "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
