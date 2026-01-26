@@ -9,6 +9,7 @@ export interface MaterialCategory {
   description: string | null;
   parent_id: string | null;
   order_index: number;
+  color: string;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -65,13 +66,14 @@ export function useCreateMaterialCategory() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async (category: { name: string; description?: string; parent_id?: string }) => {
+    mutationFn: async (category: { name: string; description?: string; parent_id?: string; color?: string }) => {
       const { data, error } = await supabase
         .from("material_categories")
         .insert({
           name: category.name,
           description: category.description || null,
           parent_id: category.parent_id || null,
+          color: category.color || "#6366f1",
           created_by: user?.id,
         })
         .select()
@@ -103,7 +105,7 @@ export function useUpdateMaterialCategory() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; name?: string; description?: string; parent_id?: string | null }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; name?: string; description?: string; parent_id?: string | null; color?: string }) => {
       const { data, error } = await supabase
         .from("material_categories")
         .update(updates)

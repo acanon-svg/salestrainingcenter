@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTrainingMaterials, useDeleteTrainingMaterial, TrainingMaterial } from "@/hooks/useTrainingMaterials";
 import { useMaterialCategories, MaterialCategory } from "@/hooks/useMaterialCategories";
 import { useMaterialTags } from "@/hooks/useMaterialTags";
-import { MaterialCard } from "@/components/materials/MaterialCard";
+import { MaterialListItem } from "@/components/materials/MaterialListItem";
 import { MaterialViewer } from "@/components/materials/MaterialViewer";
 import { MaterialForm } from "@/components/materials/MaterialForm";
 import { CategoryManager } from "@/components/materials/CategoryManager";
@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, Video, FileText, Link as LinkIcon, FolderOpen, Loader2, Folder, ChevronRight, ChevronDown, Settings, Tag, X } from "lucide-react";
+import { Plus, Search, Video, FileText, Link as LinkIcon, FolderOpen, Loader2, Folder, ChevronRight, ChevronDown, Settings, Tag, X, List } from "lucide-react";
 
 const TrainingMaterials: React.FC = () => {
   const { hasRole } = useAuth();
@@ -140,6 +140,12 @@ const TrainingMaterials: React.FC = () => {
   const documentMaterials = filteredMaterials?.filter((m) => m.type === "documento") || [];
   const linkMaterials = filteredMaterials?.filter((m) => m.type === "link") || [];
 
+  // Helper to get category by ID
+  const getCategoryById = (id: string | null): MaterialCategory | undefined => {
+    if (!id) return undefined;
+    return categories?.flat.find((c) => c.id === id);
+  };
+
   // Render category with its materials
   const renderCategorySection = (category: MaterialCategory, level: number = 0) => {
     const categoryMaterials = materialsByCategory[category.id] || [];
@@ -158,25 +164,32 @@ const TrainingMaterials: React.FC = () => {
             <Button
               variant="ghost"
               className="w-full justify-start gap-2 mb-2 hover:bg-accent"
+              style={{ borderLeft: `4px solid ${category.color}` }}
             >
               {isExpanded ? (
                 <ChevronDown className="h-4 w-4" />
               ) : (
                 <ChevronRight className="h-4 w-4" />
               )}
-              <Folder className="h-4 w-4 text-amber-500" />
+              <div 
+                className="w-4 h-4 rounded-full shrink-0" 
+                style={{ backgroundColor: category.color }}
+              />
+              <Folder className="h-4 w-4" style={{ color: category.color }} />
               <span className="font-medium">{category.name}</span>
               <span className="text-muted-foreground text-sm">({totalMaterials})</span>
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent>
             {hasMaterials && (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-4">
+              <div className="space-y-2 mb-4">
                 {categoryMaterials.map((material) => (
-                  <MaterialCard
+                  <MaterialListItem
                     key={material.id}
                     material={material}
                     isCreator={isCreator}
+                    category={category}
+                    tags={tags || []}
                     onView={handleView}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
@@ -254,7 +267,13 @@ const TrainingMaterials: React.FC = () => {
                 <SelectItem value="uncategorized">Sin categoría</SelectItem>
                 {categories?.flat.map((cat) => (
                   <SelectItem key={cat.id} value={cat.id}>
-                    {cat.parent_id && "└ "}{cat.name}
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: cat.color }}
+                      />
+                      {cat.parent_id && "└ "}{cat.name}
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -301,8 +320,11 @@ const TrainingMaterials: React.FC = () => {
                 </Badge>
               )}
               {categoryFilter !== "all" && (
-                <Badge variant="secondary" className="gap-1">
-                  Categoría: {categoryFilter === "uncategorized" ? "Sin categoría" : categories?.flat.find((c) => c.id === categoryFilter)?.name}
+                <Badge 
+                  className="gap-1 text-white"
+                  style={{ backgroundColor: categoryFilter === "uncategorized" ? "#6b7280" : categories?.flat.find((c) => c.id === categoryFilter)?.color }}
+                >
+                  {categoryFilter === "uncategorized" ? "Sin categoría" : categories?.flat.find((c) => c.id === categoryFilter)?.name}
                   <button onClick={() => setCategoryFilter("all")}>
                     <X className="h-3 w-3" />
                   </button>
@@ -360,7 +382,7 @@ const TrainingMaterials: React.FC = () => {
           <Tabs defaultValue="all" className="space-y-6">
             <TabsList className="flex-wrap h-auto">
               <TabsTrigger value="all" className="gap-2">
-                <FolderOpen className="h-4 w-4" />
+                <List className="h-4 w-4" />
                 Todos ({filteredMaterials?.length || 0})
               </TabsTrigger>
               <TabsTrigger value="by-category" className="gap-2">
@@ -382,12 +404,14 @@ const TrainingMaterials: React.FC = () => {
             </TabsList>
 
             <TabsContent value="all">
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="space-y-2">
                 {filteredMaterials?.map((material) => (
-                  <MaterialCard
+                  <MaterialListItem
                     key={material.id}
                     material={material}
                     isCreator={isCreator}
+                    category={getCategoryById(material.category_id)}
+                    tags={tags || []}
                     onView={handleView}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
@@ -412,6 +436,7 @@ const TrainingMaterials: React.FC = () => {
                         <Button
                           variant="ghost"
                           className="w-full justify-start gap-2 mb-2 hover:bg-accent"
+                          style={{ borderLeft: "4px solid #6b7280" }}
                         >
                           {expandedCategories.has("uncategorized") ? (
                             <ChevronDown className="h-4 w-4" />
@@ -426,12 +451,13 @@ const TrainingMaterials: React.FC = () => {
                         </Button>
                       </CollapsibleTrigger>
                       <CollapsibleContent>
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        <div className="space-y-2">
                           {materialsByCategory.uncategorized.map((material) => (
-                            <MaterialCard
+                            <MaterialListItem
                               key={material.id}
                               material={material}
                               isCreator={isCreator}
+                              tags={tags || []}
                               onView={handleView}
                               onEdit={handleEdit}
                               onDelete={handleDelete}
@@ -446,12 +472,14 @@ const TrainingMaterials: React.FC = () => {
             </TabsContent>
 
             <TabsContent value="videos">
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="space-y-2">
                 {videoMaterials.map((material) => (
-                  <MaterialCard
+                  <MaterialListItem
                     key={material.id}
                     material={material}
                     isCreator={isCreator}
+                    category={getCategoryById(material.category_id)}
+                    tags={tags || []}
                     onView={handleView}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
@@ -466,12 +494,14 @@ const TrainingMaterials: React.FC = () => {
             </TabsContent>
 
             <TabsContent value="documents">
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="space-y-2">
                 {documentMaterials.map((material) => (
-                  <MaterialCard
+                  <MaterialListItem
                     key={material.id}
                     material={material}
                     isCreator={isCreator}
+                    category={getCategoryById(material.category_id)}
+                    tags={tags || []}
                     onView={handleView}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
@@ -486,12 +516,14 @@ const TrainingMaterials: React.FC = () => {
             </TabsContent>
 
             <TabsContent value="links">
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="space-y-2">
                 {linkMaterials.map((material) => (
-                  <MaterialCard
+                  <MaterialListItem
                     key={material.id}
                     material={material}
                     isCreator={isCreator}
+                    category={getCategoryById(material.category_id)}
+                    tags={tags || []}
                     onView={handleView}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
