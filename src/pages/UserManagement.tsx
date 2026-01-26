@@ -534,6 +534,7 @@ const UserManagement: React.FC = () => {
           open={isRoleDialogOpen}
           onOpenChange={setIsRoleDialogOpen}
           user={selectedUser}
+          onProfileUpdated={fetchUsers}
         />
           </TabsContent>
 
