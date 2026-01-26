@@ -20,26 +20,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { X, Upload, Loader2 } from "lucide-react";
+import { X, Upload, Loader2, Folder } from "lucide-react";
 import { TrainingMaterial, useCreateTrainingMaterial, useUpdateTrainingMaterial } from "@/hooks/useTrainingMaterials";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAvailableTeams } from "@/hooks/useCourseTargeting";
+import { useMaterialCategories } from "@/hooks/useMaterialCategories";
 
 interface MaterialFormProps {
   material?: TrainingMaterial | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
-const TEAM_OPTIONS = [
-  "Ventas",
-  "Operaciones",
-  "Tecnología",
-  "Recursos Humanos",
-  "Finanzas",
-  "Marketing",
-  "Servicio al Cliente",
-];
 
 export const MaterialForm: React.FC<MaterialFormProps> = ({
   material,
@@ -50,6 +42,8 @@ export const MaterialForm: React.FC<MaterialFormProps> = ({
   const createMutation = useCreateTrainingMaterial();
   const updateMutation = useUpdateTrainingMaterial();
   const { toast } = useToast();
+  const { data: availableTeams, isLoading: teamsLoading } = useAvailableTeams();
+  const { data: categories } = useMaterialCategories();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -57,6 +51,7 @@ export const MaterialForm: React.FC<MaterialFormProps> = ({
   const [contentUrl, setContentUrl] = useState("");
   const [contentText, setContentText] = useState("");
   const [targetTeams, setTargetTeams] = useState<string[]>([]);
+  const [categoryId, setCategoryId] = useState<string>("");
   const [isPublished, setIsPublished] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -68,6 +63,7 @@ export const MaterialForm: React.FC<MaterialFormProps> = ({
       setContentUrl(material.content_url || "");
       setContentText(material.content_text || "");
       setTargetTeams(material.target_teams || []);
+      setCategoryId(material.category_id || "");
       setIsPublished(material.is_published);
     } else {
       resetForm();
@@ -81,6 +77,7 @@ export const MaterialForm: React.FC<MaterialFormProps> = ({
     setContentUrl("");
     setContentText("");
     setTargetTeams([]);
+    setCategoryId("");
     setIsPublished(false);
   };
 
@@ -151,6 +148,7 @@ export const MaterialForm: React.FC<MaterialFormProps> = ({
       content_url: contentUrl || null,
       content_text: contentText || null,
       target_teams: targetTeams,
+      category_id: categoryId || null,
       is_published: isPublished,
       order_index: 0,
     };
@@ -314,14 +312,39 @@ export const MaterialForm: React.FC<MaterialFormProps> = ({
             </div>
           )}
 
+          {/* Category Selection */}
           <div className="space-y-2">
-            <Label>Equipos objetivo (dejar vacío para todos)</Label>
-            <Select onValueChange={addTeam}>
+            <Label>Categoría</Label>
+            <Select value={categoryId} onValueChange={setCategoryId}>
               <SelectTrigger>
-                <SelectValue placeholder="Seleccionar equipo..." />
+                <SelectValue placeholder="Seleccionar categoría...">
+                  {categoryId && categories?.flat.find((c) => c.id === categoryId)?.name}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {TEAM_OPTIONS.filter((t) => !targetTeams.includes(t)).map((team) => (
+                <SelectItem value="">Sin categoría</SelectItem>
+                {categories?.flat.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    <div className="flex items-center gap-2">
+                      <Folder className="h-3 w-3 text-amber-500" />
+                      {cat.parent_id && <span className="text-muted-foreground">└</span>}
+                      {cat.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Team Selection - Dynamic from profiles */}
+          <div className="space-y-2">
+            <Label>Equipos objetivo (dejar vacío para todos)</Label>
+            <Select onValueChange={addTeam} disabled={teamsLoading}>
+              <SelectTrigger>
+                <SelectValue placeholder={teamsLoading ? "Cargando equipos..." : "Seleccionar equipo..."} />
+              </SelectTrigger>
+              <SelectContent>
+                {availableTeams?.filter((t) => !targetTeams.includes(t)).map((team) => (
                   <SelectItem key={team} value={team}>
                     {team}
                   </SelectItem>

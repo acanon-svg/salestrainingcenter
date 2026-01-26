@@ -11,6 +11,7 @@ export interface TrainingMaterial {
   content_url: string | null;
   content_text: string | null;
   target_teams: string[];
+  category_id: string | null;
   is_published: boolean;
   order_index: number;
   created_by: string | null;
