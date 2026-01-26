@@ -961,7 +961,50 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      quiz_attempts_safe: {
+        Row: {
+          answers: Json | null
+          completed_at: string | null
+          created_at: string | null
+          id: string | null
+          passed: boolean | null
+          quiz_id: string | null
+          score: number | null
+          started_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          answers?: never
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string | null
+          passed?: boolean | null
+          quiz_id?: string | null
+          score?: number | null
+          started_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          answers?: never
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string | null
+          passed?: boolean | null
+          quiz_id?: string | null
+          score?: number | null
+          started_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_attempts_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       has_role: {
@@ -969,6 +1012,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_own_quiz_attempt: {
+        Args: { attempt_user_id: string }
         Returns: boolean
       }
     }
