@@ -3,12 +3,15 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTrainingMaterials, useDeleteTrainingMaterial, TrainingMaterial } from "@/hooks/useTrainingMaterials";
 import { useMaterialCategories, MaterialCategory } from "@/hooks/useMaterialCategories";
+import { useMaterialTags } from "@/hooks/useMaterialTags";
 import { MaterialCard } from "@/components/materials/MaterialCard";
 import { MaterialViewer } from "@/components/materials/MaterialViewer";
 import { MaterialForm } from "@/components/materials/MaterialForm";
 import { CategoryManager } from "@/components/materials/CategoryManager";
+import { TagManager } from "@/components/materials/TagManager";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -28,7 +31,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, Video, FileText, Link as LinkIcon, FolderOpen, Loader2, Folder, ChevronRight, ChevronDown, Settings } from "lucide-react";
+import { Plus, Search, Video, FileText, Link as LinkIcon, FolderOpen, Loader2, Folder, ChevronRight, ChevronDown, Settings, Tag, X } from "lucide-react";
 
 const TrainingMaterials: React.FC = () => {
   const { hasRole } = useAuth();
@@ -37,35 +40,43 @@ const TrainingMaterials: React.FC = () => {
   // For students, only show published materials
   const { data: materials, isLoading } = useTrainingMaterials({ onlyPublished: !isCreator });
   const { data: categories } = useMaterialCategories();
+  const { data: tags } = useMaterialTags();
   const deleteMutation = useDeleteTrainingMaterial();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [tagFilter, setTagFilter] = useState<string>("all");
   const [viewingMaterial, setViewingMaterial] = useState<TrainingMaterial | null>(null);
   const [editingMaterial, setEditingMaterial] = useState<TrainingMaterial | null>(null);
   const [deletingMaterial, setDeletingMaterial] = useState<TrainingMaterial | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
+  const [isTagManagerOpen, setIsTagManagerOpen] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
-  // Search by keywords in title, description, and content
+  // Search by keywords in title, description, content, and keywords array
   const filteredMaterials = useMemo(() => {
     return materials?.filter((material) => {
       const searchLower = searchQuery.toLowerCase();
+      const keywordsMatch = material.keywords?.some((k) => k.toLowerCase().includes(searchLower));
       const matchesSearch =
         !searchQuery ||
         material.title.toLowerCase().includes(searchLower) ||
         material.description?.toLowerCase().includes(searchLower) ||
-        material.content_text?.toLowerCase().includes(searchLower);
+        material.content_text?.toLowerCase().includes(searchLower) ||
+        keywordsMatch;
       const matchesType = typeFilter === "all" || material.type === typeFilter;
       const matchesCategory = 
         categoryFilter === "all" || 
         (categoryFilter === "uncategorized" && !material.category_id) ||
         material.category_id === categoryFilter;
-      return matchesSearch && matchesType && matchesCategory;
+      const matchesTag =
+        tagFilter === "all" ||
+        (material.tag_ids && material.tag_ids.includes(tagFilter));
+      return matchesSearch && matchesType && matchesCategory && matchesTag;
     });
-  }, [materials, searchQuery, typeFilter, categoryFilter]);
+  }, [materials, searchQuery, typeFilter, categoryFilter, tagFilter]);
 
   // Group materials by category for tree view
   const materialsByCategory = useMemo(() => {
@@ -194,6 +205,10 @@ const TrainingMaterials: React.FC = () => {
           <div className="flex gap-2">
             {isCreator && (
               <>
+                <Button variant="outline" onClick={() => setIsTagManagerOpen(true)}>
+                  <Tag className="h-4 w-4 mr-2" />
+                  Etiquetas
+                </Button>
                 <Button variant="outline" onClick={() => setIsCategoryManagerOpen(true)}>
                   <Settings className="h-4 w-4 mr-2" />
                   Categorías
@@ -208,41 +223,116 @@ const TrainingMaterials: React.FC = () => {
         </div>
 
         {/* Enhanced Search and Filters */}
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por palabras clave en título, descripción o contenido..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por palabras clave en título, descripción o contenido..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-full md:w-40">
+                <SelectValue placeholder="Tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los tipos</SelectItem>
+                <SelectItem value="video">Videos</SelectItem>
+                <SelectItem value="documento">Documentos</SelectItem>
+                <SelectItem value="link">Enlaces</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-full md:w-48">
+                <SelectValue placeholder="Categoría" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas las categorías</SelectItem>
+                <SelectItem value="uncategorized">Sin categoría</SelectItem>
+                {categories?.flat.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.parent_id && "└ "}{cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={tagFilter} onValueChange={setTagFilter}>
+              <SelectTrigger className="w-full md:w-48">
+                <SelectValue placeholder="Etiqueta" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas las etiquetas</SelectItem>
+                {tags?.map((tag) => (
+                  <SelectItem key={tag.id} value={tag.id}>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: tag.color }}
+                      />
+                      {tag.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-full md:w-48">
-              <SelectValue placeholder="Tipo de contenido" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos los tipos</SelectItem>
-              <SelectItem value="video">Videos</SelectItem>
-              <SelectItem value="documento">Documentos</SelectItem>
-              <SelectItem value="link">Enlaces</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-full md:w-48">
-              <SelectValue placeholder="Categoría" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas las categorías</SelectItem>
-              <SelectItem value="uncategorized">Sin categoría</SelectItem>
-              {categories?.flat.map((cat) => (
-                <SelectItem key={cat.id} value={cat.id}>
-                  {cat.parent_id && "└ "}{cat.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+
+          {/* Active Filters Display */}
+          {(typeFilter !== "all" || categoryFilter !== "all" || tagFilter !== "all" || searchQuery) && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-muted-foreground">Filtros activos:</span>
+              {searchQuery && (
+                <Badge variant="secondary" className="gap-1">
+                  Búsqueda: "{searchQuery}"
+                  <button onClick={() => setSearchQuery("")}>
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              )}
+              {typeFilter !== "all" && (
+                <Badge variant="secondary" className="gap-1">
+                  Tipo: {typeFilter}
+                  <button onClick={() => setTypeFilter("all")}>
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              )}
+              {categoryFilter !== "all" && (
+                <Badge variant="secondary" className="gap-1">
+                  Categoría: {categoryFilter === "uncategorized" ? "Sin categoría" : categories?.flat.find((c) => c.id === categoryFilter)?.name}
+                  <button onClick={() => setCategoryFilter("all")}>
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              )}
+              {tagFilter !== "all" && (
+                <Badge 
+                  className="gap-1 text-white"
+                  style={{ backgroundColor: tags?.find((t) => t.id === tagFilter)?.color }}
+                >
+                  {tags?.find((t) => t.id === tagFilter)?.name}
+                  <button onClick={() => setTagFilter("all")}>
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSearchQuery("");
+                  setTypeFilter("all");
+                  setCategoryFilter("all");
+                  setTagFilter("all");
+                }}
+              >
+                Limpiar filtros
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Content */}
@@ -437,6 +527,12 @@ const TrainingMaterials: React.FC = () => {
       <CategoryManager
         open={isCategoryManagerOpen}
         onOpenChange={setIsCategoryManagerOpen}
+      />
+
+      {/* Tag Manager Modal */}
+      <TagManager
+        open={isTagManagerOpen}
+        onOpenChange={setIsTagManagerOpen}
       />
 
       {/* Delete Confirmation Dialog */}

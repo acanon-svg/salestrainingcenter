@@ -663,6 +663,69 @@ export type Database = {
           },
         ]
       }
+      material_tag_assignments: {
+        Row: {
+          created_at: string
+          id: string
+          material_id: string
+          tag_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          material_id: string
+          tag_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          material_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "material_tag_assignments_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "training_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_tag_assignments_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "material_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      material_tags: {
+        Row: {
+          color: string
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          priority: number
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          priority?: number
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          priority?: number
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -954,6 +1017,7 @@ export type Database = {
           description: string | null
           id: string
           is_published: boolean | null
+          keywords: string[] | null
           order_index: number | null
           target_teams: string[] | null
           title: string
@@ -969,6 +1033,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_published?: boolean | null
+          keywords?: string[] | null
           order_index?: number | null
           target_teams?: string[] | null
           title: string
@@ -984,6 +1049,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_published?: boolean | null
+          keywords?: string[] | null
           order_index?: number | null
           target_teams?: string[] | null
           title?: string
