@@ -187,7 +187,7 @@ export const Sidebar: React.FC = () => {
               <>
                 <Separator className="my-4 bg-sidebar-border" />
                 <p className="px-3 mb-2 text-xs font-semibold uppercase text-sidebar-foreground/50">
-                  Analista
+                  Reporting & Data
                 </p>
                 {visibleAnalistaItems.map((item) => {
                   const Icon = item.icon;

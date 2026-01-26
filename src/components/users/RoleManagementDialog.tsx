@@ -61,7 +61,7 @@ const roleConfig: { role: AppRole; label: string; description: string; icon: Rea
   },
   {
     role: "analista",
-    label: "Analista",
+    label: "Reporting & Data",
     description: "Acceso de solo lectura a reportes de todos los equipos",
     icon: LineChart,
   },
