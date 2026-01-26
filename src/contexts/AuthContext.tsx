@@ -3,7 +3,7 @@ import { User, Session, SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-type AppRole = "student" | "creator" | "admin";
+type AppRole = "student" | "creator" | "admin" | "lider";
 
 interface Profile {
   id: string;

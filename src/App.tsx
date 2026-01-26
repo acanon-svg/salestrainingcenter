@@ -21,6 +21,7 @@ import Reports from "@/pages/Reports";
 import UserManagement from "@/pages/UserManagement";
 import NotFound from "@/pages/NotFound";
 import TrainingMaterials from "@/pages/TrainingMaterials";
+import Team from "@/pages/Team";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
@@ -50,7 +51,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 // Role-based Route Component
 const RoleRoute: React.FC<{ 
   children: React.ReactNode; 
-  allowedRoles: ("student" | "creator" | "admin")[];
+  allowedRoles: ("student" | "creator" | "admin" | "lider")[];
 }> = ({ children, allowedRoles }) => {
   const { user, roles, isLoading, hasRole } = useAuth();
 
@@ -204,11 +205,21 @@ const AppRoutes = () => {
         }
       />
       
+      {/* Leader Routes */}
+      <Route
+        path="/team"
+        element={
+          <RoleRoute allowedRoles={["lider"]}>
+            <Team />
+          </RoleRoute>
+        }
+      />
+      
       {/* Admin Routes */}
       <Route
         path="/reports"
         element={
-          <RoleRoute allowedRoles={["admin"]}>
+          <RoleRoute allowedRoles={["admin", "lider"]}>
             <Reports />
           </RoleRoute>
         }

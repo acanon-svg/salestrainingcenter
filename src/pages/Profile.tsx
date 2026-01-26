@@ -8,19 +8,28 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { User, Mail, Building, MapPin, Users, Moon, Sun, Save, Loader2 } from "lucide-react";
+import { User, Mail, Building, MapPin, Users, Moon, Sun, Save, Loader2, UserCog, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
 import { LevelBadge } from "@/components/gamification/LevelBadge";
+import { RoleManagementDialog } from "@/components/users/RoleManagementDialog";
+import { useQuery } from "@tanstack/react-query";
 
 // Helper to get untyped supabase client for tables not yet in types
 const getSupabaseClient = () => supabase as unknown as SupabaseClient;
 
 const Profile: React.FC = () => {
-  const { profile, roles } = useAuth();
+  const { profile, roles, hasRole } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [userSearch, setUserSearch] = useState("");
+  const [selectedUserForRoles, setSelectedUserForRoles] = useState<{
+    user_id: string;
+    full_name: string | null;
+    email: string;
+  } | null>(null);
+  const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(
     document.documentElement.classList.contains("dark")
   );
@@ -89,10 +98,37 @@ const Profile: React.FC = () => {
     }
   };
 
+  // Fetch users for admin role assignment
+  const isAdmin = hasRole("admin");
+  const { data: allUsers } = useQuery({
+    queryKey: ["all-users-for-roles"],
+    queryFn: async () => {
+      const client = getSupabaseClient();
+      const { data, error } = await client
+        .from("profiles")
+        .select("user_id, full_name, email")
+        .order("full_name");
+      if (error) throw error;
+      return data as { user_id: string; full_name: string | null; email: string }[];
+    },
+    enabled: isAdmin,
+  });
+
+  const filteredUsers = allUsers?.filter((u) => {
+    if (!userSearch) return true;
+    const search = userSearch.toLowerCase();
+    return (
+      u.email.toLowerCase().includes(search) ||
+      u.full_name?.toLowerCase().includes(search)
+    );
+  }) || [];
+
   const getRoleName = (role: string) => {
     switch (role) {
       case "student":
         return "Estudiante";
+      case "lider":
+        return "Líder";
       case "creator":
         return "Creador de Cursos";
       case "admin":
@@ -276,7 +312,70 @@ const Profile: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Admin: Role Assignment */}
+        {isAdmin && (
+          <Card className="border-border/50 border-primary/30">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserCog className="h-5 w-5 text-primary" />
+                Asignar Roles a Usuarios
+              </CardTitle>
+              <CardDescription>
+                Como administrador, puedes gestionar los roles de otros usuarios
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar usuario por nombre o email..."
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              
+              {userSearch && filteredUsers.length > 0 && (
+                <div className="border rounded-lg divide-y max-h-64 overflow-auto">
+                  {filteredUsers.slice(0, 10).map((user) => (
+                    <div
+                      key={user.user_id}
+                      className="flex items-center justify-between p-3 hover:bg-muted/50 cursor-pointer"
+                      onClick={() => {
+                        setSelectedUserForRoles(user);
+                        setIsRoleDialogOpen(true);
+                        setUserSearch("");
+                      }}
+                    >
+                      <div>
+                        <p className="font-medium">{user.full_name || "Sin nombre"}</p>
+                        <p className="text-sm text-muted-foreground">{user.email}</p>
+                      </div>
+                      <Button variant="ghost" size="sm">
+                        <UserCog className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {userSearch && filteredUsers.length === 0 && (
+                <p className="text-center text-muted-foreground py-4">
+                  No se encontraron usuarios
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
+
+      {/* Role Management Dialog */}
+      <RoleManagementDialog
+        open={isRoleDialogOpen}
+        onOpenChange={setIsRoleDialogOpen}
+        user={selectedUserForRoles}
+      />
     </DashboardLayout>
   );
 };
