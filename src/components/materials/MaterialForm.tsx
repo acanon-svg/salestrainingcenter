@@ -315,14 +315,15 @@ export const MaterialForm: React.FC<MaterialFormProps> = ({
           {/* Category Selection */}
           <div className="space-y-2">
             <Label>Categoría</Label>
-            <Select value={categoryId} onValueChange={setCategoryId}>
+            <Select 
+              value={categoryId || "none"} 
+              onValueChange={(val) => setCategoryId(val === "none" ? "" : val)}
+            >
               <SelectTrigger>
-                <SelectValue placeholder="Seleccionar categoría...">
-                  {categoryId && categories?.flat.find((c) => c.id === categoryId)?.name}
-                </SelectValue>
+                <SelectValue placeholder="Seleccionar categoría..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Sin categoría</SelectItem>
+                <SelectItem value="none">Sin categoría</SelectItem>
                 {categories?.flat.map((cat) => (
                   <SelectItem key={cat.id} value={cat.id}>
                     <div className="flex items-center gap-2">
@@ -344,7 +345,7 @@ export const MaterialForm: React.FC<MaterialFormProps> = ({
                 <SelectValue placeholder={teamsLoading ? "Cargando equipos..." : "Seleccionar equipo..."} />
               </SelectTrigger>
               <SelectContent>
-                {availableTeams?.filter((t) => !targetTeams.includes(t)).map((team) => (
+                {availableTeams?.filter((t) => t && !targetTeams.includes(t)).map((team) => (
                   <SelectItem key={team} value={team}>
                     {team}
                   </SelectItem>
