@@ -336,6 +336,7 @@ export type Database = {
           points: number
           process_id: string | null
           published_at: string | null
+          scheduled_at: string | null
           status: Database["public"]["Enums"]["course_status"]
           subtitles_enabled: boolean
           tags: string[] | null
@@ -358,6 +359,7 @@ export type Database = {
           points?: number
           process_id?: string | null
           published_at?: string | null
+          scheduled_at?: string | null
           status?: Database["public"]["Enums"]["course_status"]
           subtitles_enabled?: boolean
           tags?: string[] | null
@@ -380,6 +382,7 @@ export type Database = {
           points?: number
           process_id?: string | null
           published_at?: string | null
+          scheduled_at?: string | null
           status?: Database["public"]["Enums"]["course_status"]
           subtitles_enabled?: boolean
           tags?: string[] | null
@@ -1048,6 +1051,7 @@ export type Database = {
         Args: { attempt_user_id: string }
         Returns: boolean
       }
+      publish_scheduled_courses: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "student" | "creator" | "admin" | "lider" | "analista"
