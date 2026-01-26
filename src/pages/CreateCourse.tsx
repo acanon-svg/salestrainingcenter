@@ -10,6 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Plus,
   Save,
@@ -29,15 +32,23 @@ import {
   X,
   GripVertical,
   Clock,
+  UserPlus,
+  Search,
 } from "lucide-react";
 import { dimensionLabels, difficultyLabels, TrainingDimension, DifficultyLevel } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
+import { useAvailableTeams, useAvailableUsers } from "@/hooks/useCourseTargeting";
 
 const CreateCourse: React.FC = () => {
   const { profile } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+
+  // Fetch available teams and users
+  const { data: availableTeams = [], isLoading: teamsLoading } = useAvailableTeams();
+  const { data: availableUsers = [], isLoading: usersLoading } = useAvailableUsers();
 
   // Form state
   const [courseData, setCourseData] = useState({
@@ -55,6 +66,8 @@ const CreateCourse: React.FC = () => {
     objectives: [] as string[],
     expires_at: "",
     scheduled_at: "",
+    target_teams: [] as string[],
+    target_users: [] as string[],
   });
 
   const [materials, setMaterials] = useState<
@@ -113,6 +126,60 @@ const CreateCourse: React.FC = () => {
       ...courseData,
       target_audience: courseData.target_audience.filter((t) => t !== team),
     });
+  };
+
+  // Target teams handlers
+  const handleToggleTargetTeam = (team: string) => {
+    setCourseData(prev => ({
+      ...prev,
+      target_teams: prev.target_teams.includes(team)
+        ? prev.target_teams.filter(t => t !== team)
+        : [...prev.target_teams, team]
+    }));
+  };
+
+  const handleRemoveTargetTeam = (team: string) => {
+    setCourseData(prev => ({
+      ...prev,
+      target_teams: prev.target_teams.filter(t => t !== team)
+    }));
+  };
+
+  // Target users handlers (for personalized courses)
+  const handleToggleTargetUser = (userId: string) => {
+    setCourseData(prev => ({
+      ...prev,
+      target_users: prev.target_users.includes(userId)
+        ? prev.target_users.filter(u => u !== userId)
+        : [...prev.target_users, userId]
+    }));
+  };
+
+  const handleRemoveTargetUser = (userId: string) => {
+    setCourseData(prev => ({
+      ...prev,
+      target_users: prev.target_users.filter(u => u !== userId)
+    }));
+  };
+
+  // Filter users by search query
+  const filteredUsers = availableUsers.filter(user => {
+    const query = userSearchQuery.toLowerCase();
+    return (
+      user.full_name?.toLowerCase().includes(query) ||
+      user.email.toLowerCase().includes(query) ||
+      user.team?.toLowerCase().includes(query)
+    );
+  });
+
+  const getInitials = (name: string | null) => {
+    if (!name) return "U";
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   const handleAddMaterial = (type: string) => {
@@ -732,51 +799,172 @@ const CreateCourse: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* Target Audience */}
+            {/* Target Teams */}
             <Card className="border-border/50">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="w-5 h-5 text-primary" />
-                  Público Objetivo
+                  Asignar a Equipos
                 </CardTitle>
                 <CardDescription>
-                  Selecciona los equipos que verán este curso
+                  Selecciona los equipos que tendrán acceso a este curso. 
+                  Todos los miembros de los equipos seleccionados serán inscritos automáticamente.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex gap-2">
-                  <Select value={newTeam} onValueChange={setNewTeam}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar equipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Ventas Norte">Ventas Norte</SelectItem>
-                      <SelectItem value="Ventas Centro">Ventas Centro</SelectItem>
-                      <SelectItem value="Ventas Sur">Ventas Sur</SelectItem>
-                      <SelectItem value="Soporte">Soporte</SelectItem>
-                      <SelectItem value="Operaciones">Operaciones</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button onClick={handleAddTeam}>
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {courseData.target_audience.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      Sin selección = visible para todos
-                    </p>
-                  ) : (
-                    courseData.target_audience.map((team) => (
-                      <Badge key={team} variant="secondary" className="gap-1">
-                        {team}
-                        <button onClick={() => handleRemoveTeam(team)}>
-                          <X className="w-3 h-3" />
-                        </button>
-                      </Badge>
-                    ))
-                  )}
-                </div>
+                {teamsLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : availableTeams.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No hay equipos disponibles. Los equipos se crean desde la gestión de usuarios.
+                  </p>
+                ) : (
+                  <>
+                    <ScrollArea className="h-48 rounded-md border p-4">
+                      <div className="space-y-2">
+                        {availableTeams.map((team) => (
+                          <div
+                            key={team}
+                            className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
+                          >
+                            <Checkbox
+                              id={`team-${team}`}
+                              checked={courseData.target_teams.includes(team)}
+                              onCheckedChange={() => handleToggleTargetTeam(team)}
+                            />
+                            <label
+                              htmlFor={`team-${team}`}
+                              className="flex-1 text-sm font-medium cursor-pointer"
+                            >
+                              {team}
+                            </label>
+                            <Badge variant="outline" className="text-xs">
+                              Equipo
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                    
+                    {courseData.target_teams.length > 0 && (
+                      <div className="space-y-2">
+                        <Label className="text-sm text-muted-foreground">Equipos seleccionados:</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {courseData.target_teams.map((team) => (
+                            <Badge key={team} variant="secondary" className="gap-1">
+                              <Users className="w-3 h-3" />
+                              {team}
+                              <button onClick={() => handleRemoveTargetTeam(team)}>
+                                <X className="w-3 h-3" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {courseData.target_teams.length === 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        Sin equipos seleccionados = curso disponible para todos
+                      </p>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Target Users (Personalized Courses) */}
+            <Card className="border-border/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <UserPlus className="w-5 h-5 text-primary" />
+                  Asignar a Usuarios Específicos
+                </CardTitle>
+                <CardDescription>
+                  Asigna este curso a personas específicas para cursos personalizados o planes de desarrollo individual.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {usersLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Buscar usuario por nombre, email o equipo..."
+                        value={userSearchQuery}
+                        onChange={(e) => setUserSearchQuery(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                    
+                    <ScrollArea className="h-64 rounded-md border p-4">
+                      <div className="space-y-2">
+                        {filteredUsers.length === 0 ? (
+                          <p className="text-sm text-muted-foreground text-center py-4">
+                            No se encontraron usuarios
+                          </p>
+                        ) : (
+                          filteredUsers.map((user) => (
+                            <div
+                              key={user.user_id}
+                              className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
+                            >
+                              <Checkbox
+                                id={`user-${user.user_id}`}
+                                checked={courseData.target_users.includes(user.user_id)}
+                                onCheckedChange={() => handleToggleTargetUser(user.user_id)}
+                              />
+                              <Avatar className="h-8 w-8">
+                                <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                                  {getInitials(user.full_name)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <label
+                                htmlFor={`user-${user.user_id}`}
+                                className="flex-1 cursor-pointer"
+                              >
+                                <p className="text-sm font-medium">{user.full_name || "Sin nombre"}</p>
+                                <p className="text-xs text-muted-foreground">{user.email}</p>
+                              </label>
+                              {user.team && (
+                                <Badge variant="outline" className="text-xs">
+                                  {user.team}
+                                </Badge>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </ScrollArea>
+                    
+                    {courseData.target_users.length > 0 && (
+                      <div className="space-y-2">
+                        <Label className="text-sm text-muted-foreground">
+                          Usuarios seleccionados ({courseData.target_users.length}):
+                        </Label>
+                        <div className="flex flex-wrap gap-2">
+                          {courseData.target_users.map((userId) => {
+                            const user = availableUsers.find(u => u.user_id === userId);
+                            return (
+                              <Badge key={userId} variant="secondary" className="gap-1">
+                                {user?.full_name || user?.email || userId}
+                                <button onClick={() => handleRemoveTargetUser(userId)}>
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
