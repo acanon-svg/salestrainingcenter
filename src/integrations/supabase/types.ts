@@ -420,6 +420,75 @@ export type Database = {
           },
         ]
       }
+      field_accompaniments: {
+        Row: {
+          accompaniment_date: string
+          action_plan: string | null
+          created_at: string
+          evaluator_email: string | null
+          evaluator_name: string
+          executive_email: string | null
+          executive_name: string
+          general_comments: string | null
+          google_sheets_row_id: string | null
+          id: string
+          improvement_opportunities: string | null
+          overall_score: number | null
+          product_knowledge_score: number | null
+          regional: string
+          sales_technique_score: number | null
+          soft_skills_score: number | null
+          strengths: string | null
+          synced_at: string | null
+          team: string | null
+          tools_usage_score: number | null
+        }
+        Insert: {
+          accompaniment_date: string
+          action_plan?: string | null
+          created_at?: string
+          evaluator_email?: string | null
+          evaluator_name: string
+          executive_email?: string | null
+          executive_name: string
+          general_comments?: string | null
+          google_sheets_row_id?: string | null
+          id?: string
+          improvement_opportunities?: string | null
+          overall_score?: number | null
+          product_knowledge_score?: number | null
+          regional: string
+          sales_technique_score?: number | null
+          soft_skills_score?: number | null
+          strengths?: string | null
+          synced_at?: string | null
+          team?: string | null
+          tools_usage_score?: number | null
+        }
+        Update: {
+          accompaniment_date?: string
+          action_plan?: string | null
+          created_at?: string
+          evaluator_email?: string | null
+          evaluator_name?: string
+          executive_email?: string | null
+          executive_name?: string
+          general_comments?: string | null
+          google_sheets_row_id?: string | null
+          id?: string
+          improvement_opportunities?: string | null
+          overall_score?: number | null
+          product_knowledge_score?: number | null
+          regional?: string
+          sales_technique_score?: number | null
+          soft_skills_score?: number | null
+          strengths?: string | null
+          synced_at?: string | null
+          team?: string | null
+          tools_usage_score?: number | null
+        }
+        Relationships: []
+      }
       material_feedback: {
         Row: {
           created_at: string
@@ -737,6 +806,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sheets_sync_log: {
+        Row: {
+          completed_at: string | null
+          error_message: string | null
+          id: string
+          rows_synced: number | null
+          started_at: string
+          status: string | null
+          sync_type: string
+        }
+        Insert: {
+          completed_at?: string | null
+          error_message?: string | null
+          id?: string
+          rows_synced?: number | null
+          started_at?: string
+          status?: string | null
+          sync_type: string
+        }
+        Update: {
+          completed_at?: string | null
+          error_message?: string | null
+          id?: string
+          rows_synced?: number | null
+          started_at?: string
+          status?: string | null
+          sync_type?: string
+        }
+        Relationships: []
       }
       training_materials: {
         Row: {
