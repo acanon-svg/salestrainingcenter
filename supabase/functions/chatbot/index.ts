@@ -16,53 +16,72 @@ interface ChatMessage {
   content: string;
 }
 
+interface TeamData {
+  data_name: string;
+  data_content: Record<string, unknown>;
+  description: string | null;
+}
+
 function validateMessages(messages: unknown): { valid: boolean; error?: string } {
-  // Check if messages is an array
   if (!Array.isArray(messages)) {
     return { valid: false, error: "El formato de mensajes es inválido." };
   }
 
-  // Check if array is empty
   if (messages.length === 0) {
     return { valid: false, error: "Se requiere al menos un mensaje." };
   }
 
-  // Check message count limit
   if (messages.length > MAX_MESSAGES) {
     return { valid: false, error: `Demasiados mensajes. Máximo ${MAX_MESSAGES} mensajes permitidos.` };
   }
 
-  // Validate each message
   for (let i = 0; i < messages.length; i++) {
     const msg = messages[i];
 
-    // Check message structure
     if (!msg || typeof msg !== "object") {
       return { valid: false, error: `Mensaje ${i + 1} tiene formato inválido.` };
     }
 
-    // Check role
     if (!msg.role || typeof msg.role !== "string" || !VALID_ROLES.includes(msg.role)) {
       return { valid: false, error: `Rol de mensaje ${i + 1} es inválido.` };
     }
 
-    // Check content
     if (typeof msg.content !== "string") {
       return { valid: false, error: `Contenido del mensaje ${i + 1} es inválido.` };
     }
 
-    // Check content length
     if (msg.content.length > MAX_MESSAGE_LENGTH) {
       return { valid: false, error: `Mensaje ${i + 1} excede el límite de ${MAX_MESSAGE_LENGTH} caracteres.` };
     }
 
-    // Check for empty content in user messages
     if (msg.role === "user" && msg.content.trim().length === 0) {
       return { valid: false, error: `El mensaje ${i + 1} no puede estar vacío.` };
     }
   }
 
   return { valid: true };
+}
+
+function formatTeamDataForContext(teamData: TeamData[]): string {
+  if (!teamData || teamData.length === 0) {
+    return "";
+  }
+
+  let context = "\n\n---\nDATOS DEL EQUIPO DISPONIBLES:\n";
+  
+  for (const data of teamData) {
+    context += `\n### ${data.data_name}`;
+    if (data.description) {
+      context += ` - ${data.description}`;
+    }
+    context += `\n${JSON.stringify(data.data_content, null, 2)}\n`;
+  }
+  
+  context += "\n---\n";
+  context += "Puedes usar estos datos para responder preguntas sobre resultados, métricas y desempeño del equipo. ";
+  context += "Cuando el usuario pregunte sobre resultados o datos del equipo, usa esta información para dar respuestas precisas.\n";
+  
+  return context;
 }
 
 serve(async (req) => {
@@ -85,7 +104,11 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: { Authorization: authHeader },
+      },
+    });
 
     // Verify JWT token
     const token = authHeader.replace("Bearer ", "");
@@ -101,7 +124,7 @@ serve(async (req) => {
       );
     }
 
-    // Parse request body with size limit check
+    // Parse request body
     let body: { messages?: unknown };
     try {
       body = await req.json();
@@ -135,19 +158,25 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Fetch system prompt server-side (don't trust client input)
-    const { data: config } = await supabase
-      .from("chatbot_config")
-      .select("system_prompt")
-      .single();
+    // Fetch system prompt and team data server-side
+    const [configResult, teamDataResult] = await Promise.all([
+      supabase.from("chatbot_config").select("system_prompt").single(),
+      supabase.from("chatbot_team_data").select("data_name, data_content, description").order("created_at", { ascending: false }),
+    ]);
 
-    const systemPrompt = config?.system_prompt || 
+    let systemPrompt = configResult.data?.system_prompt || 
       "Eres un asistente virtual experto en procesos comerciales. Responde de manera clara, concisa y profesional en español.";
 
-    // Sanitize messages before sending to AI (only keep role and content)
+    // Append team data context to system prompt
+    const teamData = teamDataResult.data as TeamData[] | null;
+    if (teamData && teamData.length > 0) {
+      systemPrompt += formatTeamDataForContext(teamData);
+    }
+
+    // Sanitize messages before sending to AI
     const sanitizedMessages = (messages as ChatMessage[]).map((msg) => ({
       role: msg.role,
-      content: msg.content.slice(0, MAX_MESSAGE_LENGTH), // Extra safety trim
+      content: msg.content.slice(0, MAX_MESSAGE_LENGTH),
     }));
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

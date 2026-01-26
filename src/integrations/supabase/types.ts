@@ -193,6 +193,36 @@ export type Database = {
         }
         Relationships: []
       }
+      chatbot_team_data: {
+        Row: {
+          created_at: string
+          data_content: Json
+          data_name: string
+          description: string | null
+          id: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          data_content: Json
+          data_name: string
+          description?: string | null
+          id?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          data_content?: Json
+          data_name?: string
+          description?: string | null
+          id?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
       course_enrollments: {
         Row: {
           completed_at: string | null
