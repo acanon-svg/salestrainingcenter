@@ -61,6 +61,8 @@ export interface Course {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  target_teams: string[] | null;
+  target_users: string[] | null;
   // Joined fields
   process?: Process;
   materials_count?: number;

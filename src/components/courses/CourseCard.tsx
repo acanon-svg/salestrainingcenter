@@ -5,7 +5,7 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Clock, Users, Star, BookOpen, Trophy, Calendar, Timer } from "lucide-react";
+import { Clock, Users, Star, BookOpen, Trophy, Calendar, Timer, UserPlus } from "lucide-react";
 import { format, isPast, isFuture } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -163,6 +163,30 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             {course.tags.length > 3 && (
               <Badge variant="outline" className="text-xs">
                 +{course.tags.length - 3}
+              </Badge>
+            )}
+          </div>
+        )}
+
+        {/* Target Teams and Users */}
+        {((course.target_teams && course.target_teams.length > 0) ||
+          (course.target_users && course.target_users.length > 0)) && (
+          <div className="flex flex-wrap gap-1 mt-3">
+            {course.target_teams?.slice(0, 2).map((team) => (
+              <Badge key={team} variant="secondary" className="text-xs gap-1">
+                <Users className="w-3 h-3" />
+                {team}
+              </Badge>
+            ))}
+            {course.target_teams && course.target_teams.length > 2 && (
+              <Badge variant="secondary" className="text-xs">
+                +{course.target_teams.length - 2} equipos
+              </Badge>
+            )}
+            {course.target_users && course.target_users.length > 0 && (
+              <Badge variant="outline" className="text-xs gap-1 border-primary/30 text-primary">
+                <UserPlus className="w-3 h-3" />
+                {course.target_users.length} persona{course.target_users.length > 1 ? "s" : ""}
               </Badge>
             )}
           </div>

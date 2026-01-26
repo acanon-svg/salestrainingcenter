@@ -5,8 +5,10 @@ import { useAuth } from "@/contexts/AuthContext";
 const client = getSupabaseClient();
 
 export const useCourses = (filters?: { status?: string; dimension?: string }) => {
+  const { profile, user } = useAuth();
+
   return useQuery({
-    queryKey: ["courses", filters],
+    queryKey: ["courses", filters, profile?.team, user?.id],
     queryFn: async () => {
       let query = client
         .from("courses")
@@ -22,7 +24,29 @@ export const useCourses = (filters?: { status?: string; dimension?: string }) =>
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as Course[];
+
+      // Filter courses by target_teams and target_users on the client
+      // A course is visible if:
+      // 1. No target_teams AND no target_users (available to all)
+      // 2. User's team is in target_teams
+      // 3. User's ID is in target_users
+      const filteredCourses = (data as Course[]).filter((course) => {
+        const hasNoTargeting =
+          (!course.target_teams || course.target_teams.length === 0) &&
+          (!course.target_users || course.target_users.length === 0);
+
+        if (hasNoTargeting) return true;
+
+        const userTeamMatches =
+          profile?.team && course.target_teams?.includes(profile.team);
+
+        const userIdMatches =
+          user?.id && course.target_users?.includes(user.id);
+
+        return userTeamMatches || userIdMatches;
+      });
+
+      return filteredCourses;
     },
   });
 };

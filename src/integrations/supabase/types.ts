@@ -341,6 +341,8 @@ export type Database = {
           subtitles_enabled: boolean
           tags: string[] | null
           target_audience: string[] | null
+          target_teams: string[] | null
+          target_users: string[] | null
           title: string
           updated_at: string
         }
@@ -364,6 +366,8 @@ export type Database = {
           subtitles_enabled?: boolean
           tags?: string[] | null
           target_audience?: string[] | null
+          target_teams?: string[] | null
+          target_users?: string[] | null
           title: string
           updated_at?: string
         }
@@ -387,6 +391,8 @@ export type Database = {
           subtitles_enabled?: boolean
           tags?: string[] | null
           target_audience?: string[] | null
+          target_teams?: string[] | null
+          target_users?: string[] | null
           title?: string
           updated_at?: string
         }
