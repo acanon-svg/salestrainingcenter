@@ -12,6 +12,7 @@ import {
   Settings,
   LogOut,
   PlusCircle,
+  FolderOpen,
   Award,
   Trophy,
   Users,
@@ -32,6 +33,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: "Home", icon: Home, href: "/dashboard" },
   { label: "Mis Cursos", icon: BookOpen, href: "/courses" },
+  { label: "Material Formativo", icon: FolderOpen, href: "/materials" },
   { label: "Ranking", icon: Trophy, href: "/ranking" },
   { label: "Insignias", icon: Award, href: "/badges" },
   { label: "Notificaciones", icon: Bell, href: "/notifications" },

@@ -420,6 +420,38 @@ export type Database = {
           },
         ]
       }
+      material_feedback: {
+        Row: {
+          created_at: string
+          id: string
+          is_useful: boolean
+          material_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_useful: boolean
+          material_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_useful?: boolean
+          material_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "material_feedback_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "training_materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       material_progress: {
         Row: {
           completed: boolean
@@ -705,6 +737,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      training_materials: {
+        Row: {
+          content_text: string | null
+          content_url: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_published: boolean | null
+          order_index: number | null
+          target_teams: string[] | null
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          content_text?: string | null
+          content_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_published?: boolean | null
+          order_index?: number | null
+          target_teams?: string[] | null
+          title: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          content_text?: string | null
+          content_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_published?: boolean | null
+          order_index?: number | null
+          target_teams?: string[] | null
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       user_badges: {
         Row: {

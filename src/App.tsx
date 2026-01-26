@@ -20,6 +20,7 @@ import MyCourses from "@/pages/MyCourses";
 import Reports from "@/pages/Reports";
 import UserManagement from "@/pages/UserManagement";
 import NotFound from "@/pages/NotFound";
+import TrainingMaterials from "@/pages/TrainingMaterials";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
@@ -173,6 +174,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Feedback />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/materials"
+        element={
+          <ProtectedRoute>
+            <TrainingMaterials />
           </ProtectedRoute>
         }
       />
