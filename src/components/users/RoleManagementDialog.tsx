@@ -9,15 +9,23 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Shield, BookOpen, Crown, Users } from "lucide-react";
+import { Loader2, Shield, BookOpen, Crown, Users, Check, ChevronsUpDown, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useUserRoles, useAddRole, useRemoveRole, AppRole } from "@/hooks/useUserRoles";
 import { useLeaderRegion, useAssignLeaderRegion, useRemoveLeaderRegion } from "@/hooks/useLeaderRegion";
 import { useRegionals } from "@/hooks/useRegionals";
@@ -74,6 +82,8 @@ export const RoleManagementDialog: React.FC<RoleManagementDialogProps> = ({
   const removeRegion = useRemoveLeaderRegion();
 
   const [selectedRegional, setSelectedRegional] = useState<string>("");
+  const [regionalOpen, setRegionalOpen] = useState(false);
+  const [newRegionalInput, setNewRegionalInput] = useState("");
 
   useEffect(() => {
     if (leaderRegion?.regional) {
@@ -82,6 +92,14 @@ export const RoleManagementDialog: React.FC<RoleManagementDialogProps> = ({
       setSelectedRegional("");
     }
   }, [leaderRegion]);
+
+  // Check if typed input matches any existing regional
+  const matchingRegionals = regionals?.filter((r) =>
+    r.toLowerCase().includes(newRegionalInput.toLowerCase())
+  ) || [];
+  
+  const canCreateNew = newRegionalInput.trim() && 
+    !regionals?.some((r) => r.toLowerCase() === newRegionalInput.toLowerCase().trim());
 
   if (!user) return null;
 
@@ -168,24 +186,87 @@ export const RoleManagementDialog: React.FC<RoleManagementDialogProps> = ({
               <div className="space-y-3 pt-4 border-t">
                 <Label className="text-sm font-medium">Región del Líder</Label>
                 <p className="text-xs text-muted-foreground">
-                  Selecciona la región que supervisará este líder
+                  Selecciona una región existente o escribe para crear una nueva
                 </p>
-                <Select
-                  value={selectedRegional}
-                  onValueChange={handleRegionalChange}
-                  disabled={isSaving}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar región..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {regionals?.map((regional) => (
-                      <SelectItem key={regional} value={regional}>
-                        {regional}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={regionalOpen} onOpenChange={setRegionalOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={regionalOpen}
+                      className="w-full justify-between"
+                      disabled={isSaving}
+                    >
+                      {selectedRegional || "Seleccionar o crear región..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" align="start">
+                    <Command>
+                      <CommandInput
+                        placeholder="Buscar o crear región..."
+                        value={newRegionalInput}
+                        onValueChange={setNewRegionalInput}
+                      />
+                      <CommandList>
+                        <CommandEmpty>
+                          {newRegionalInput.trim() ? (
+                            <div className="p-2 text-sm text-muted-foreground">
+                              No se encontró "{newRegionalInput}"
+                            </div>
+                          ) : (
+                            <div className="p-2 text-sm text-muted-foreground">
+                              No hay regiones. Escribe para crear una.
+                            </div>
+                          )}
+                        </CommandEmpty>
+                        
+                        {/* Create new option */}
+                        {canCreateNew && (
+                          <CommandGroup heading="Crear nueva">
+                            <CommandItem
+                              value={`create-${newRegionalInput.trim()}`}
+                              onSelect={() => {
+                                const newRegion = newRegionalInput.trim();
+                                handleRegionalChange(newRegion);
+                                setNewRegionalInput("");
+                                setRegionalOpen(false);
+                              }}
+                            >
+                              <Plus className="mr-2 h-4 w-4" />
+                              Crear "{newRegionalInput.trim()}"
+                            </CommandItem>
+                          </CommandGroup>
+                        )}
+                        
+                        {/* Existing regionals */}
+                        {matchingRegionals.length > 0 && (
+                          <CommandGroup heading="Regiones existentes">
+                            {matchingRegionals.map((regional) => (
+                              <CommandItem
+                                key={regional}
+                                value={regional}
+                                onSelect={() => {
+                                  handleRegionalChange(regional);
+                                  setNewRegionalInput("");
+                                  setRegionalOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    selectedRegional === regional ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {regional}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        )}
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
                 {selectedRegional && (
                   <p className="text-xs text-green-600">
                     ✓ Región asignada: {selectedRegional}
