@@ -19,9 +19,13 @@ import { LevelBadge } from "@/components/gamification/LevelBadge";
 import { LevelCard } from "@/components/gamification/LevelCard";
 import { getLevelProgress, getPointsToNextLevel } from "@/lib/userLevel";
 import { AnnouncementCarousel } from "@/components/announcements/AnnouncementCarousel";
+import { useAutoPublishScheduledCourses } from "@/hooks/useScheduledCourses";
 
 const Dashboard: React.FC = () => {
   const { profile, roles } = useAuth();
+  
+  // Auto-publish scheduled courses when dashboard loads
+  useAutoPublishScheduledCourses();
 
   // Mock data - will be replaced with real data from the database
   const stats = {

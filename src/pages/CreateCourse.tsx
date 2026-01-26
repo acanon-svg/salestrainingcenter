@@ -28,6 +28,7 @@ import {
   Loader2,
   X,
   GripVertical,
+  Clock,
 } from "lucide-react";
 import { dimensionLabels, difficultyLabels, TrainingDimension, DifficultyLevel } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
@@ -53,6 +54,7 @@ const CreateCourse: React.FC = () => {
     tags: [] as string[],
     objectives: [] as string[],
     expires_at: "",
+    scheduled_at: "",
   });
 
   const [materials, setMaterials] = useState<
@@ -675,6 +677,25 @@ const CreateCourse: React.FC = () => {
                         <SelectItem value="en">Inglés</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="scheduled">Fecha de Publicación Programada</Label>
+                    <div className="relative">
+                      <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        id="scheduled"
+                        type="datetime-local"
+                        className="pl-10"
+                        value={courseData.scheduled_at}
+                        onChange={(e) =>
+                          setCourseData({ ...courseData, scheduled_at: e.target.value })
+                        }
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      El curso se publicará automáticamente en esta fecha
+                    </p>
                   </div>
 
                   <div className="space-y-2">
