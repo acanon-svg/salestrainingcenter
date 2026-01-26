@@ -17,11 +17,14 @@ export interface TrainingMaterial {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  keywords: string[];
   // Computed fields from joins
   feedback_count?: number;
   useful_count?: number;
   not_useful_count?: number;
   user_feedback?: boolean | null;
+  // Tag assignments (loaded separately)
+  tag_ids?: string[];
 }
 
 export interface MaterialFeedback {
@@ -54,7 +57,11 @@ export function useTrainingMaterials(options?: { onlyPublished?: boolean }) {
       if (error) throw error;
 
       // Filter by team if user is a student
-      let materials = data as TrainingMaterial[];
+      let materials = (data as TrainingMaterial[]).map(m => ({
+        ...m,
+        keywords: m.keywords || [],
+        target_teams: m.target_teams || [],
+      }));
       
       if (options?.onlyPublished && profile?.team) {
         materials = materials.filter(
@@ -62,21 +69,31 @@ export function useTrainingMaterials(options?: { onlyPublished?: boolean }) {
         );
       }
 
-      // Fetch feedback for each material
+      // Fetch feedback and tag assignments for each material
       if (materials.length > 0) {
         const materialIds = materials.map((m) => m.id);
         
-        const { data: feedbackData } = await supabase
-          .from("material_feedback")
-          .select("*")
-          .in("material_id", materialIds);
+        const [feedbackResult, tagAssignmentsResult] = await Promise.all([
+          supabase
+            .from("material_feedback")
+            .select("*")
+            .in("material_id", materialIds),
+          supabase
+            .from("material_tag_assignments")
+            .select("*")
+            .in("material_id", materialIds),
+        ]);
 
-        // Calculate feedback stats
+        const feedbackData = feedbackResult.data;
+        const tagAssignments = tagAssignmentsResult.data;
+
+        // Calculate feedback stats and add tag IDs
         materials = materials.map((material) => {
           const materialFeedback = feedbackData?.filter((f) => f.material_id === material.id) || [];
           const usefulCount = materialFeedback.filter((f) => f.is_useful).length;
           const notUsefulCount = materialFeedback.filter((f) => !f.is_useful).length;
           const userFeedback = materialFeedback.find((f) => f.user_id === user?.id);
+          const materialTagIds = tagAssignments?.filter((t) => t.material_id === material.id).map((t) => t.tag_id) || [];
 
           return {
             ...material,
@@ -84,6 +101,7 @@ export function useTrainingMaterials(options?: { onlyPublished?: boolean }) {
             useful_count: usefulCount,
             not_useful_count: notUsefulCount,
             user_feedback: userFeedback ? userFeedback.is_useful : null,
+            tag_ids: materialTagIds,
           };
         });
       }
