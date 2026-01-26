@@ -14,6 +14,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
 import { LevelBadge } from "@/components/gamification/LevelBadge";
 import { RoleManagementDialog } from "@/components/users/RoleManagementDialog";
+import { ProfileMaterialsSection } from "@/components/materials/ProfileMaterialsSection";
 import { useQuery } from "@tanstack/react-query";
 
 // Helper to get untyped supabase client for tables not yet in types
@@ -312,6 +313,11 @@ const Profile: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Training Materials Section for Students */}
+        {hasRole("student") && !hasRole("creator") && !hasRole("admin") && (
+          <ProfileMaterialsSection />
+        )}
 
         {/* Admin: Role Assignment */}
         {isAdmin && (

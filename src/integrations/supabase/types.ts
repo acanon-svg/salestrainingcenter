@@ -411,6 +411,7 @@ export type Database = {
           course_id: string | null
           created_at: string
           id: string
+          material_id: string | null
           message: string
           points_awarded: number | null
           recipient_id: string | null
@@ -425,6 +426,7 @@ export type Database = {
           course_id?: string | null
           created_at?: string
           id?: string
+          material_id?: string | null
           message: string
           points_awarded?: number | null
           recipient_id?: string | null
@@ -439,6 +441,7 @@ export type Database = {
           course_id?: string | null
           created_at?: string
           id?: string
+          material_id?: string | null
           message?: string
           points_awarded?: number | null
           recipient_id?: string | null
@@ -455,6 +458,13 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "training_materials"
             referencedColumns: ["id"]
           },
         ]
