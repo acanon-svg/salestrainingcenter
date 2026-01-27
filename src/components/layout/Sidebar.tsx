@@ -43,6 +43,7 @@ const navItems: NavItem[] = [
 const creatorItems: NavItem[] = [
   { label: "Crear Curso", icon: PlusCircle, href: "/courses/create", roles: ["creator", "admin"] },
   { label: "Mis Creaciones", icon: BookOpen, href: "/my-courses", roles: ["creator", "admin"] },
+  { label: "Anuncios", icon: Bell, href: "/announcements", roles: ["creator", "admin"] },
 ];
 
 const leaderItems: NavItem[] = [
