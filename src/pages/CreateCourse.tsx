@@ -38,11 +38,12 @@ import {
 import { dimensionLabels, difficultyLabels, TrainingDimension, DifficultyLevel } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useAvailableTeams, useAvailableUsers } from "@/hooks/useCourseTargeting";
+import { useCreateCourse } from "@/hooks/useCreateCourse";
 
 const CreateCourse: React.FC = () => {
-  const { profile } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const createCourseMutation = useCreateCourse();
   const [activeTab, setActiveTab] = useState("basic");
   const [userSearchQuery, setUserSearchQuery] = useState("");
 
@@ -211,13 +212,20 @@ const CreateCourse: React.FC = () => {
   };
 
   const handleSaveDraft = async () => {
-    setIsSubmitting(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsSubmitting(false);
-    toast({
-      title: "Borrador guardado",
-      description: "El curso se ha guardado como borrador.",
+    if (!courseData.title) {
+      toast({
+        title: "Error",
+        description: "El título del curso es requerido",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createCourseMutation.mutate({
+      courseData,
+      materials,
+      quizQuestions,
+      status: "draft",
     });
   };
 
@@ -231,15 +239,15 @@ const CreateCourse: React.FC = () => {
       return;
     }
 
-    setIsSubmitting(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsSubmitting(false);
-    toast({
-      title: "¡Curso publicado!",
-      description: "El curso ya está disponible para los usuarios.",
+    createCourseMutation.mutate({
+      courseData,
+      materials,
+      quizQuestions,
+      status: "published",
     });
   };
+
+  const isSubmitting = createCourseMutation.isPending;
 
   return (
     <DashboardLayout>
