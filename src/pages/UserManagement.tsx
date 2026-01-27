@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { ChatbotSettings } from "@/components/chatbot/ChatbotSettings";
 import { RoleManagementDialog } from "@/components/users/RoleManagementDialog";
+import { AssignPointsDialog } from "@/components/users/AssignPointsDialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Users, Eye, Shield, Loader2, Mail, Building, MapPin, UserCheck, Calendar, Trophy, Settings, UserPlus, Bot, UserCog } from "lucide-react";
+import { Search, Users, Eye, Shield, Loader2, Mail, Building, MapPin, UserCheck, Calendar, Trophy, Settings, UserPlus, Bot, UserCog, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
@@ -59,6 +60,7 @@ const UserManagement: React.FC = () => {
   const [filterRegional, setFilterRegional] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
+  const [isPointsDialogOpen, setIsPointsDialogOpen] = useState(false);
   const [isUpdatingSettings, setIsUpdatingSettings] = useState(false);
 
   const ALL_ROLES = ["student", "lider", "creator", "admin"] as const;
@@ -154,6 +156,11 @@ const UserManagement: React.FC = () => {
   const handleManageRoles = (user: UserProfile) => {
     setSelectedUser(user);
     setIsRoleDialogOpen(true);
+  };
+
+  const handleAssignPoints = (user: UserProfile) => {
+    setSelectedUser(user);
+    setIsPointsDialogOpen(true);
   };
 
 
@@ -388,15 +395,26 @@ const UserManagement: React.FC = () => {
                             : "Nunca"}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewUser(user)}
-                            className="gap-2"
-                          >
-                            <Eye className="h-4 w-4" />
-                            Ver perfil
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleAssignPoints(user)}
+                              className="gap-1"
+                              title="Asignar puntos"
+                            >
+                              <Star className="h-4 w-4 text-addi-orange" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleViewUser(user)}
+                              className="gap-2"
+                            >
+                              <Eye className="h-4 w-4" />
+                              Ver perfil
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -474,8 +492,19 @@ const UserManagement: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Role Management Button */}
-                <div className="flex justify-center">
+                {/* Role and Points Management Buttons */}
+                <div className="flex justify-center gap-3">
+                  <Button
+                    onClick={() => {
+                      setIsDialogOpen(false);
+                      setIsPointsDialogOpen(true);
+                    }}
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    <Star className="h-4 w-4 text-addi-orange" />
+                    Asignar Puntos
+                  </Button>
                   <Button
                     onClick={() => {
                       setIsDialogOpen(false);
@@ -535,6 +564,14 @@ const UserManagement: React.FC = () => {
           onOpenChange={setIsRoleDialogOpen}
           user={selectedUser}
           onProfileUpdated={fetchUsers}
+        />
+
+        {/* Assign Points Dialog */}
+        <AssignPointsDialog
+          open={isPointsDialogOpen}
+          onOpenChange={setIsPointsDialogOpen}
+          user={selectedUser}
+          onPointsUpdated={fetchUsers}
         />
           </TabsContent>
 
