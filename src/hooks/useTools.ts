@@ -11,6 +11,7 @@ export interface Tool {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  target_teams: string[] | null;
 }
 
 export interface CalculatorVariable {
@@ -62,7 +63,7 @@ export const useTools = () => {
   });
 
   const createTool = useMutation({
-    mutationFn: async (tool: { name: string; description?: string | null; type?: string; is_active?: boolean }) => {
+    mutationFn: async (tool: { name: string; description?: string | null; type?: string; is_active?: boolean; target_teams?: string[] | null }) => {
       const { data, error } = await supabase
         .from("tools")
         .insert([tool])

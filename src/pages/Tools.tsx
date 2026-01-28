@@ -20,19 +20,24 @@ import {
   Settings,
   ArrowLeft,
   Loader2,
+  Users,
 } from "lucide-react";
 import { useTools, Tool } from "@/hooks/useTools";
 import { useAuth } from "@/contexts/AuthContext";
 import { CalculatorConfigurator } from "@/components/tools/CalculatorConfigurator";
 import { CommissionCalculator } from "@/components/tools/CommissionCalculator";
 import { useCalculatorVariables, useCalculatorFormulas } from "@/hooks/useTools";
+import { TeamSelector } from "@/components/tools/TeamSelector";
 
 const ToolCard: React.FC<{
   tool: Tool;
   onConfigure: () => void;
   onUse: () => void;
+  onEditTeams: () => void;
   isCreator: boolean;
-}> = ({ tool, onConfigure, onUse, isCreator }) => {
+}> = ({ tool, onConfigure, onUse, onEditTeams, isCreator }) => {
+  const hasTeamRestriction = tool.target_teams && tool.target_teams.length > 0;
+  
   return (
     <Card className="hover:border-primary/50 transition-colors">
       <CardHeader>
@@ -48,9 +53,17 @@ const ToolCard: React.FC<{
               )}
             </div>
           </div>
-          <Badge variant={tool.is_active ? "default" : "secondary"}>
-            {tool.is_active ? "Activa" : "Inactiva"}
-          </Badge>
+          <div className="flex flex-col items-end gap-1">
+            <Badge variant={tool.is_active ? "default" : "secondary"}>
+              {tool.is_active ? "Activa" : "Inactiva"}
+            </Badge>
+            {isCreator && hasTeamRestriction && (
+              <Badge variant="outline" className="text-xs">
+                <Users className="h-3 w-3 mr-1" />
+                {tool.target_teams!.length} equipos
+              </Badge>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -60,9 +73,14 @@ const ToolCard: React.FC<{
             Usar Herramienta
           </Button>
           {isCreator && (
-            <Button variant="outline" onClick={onConfigure}>
-              <Settings className="h-4 w-4" />
-            </Button>
+            <>
+              <Button variant="outline" onClick={onEditTeams} title="Equipos">
+                <Users className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" onClick={onConfigure} title="Configurar">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </>
           )}
         </div>
       </CardContent>
@@ -88,14 +106,17 @@ const ToolViewer: React.FC<{
 
 const Tools: React.FC = () => {
   const { hasRole } = useAuth();
-  const { tools, isLoading, createTool } = useTools();
+  const { tools, isLoading, createTool, updateTool } = useTools();
   const isCreator = hasRole("creator") || hasRole("admin");
 
   const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
   const [mode, setMode] = useState<"list" | "configure" | "use">("list");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [teamsDialogOpen, setTeamsDialogOpen] = useState(false);
   const [newToolName, setNewToolName] = useState("");
   const [newToolDescription, setNewToolDescription] = useState("");
+  const [newToolTeams, setNewToolTeams] = useState<string[]>([]);
+  const [editingToolTeams, setEditingToolTeams] = useState<string[]>([]);
 
   const handleCreateTool = async () => {
     if (!newToolName.trim()) return;
@@ -104,10 +125,29 @@ const Tools: React.FC = () => {
       description: newToolDescription || null,
       type: "calculator",
       is_active: true,
+      target_teams: newToolTeams.length > 0 ? newToolTeams : null,
     });
     setCreateDialogOpen(false);
     setNewToolName("");
     setNewToolDescription("");
+    setNewToolTeams([]);
+  };
+
+  const handleSaveTeams = async () => {
+    if (!selectedTool) return;
+    await updateTool.mutateAsync({
+      id: selectedTool.id,
+      target_teams: editingToolTeams.length > 0 ? editingToolTeams : null,
+    });
+    setTeamsDialogOpen(false);
+    setSelectedTool(null);
+    setEditingToolTeams([]);
+  };
+
+  const openTeamsDialog = (tool: Tool) => {
+    setSelectedTool(tool);
+    setEditingToolTeams(tool.target_teams || []);
+    setTeamsDialogOpen(true);
   };
 
   const getUserRole = (): "student" | "lider" | "admin" | "creator" => {
@@ -200,6 +240,7 @@ const Tools: React.FC = () => {
                   setSelectedTool(tool);
                   setMode("use");
                 }}
+                onEditTeams={() => openTeamsDialog(tool)}
                 isCreator={isCreator}
               />
             ))}
@@ -226,7 +267,7 @@ const Tools: React.FC = () => {
 
         {/* Create Tool Dialog */}
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-          <DialogContent>
+          <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Nueva Herramienta</DialogTitle>
             </DialogHeader>
@@ -250,6 +291,10 @@ const Tools: React.FC = () => {
                   rows={3}
                 />
               </div>
+              <TeamSelector
+                selectedTeams={newToolTeams}
+                onTeamsChange={setNewToolTeams}
+              />
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
@@ -257,6 +302,35 @@ const Tools: React.FC = () => {
               </Button>
               <Button onClick={handleCreateTool} disabled={!newToolName.trim()}>
                 Crear Herramienta
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Teams Dialog */}
+        <Dialog open={teamsDialogOpen} onOpenChange={setTeamsDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Equipos con acceso
+              </DialogTitle>
+            </DialogHeader>
+            <div className="py-2">
+              <TeamSelector
+                selectedTeams={editingToolTeams}
+                onTeamsChange={setEditingToolTeams}
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setTeamsDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSaveTeams} disabled={updateTool.isPending}>
+                {updateTool.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : null}
+                Guardar
               </Button>
             </DialogFooter>
           </DialogContent>
