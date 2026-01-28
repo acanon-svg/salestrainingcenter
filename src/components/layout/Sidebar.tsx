@@ -16,6 +16,7 @@ import {
   Award,
   Trophy,
   Users,
+  Wrench,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -44,6 +45,7 @@ const creatorItems: NavItem[] = [
   { label: "Crear Curso", icon: PlusCircle, href: "/courses/create", roles: ["creator", "admin"] },
   { label: "Mis Creaciones", icon: BookOpen, href: "/my-courses", roles: ["creator", "admin"] },
   { label: "Anuncios", icon: Bell, href: "/announcements", roles: ["creator", "admin"] },
+  { label: "Herramientas", icon: Wrench, href: "/tools", roles: ["creator", "admin"] },
 ];
 
 const leaderItems: NavItem[] = [

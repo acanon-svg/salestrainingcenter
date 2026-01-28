@@ -23,6 +23,7 @@ import NotFound from "@/pages/NotFound";
 import TrainingMaterials from "@/pages/TrainingMaterials";
 import Team from "@/pages/Team";
 import Announcements from "@/pages/Announcements";
+import Tools from "@/pages/Tools";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
@@ -211,6 +212,14 @@ const AppRoutes = () => {
           <RoleRoute allowedRoles={["creator", "admin"]}>
             <Announcements />
           </RoleRoute>
+        }
+      />
+      <Route
+        path="/tools"
+        element={
+          <ProtectedRoute>
+            <Tools />
+          </ProtectedRoute>
         }
       />
       
