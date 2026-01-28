@@ -24,6 +24,8 @@ import TrainingMaterials from "@/pages/TrainingMaterials";
 import Team from "@/pages/Team";
 import Announcements from "@/pages/Announcements";
 import Tools from "@/pages/Tools";
+import TeamFeedbackForms from "@/pages/TeamFeedbackForms";
+import TeamFeedbackView from "@/pages/TeamFeedbackView";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
@@ -222,6 +224,14 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/team-feedback-forms"
+        element={
+          <RoleRoute allowedRoles={["creator", "admin"]}>
+            <TeamFeedbackForms />
+          </RoleRoute>
+        }
+      />
       
       {/* Leader Routes */}
       <Route
@@ -229,6 +239,14 @@ const AppRoutes = () => {
         element={
           <RoleRoute allowedRoles={["lider"]}>
             <Team />
+          </RoleRoute>
+        }
+      />
+      <Route
+        path="/team-feedback"
+        element={
+          <RoleRoute allowedRoles={["lider"]}>
+            <TeamFeedbackView />
           </RoleRoute>
         }
       />
