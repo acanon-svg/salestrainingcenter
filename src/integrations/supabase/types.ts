@@ -157,6 +157,115 @@ export type Database = {
         }
         Relationships: []
       }
+      calculator_formulas: {
+        Row: {
+          created_at: string
+          description: string | null
+          formula: string
+          id: string
+          label: string
+          name: string
+          order_index: number | null
+          result_type: string
+          tool_id: string
+          visible_to_leaders: boolean | null
+          visible_to_students: boolean | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          formula: string
+          id?: string
+          label: string
+          name: string
+          order_index?: number | null
+          result_type?: string
+          tool_id: string
+          visible_to_leaders?: boolean | null
+          visible_to_students?: boolean | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          formula?: string
+          id?: string
+          label?: string
+          name?: string
+          order_index?: number | null
+          result_type?: string
+          tool_id?: string
+          visible_to_leaders?: boolean | null
+          visible_to_students?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calculator_formulas_tool_id_fkey"
+            columns: ["tool_id"]
+            isOneToOne: false
+            referencedRelation: "tools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calculator_variables: {
+        Row: {
+          created_at: string
+          default_value: number | null
+          description: string | null
+          id: string
+          label: string
+          max_value: number | null
+          min_value: number | null
+          name: string
+          order_index: number | null
+          tool_id: string
+          variable_type: string
+          visible_to_leaders: boolean | null
+          visible_to_students: boolean | null
+          weight: number | null
+        }
+        Insert: {
+          created_at?: string
+          default_value?: number | null
+          description?: string | null
+          id?: string
+          label: string
+          max_value?: number | null
+          min_value?: number | null
+          name: string
+          order_index?: number | null
+          tool_id: string
+          variable_type?: string
+          visible_to_leaders?: boolean | null
+          visible_to_students?: boolean | null
+          weight?: number | null
+        }
+        Update: {
+          created_at?: string
+          default_value?: number | null
+          description?: string | null
+          id?: string
+          label?: string
+          max_value?: number | null
+          min_value?: number | null
+          name?: string
+          order_index?: number | null
+          tool_id?: string
+          variable_type?: string
+          visible_to_leaders?: boolean | null
+          visible_to_students?: boolean | null
+          weight?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calculator_variables_tool_id_fkey"
+            columns: ["tool_id"]
+            isOneToOne: false
+            referencedRelation: "tools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chatbot_config: {
         Row: {
           avatar_url: string | null
@@ -1050,6 +1159,39 @@ export type Database = {
           started_at?: string
           status?: string | null
           sync_type?: string
+        }
+        Relationships: []
+      }
+      tools: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          type?: string
+          updated_at?: string
         }
         Relationships: []
       }
