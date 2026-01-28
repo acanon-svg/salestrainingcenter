@@ -1162,6 +1162,42 @@ export type Database = {
         }
         Relationships: []
       }
+      team_feedback_forms: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          embed_url: string
+          id: string
+          is_active: boolean | null
+          name: string
+          target_teams: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          embed_url: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          target_teams?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          embed_url?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          target_teams?: string[] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       tools: {
         Row: {
           created_at: string
