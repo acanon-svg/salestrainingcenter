@@ -189,8 +189,7 @@ const TeamFeedbackView: React.FC = () => {
                   title={selectedForm.name}
                   onLoad={handleIframeLoad}
                   onError={() => setIframeError(true)}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+                  referrerPolicy="no-referrer-when-downgrade"
                 />
               )}
             </div>
