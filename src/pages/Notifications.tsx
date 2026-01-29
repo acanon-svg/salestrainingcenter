@@ -1,62 +1,23 @@
-import React, { useState } from "react";
+import React from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Bell, BookOpen, Award, MessageSquare, CheckCircle, Clock, Trash2 } from "lucide-react";
+import { Bell, BookOpen, Award, MessageSquare, CheckCircle, Clock, Trash2, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
-
-// Mock notifications data
-const mockNotifications = [
-  {
-    id: "1",
-    title: "Nuevo curso disponible",
-    message: "El curso 'Técnicas Avanzadas de Ventas' ya está disponible para ti.",
-    type: "course",
-    is_read: false,
-    created_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-  },
-  {
-    id: "2",
-    title: "¡Nueva insignia obtenida!",
-    message: "Has desbloqueado la insignia 'Perfeccionista'. ¡Sigue así!",
-    type: "badge",
-    is_read: false,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-  },
-  {
-    id: "3",
-    title: "Curso por vencer",
-    message: "El curso 'Compliance 2024' vence en 3 días. No olvides completarlo.",
-    type: "course",
-    is_read: true,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-  },
-  {
-    id: "4",
-    title: "Respuesta a tu feedback",
-    message: "Tu sugerencia sobre el módulo de ventas ha sido implementada. ¡Gracias!",
-    type: "feedback",
-    is_read: true,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
-  },
-  {
-    id: "5",
-    title: "Subiste en el ranking",
-    message: "¡Felicidades! Ahora estás en la posición #12 del ranking general.",
-    type: "info",
-    is_read: true,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(),
-  },
-];
+import { useNotifications, Notification } from "@/hooks/useNotifications";
 
 const Notifications: React.FC = () => {
-  const [notifications, setNotifications] = useState(mockNotifications);
-
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const {
+    notifications,
+    isLoading,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+  } = useNotifications();
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -71,22 +32,29 @@ const Notifications: React.FC = () => {
     }
   };
 
-  const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
-    );
+  const handleMarkAsRead = (id: string) => {
+    markAsRead.mutate(id);
   };
 
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+  const handleMarkAllAsRead = () => {
+    markAllAsRead.mutate();
   };
 
-  const deleteNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  const handleDelete = (id: string) => {
+    deleteNotification.mutate(id);
   };
 
   const unreadNotifications = notifications.filter((n) => !n.is_read);
-  const readNotifications = notifications.filter((n) => n.is_read);
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -109,8 +77,16 @@ const Notifications: React.FC = () => {
                 {unreadCount} sin leer
               </Badge>
             )}
-            <Button variant="outline" onClick={markAllAsRead} disabled={unreadCount === 0}>
-              <CheckCircle className="w-4 h-4 mr-2" />
+            <Button 
+              variant="outline" 
+              onClick={handleMarkAllAsRead} 
+              disabled={unreadCount === 0 || markAllAsRead.isPending}
+            >
+              {markAllAsRead.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <CheckCircle className="w-4 h-4 mr-2" />
+              )}
               Marcar todo como leído
             </Button>
           </div>
@@ -136,21 +112,27 @@ const Notifications: React.FC = () => {
           </TabsList>
 
           <TabsContent value="all" className="mt-6">
-            <NotificationsList
-              notifications={notifications}
-              onMarkAsRead={markAsRead}
-              onDelete={deleteNotification}
-              getTypeIcon={getTypeIcon}
-            />
+            {notifications.length > 0 ? (
+              <NotificationsList
+                notifications={notifications}
+                onMarkAsRead={handleMarkAsRead}
+                onDelete={handleDelete}
+                getTypeIcon={getTypeIcon}
+                isDeleting={deleteNotification.isPending}
+              />
+            ) : (
+              <EmptyState />
+            )}
           </TabsContent>
 
           <TabsContent value="unread" className="mt-6">
             {unreadNotifications.length > 0 ? (
               <NotificationsList
                 notifications={unreadNotifications}
-                onMarkAsRead={markAsRead}
-                onDelete={deleteNotification}
+                onMarkAsRead={handleMarkAsRead}
+                onDelete={handleDelete}
                 getTypeIcon={getTypeIcon}
+                isDeleting={deleteNotification.isPending}
               />
             ) : (
               <Card className="border-dashed">
@@ -170,11 +152,24 @@ const Notifications: React.FC = () => {
   );
 };
 
+const EmptyState: React.FC = () => (
+  <Card className="border-dashed">
+    <CardContent className="flex flex-col items-center justify-center py-16">
+      <Bell className="w-12 h-12 text-muted-foreground mb-4" />
+      <h3 className="font-semibold text-lg">Sin notificaciones</h3>
+      <p className="text-muted-foreground text-sm">
+        No tienes notificaciones en este momento
+      </p>
+    </CardContent>
+  </Card>
+);
+
 interface NotificationsListProps {
-  notifications: typeof mockNotifications;
+  notifications: Notification[];
   onMarkAsRead: (id: string) => void;
   onDelete: (id: string) => void;
   getTypeIcon: (type: string) => React.ReactNode;
+  isDeleting?: boolean;
 }
 
 const NotificationsList: React.FC<NotificationsListProps> = ({
@@ -182,6 +177,7 @@ const NotificationsList: React.FC<NotificationsListProps> = ({
   onMarkAsRead,
   onDelete,
   getTypeIcon,
+  isDeleting,
 }) => {
   return (
     <div className="space-y-3">
@@ -231,8 +227,13 @@ const NotificationsList: React.FC<NotificationsListProps> = ({
                     size="sm"
                     className="text-destructive hover:text-destructive"
                     onClick={() => onDelete(notification.id)}
+                    disabled={isDeleting}
                   >
-                    <Trash2 className="w-4 h-4 mr-1" />
+                    {isDeleting ? (
+                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-4 h-4 mr-1" />
+                    )}
                     Eliminar
                   </Button>
                 </div>
