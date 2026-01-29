@@ -115,12 +115,15 @@ export const Sidebar: React.FC = () => {
 
   const visibleNavItems = defaultNavItems.filter(isNavItemVisible);
 
+  // Creator items should always be visible to creators/admins - portal config visibility should NOT affect them
+  // The sectionKey is only used for dynamic naming, not for hiding sections from creators
   const visibleCreatorItems = creatorItems.filter(
-    (item) => (!item.roles || item.roles.some((role) => hasRole(role))) && isNavItemVisible(item)
+    (item) => !item.roles || item.roles.some((role) => hasRole(role))
   );
 
+  // Leader items should always be visible to leaders - portal config visibility should NOT affect them
   const visibleLeaderItems = leaderItems.filter(
-    (item) => (!item.roles || item.roles.some((role) => hasRole(role))) && isNavItemVisible(item)
+    (item) => !item.roles || item.roles.some((role) => hasRole(role))
   );
 
   const visibleAnalistaItems = analistaItems.filter(
@@ -130,7 +133,6 @@ export const Sidebar: React.FC = () => {
   const visibleAdminItems = adminItems.filter(
     (item) => !item.roles || item.roles.some((role) => hasRole(role))
   );
-
 
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
