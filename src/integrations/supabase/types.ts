@@ -739,6 +739,33 @@ export type Database = {
         }
         Relationships: []
       }
+      leader_hierarchy: {
+        Row: {
+          assigned_by: string | null
+          created_at: string
+          id: string
+          subordinate_id: string
+          supervisor_id: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          created_at?: string
+          id?: string
+          subordinate_id: string
+          supervisor_id: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_by?: string | null
+          created_at?: string
+          id?: string
+          subordinate_id?: string
+          supervisor_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       leader_regions: {
         Row: {
           assigned_by: string | null
