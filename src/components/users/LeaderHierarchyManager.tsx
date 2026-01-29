@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useLeaderHierarchy } from "@/hooks/useLeaderHierarchy";
 import { Users, UserPlus, Trash2, Loader2, ChevronRight, Crown } from "lucide-react";
 
@@ -36,8 +37,9 @@ export const LeaderHierarchyManager: React.FC<LeaderHierarchyManagerProps> = ({ 
   } = useLeaderHierarchy();
 
   const [selectedSupervisor, setSelectedSupervisor] = useState<string>("");
-  const [selectedSubordinate, setSelectedSubordinate] = useState<string>("");
+  const [selectedSubordinates, setSelectedSubordinates] = useState<string[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const getInitials = (name: string | null) => {
     if (!name) return "U";
@@ -83,16 +85,30 @@ export const LeaderHierarchyManager: React.FC<LeaderHierarchyManagerProps> = ({ 
     });
   }, [hierarchies, allLeaders]);
 
-  const handleAddSubordinate = async () => {
-    if (!selectedSupervisor || !selectedSubordinate) return;
+  const toggleSubordinate = (userId: string) => {
+    setSelectedSubordinates((prev) =>
+      prev.includes(userId)
+        ? prev.filter((id) => id !== userId)
+        : [...prev, userId]
+    );
+  };
 
-    await addSubordinate.mutateAsync({
-      supervisorId: selectedSupervisor,
-      subordinateId: selectedSubordinate,
-    });
+  const handleAddSubordinates = async () => {
+    if (!selectedSupervisor || selectedSubordinates.length === 0) return;
 
-    setSelectedSubordinate("");
-    setDialogOpen(false);
+    setIsSubmitting(true);
+    try {
+      for (const subordinateId of selectedSubordinates) {
+        await addSubordinate.mutateAsync({
+          supervisorId: selectedSupervisor,
+          subordinateId,
+        });
+      }
+      setSelectedSubordinates([]);
+      setDialogOpen(false);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleRemoveSubordinate = async (hierarchyId: string) => {
@@ -259,20 +275,23 @@ export const LeaderHierarchyManager: React.FC<LeaderHierarchyManagerProps> = ({ 
         </CardContent>
       </Card>
 
-      {/* Add Subordinate Dialog */}
+      {/* Add Subordinates Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="h-5 w-5" />
-              Asignar Líder Subordinado
+              Asignar Líderes Subordinados
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Líder Supervisor</label>
-              <Select value={selectedSupervisor} onValueChange={setSelectedSupervisor}>
+              <label className="text-sm font-medium">Líder Supervisor (Manager)</label>
+              <Select value={selectedSupervisor} onValueChange={(v) => {
+                setSelectedSupervisor(v);
+                setSelectedSubordinates([]);
+              }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecciona un supervisor" />
                 </SelectTrigger>
@@ -292,32 +311,53 @@ export const LeaderHierarchyManager: React.FC<LeaderHierarchyManagerProps> = ({ 
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Líder Subordinado</label>
-              <Select
-                value={selectedSubordinate}
-                onValueChange={setSelectedSubordinate}
-                disabled={!selectedSupervisor}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un subordinado" />
-                </SelectTrigger>
-                <SelectContent>
-                  {getAvailableSubordinates(selectedSupervisor)?.map((leader) => (
-                    <SelectItem key={leader.user_id} value={leader.user_id}>
-                      <div className="flex items-center gap-2">
-                        <span>{leader.full_name || leader.email}</span>
-                        <span className="text-muted-foreground text-xs">
-                          ({leader.team})
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {selectedSupervisor && getAvailableSubordinates(selectedSupervisor)?.length === 0 && (
-                <p className="text-xs text-muted-foreground">
+              <label className="text-sm font-medium">
+                Líderes Subordinados 
+                {selectedSubordinates.length > 0 && (
+                  <Badge variant="secondary" className="ml-2">
+                    {selectedSubordinates.length} seleccionados
+                  </Badge>
+                )}
+              </label>
+              
+              {!selectedSupervisor ? (
+                <p className="text-sm text-muted-foreground py-2">
+                  Primero selecciona un supervisor
+                </p>
+              ) : getAvailableSubordinates(selectedSupervisor)?.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-2">
                   No hay más líderes disponibles para asignar
                 </p>
+              ) : (
+                <ScrollArea className="h-[200px] border rounded-md p-2">
+                  <div className="space-y-2">
+                    {getAvailableSubordinates(selectedSupervisor)?.map((leader) => (
+                      <div
+                        key={leader.user_id}
+                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer"
+                        onClick={() => toggleSubordinate(leader.user_id)}
+                      >
+                        <Checkbox
+                          checked={selectedSubordinates.includes(leader.user_id)}
+                          onCheckedChange={() => toggleSubordinate(leader.user_id)}
+                        />
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="text-xs">
+                            {getInitials(leader.full_name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {leader.full_name || leader.email}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {leader.regional} • {leader.team}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
               )}
             </div>
           </div>
@@ -327,13 +367,13 @@ export const LeaderHierarchyManager: React.FC<LeaderHierarchyManagerProps> = ({ 
               Cancelar
             </Button>
             <Button
-              onClick={handleAddSubordinate}
-              disabled={!selectedSupervisor || !selectedSubordinate || addSubordinate.isPending}
+              onClick={handleAddSubordinates}
+              disabled={!selectedSupervisor || selectedSubordinates.length === 0 || isSubmitting}
             >
-              {addSubordinate.isPending && (
+              {isSubmitting && (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
               )}
-              Asignar
+              Asignar {selectedSubordinates.length > 0 && `(${selectedSubordinates.length})`}
             </Button>
           </DialogFooter>
         </DialogContent>
