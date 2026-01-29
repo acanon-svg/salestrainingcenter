@@ -24,10 +24,10 @@ import {
 } from "lucide-react";
 import { useTools, Tool } from "@/hooks/useTools";
 import { useAuth } from "@/contexts/AuthContext";
-import { CalculatorConfigurator } from "@/components/tools/CalculatorConfigurator";
-import { CommissionCalculator } from "@/components/tools/CommissionCalculator";
-import { useCalculatorVariables, useCalculatorFormulas } from "@/hooks/useTools";
 import { TeamSelector } from "@/components/tools/TeamSelector";
+import { SalesCommissionCalculator } from "@/components/tools/SalesCommissionCalculator";
+import { CommissionConfigManager } from "@/components/tools/CommissionConfigManager";
+import { useMyCommissionConfig } from "@/hooks/useCommissionCalculatorConfig";
 
 const ToolCard: React.FC<{
   tool: Tool;
@@ -90,22 +90,38 @@ const ToolCard: React.FC<{
 
 const ToolViewer: React.FC<{
   toolId: string;
+  userId: string | undefined;
+  userTeam: string | null | undefined;
   userRole: "student" | "lider" | "admin" | "creator";
-}> = ({ toolId, userRole }) => {
-  const { variables } = useCalculatorVariables(toolId);
-  const { formulas } = useCalculatorFormulas(toolId);
+}> = ({ toolId, userId, userTeam, userRole }) => {
+  const { data: config, isLoading } = useMyCommissionConfig(toolId, userId, userTeam);
 
-  return (
-    <CommissionCalculator
-      variables={variables || []}
-      formulas={formulas || []}
-      userRole={userRole}
-    />
-  );
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!config) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center">
+          <Calculator className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-muted-foreground">
+            No hay configuración disponible para tu perfil. Contacta al administrador.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return <SalesCommissionCalculator config={config} userRole={userRole} />;
 };
 
 const Tools: React.FC = () => {
-  const { hasRole } = useAuth();
+  const { hasRole, profile, user } = useAuth();
   const { tools, isLoading, createTool, updateTool } = useTools();
   const isCreator = hasRole("creator") || hasRole("admin");
 
@@ -168,10 +184,10 @@ const Tools: React.FC = () => {
             </Button>
             <div>
               <h1 className="text-2xl font-bold">{selectedTool.name}</h1>
-              <p className="text-muted-foreground">Configuración de la herramienta</p>
+              <p className="text-muted-foreground">Configuración de metas por perfil</p>
             </div>
           </div>
-          <CalculatorConfigurator toolId={selectedTool.id} />
+          <CommissionConfigManager toolId={selectedTool.id} />
         </div>
       </DashboardLayout>
     );
@@ -193,7 +209,12 @@ const Tools: React.FC = () => {
               )}
             </div>
           </div>
-          <ToolViewer toolId={selectedTool.id} userRole={getUserRole()} />
+          <ToolViewer 
+            toolId={selectedTool.id} 
+            userId={user?.id} 
+            userTeam={profile?.team}
+            userRole={getUserRole()} 
+          />
         </div>
       </DashboardLayout>
     );

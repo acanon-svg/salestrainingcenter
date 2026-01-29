@@ -332,6 +332,65 @@ export type Database = {
         }
         Relationships: []
       }
+      commission_calculator_configs: {
+        Row: {
+          base_comisional: number
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_default: boolean | null
+          meta_firmas: number
+          meta_gmv_usd: number
+          meta_originaciones: number
+          name: string
+          target_teams: string[] | null
+          target_users: string[] | null
+          tool_id: string
+          updated_at: string
+        }
+        Insert: {
+          base_comisional?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean | null
+          meta_firmas?: number
+          meta_gmv_usd?: number
+          meta_originaciones?: number
+          name?: string
+          target_teams?: string[] | null
+          target_users?: string[] | null
+          tool_id: string
+          updated_at?: string
+        }
+        Update: {
+          base_comisional?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean | null
+          meta_firmas?: number
+          meta_gmv_usd?: number
+          meta_originaciones?: number
+          name?: string
+          target_teams?: string[] | null
+          target_users?: string[] | null
+          tool_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_calculator_configs_tool_id_fkey"
+            columns: ["tool_id"]
+            isOneToOne: false
+            referencedRelation: "tools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       course_enrollments: {
         Row: {
           completed_at: string | null
