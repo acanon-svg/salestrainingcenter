@@ -16,13 +16,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Users, Eye, Shield, Loader2, Mail, Building, MapPin, UserCheck, Calendar, Trophy, Settings, UserPlus, Bot, UserCog, Star } from "lucide-react";
+import { Search, Users, Eye, Shield, Loader2, Mail, Building, MapPin, UserCheck, Calendar, Trophy, Settings, UserPlus, Bot, UserCog, Star, Crown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useUserRoles } from "@/hooks/useUserRoles";
+import { LeaderHierarchyManager } from "@/components/users/LeaderHierarchyManager";
 
 // Helper to get untyped supabase client
 const getSupabaseClient = () => supabase as unknown as SupabaseClient;
@@ -244,10 +245,14 @@ const UserManagement: React.FC = () => {
 
         {/* Main Tabs */}
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 max-w-md">
+          <TabsList className="grid w-full grid-cols-3 max-w-xl">
             <TabsTrigger value="users" className="gap-2">
               <Users className="h-4 w-4" />
               Usuarios
+            </TabsTrigger>
+            <TabsTrigger value="hierarchy" className="gap-2">
+              <Crown className="h-4 w-4" />
+              Jerarquía Líderes
             </TabsTrigger>
             <TabsTrigger value="chatbot" className="gap-2">
               <Bot className="h-4 w-4" />
@@ -573,6 +578,10 @@ const UserManagement: React.FC = () => {
           user={selectedUser}
           onPointsUpdated={fetchUsers}
         />
+          </TabsContent>
+
+          <TabsContent value="hierarchy" className="mt-6">
+            <LeaderHierarchyManager />
           </TabsContent>
 
           <TabsContent value="chatbot" className="mt-6">
