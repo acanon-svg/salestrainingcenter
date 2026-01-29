@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, ChevronRight, Users, MapPin, Trophy } from "lucide-react";
+import { ChevronDown, ChevronRight, Users, Briefcase, Trophy } from "lucide-react";
 import { TeamMemberTable, TeamMember } from "./TeamMemberTable";
 
 interface SubordinateLeader {
@@ -28,22 +28,22 @@ interface SubordinateLeaderCardProps {
 export const SubordinateLeaderCard: React.FC<SubordinateLeaderCardProps> = ({ leader }) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  // Fetch team members for this subordinate leader's region
+  // Fetch team members for this subordinate leader's TEAM (not region)
   const { data: teamMembers, isLoading: membersLoading } = useQuery({
-    queryKey: ["subordinate-team-members", leader.regional],
+    queryKey: ["subordinate-team-members-by-team", leader.team],
     queryFn: async () => {
-      if (!leader.regional) return [];
+      if (!leader.team) return [];
       
       const { data, error } = await supabase
         .from("profiles")
         .select("id, user_id, full_name, email, avatar_url, team, company_role, points, badges_count")
-        .eq("regional", leader.regional)
+        .eq("team", leader.team)
         .order("points", { ascending: false });
 
       if (error) throw error;
       return data as TeamMember[];
     },
-    enabled: isOpen && !!leader.regional,
+    enabled: isOpen && !!leader.team,
   });
 
   const getInitials = (name: string | null) => {
@@ -78,16 +78,15 @@ export const SubordinateLeaderCard: React.FC<SubordinateLeaderCardProps> = ({ le
                     <Badge variant="outline" className="text-xs">Líder</Badge>
                   </CardTitle>
                   <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
-                    {leader.regional && (
-                      <span className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        {leader.regional}
-                      </span>
-                    )}
                     {leader.team && (
                       <span className="flex items-center gap-1">
-                        <Users className="h-3 w-3" />
+                        <Briefcase className="h-3 w-3" />
                         {leader.team}
+                      </span>
+                    )}
+                    {leader.regional && (
+                      <span className="flex items-center gap-1 text-xs opacity-70">
+                        ({leader.regional})
                       </span>
                     )}
                   </div>
@@ -118,7 +117,7 @@ export const SubordinateLeaderCard: React.FC<SubordinateLeaderCardProps> = ({ le
         </CollapsibleTrigger>
         <CollapsibleContent>
           <CardContent className="pt-0">
-            {leader.regional ? (
+            {leader.team ? (
               <div className="bg-muted/30 rounded-lg p-4">
                 <h4 className="font-medium mb-3 flex items-center gap-2">
                   <Users className="h-4 w-4 text-primary" />
@@ -132,7 +131,7 @@ export const SubordinateLeaderCard: React.FC<SubordinateLeaderCardProps> = ({ le
               </div>
             ) : (
               <div className="text-center py-4 text-muted-foreground">
-                Este líder no tiene una región asignada
+                Este líder no tiene un equipo asignado
               </div>
             )}
           </CardContent>
