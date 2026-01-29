@@ -508,6 +508,10 @@ const CreateCourse: React.FC = () => {
                     <Link2 className="w-4 h-4 mr-2" />
                     Enlace
                   </Button>
+                  <Button variant="outline" onClick={() => handleAddMaterial("google_embed")}>
+                    <FileText className="w-4 h-4 mr-2" />
+                    Google Embed
+                  </Button>
                 </div>
 
                 <div className="space-y-4">

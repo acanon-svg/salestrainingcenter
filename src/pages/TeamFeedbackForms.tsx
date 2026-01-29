@@ -46,9 +46,11 @@ import {
   Users,
   ExternalLink,
   Loader2,
+  Crown,
 } from "lucide-react";
 import { useTeamFeedbackForms, TeamFeedbackForm } from "@/hooks/useTeamFeedbackForms";
 import { TeamSelector } from "@/components/tools/TeamSelector";
+import { LeaderSelector } from "@/components/tools/LeaderSelector";
 
 const TeamFeedbackForms: React.FC = () => {
   const { forms, isLoading, createForm, updateForm, deleteForm } =
@@ -64,6 +66,7 @@ const TeamFeedbackForms: React.FC = () => {
   const [description, setDescription] = useState("");
   const [embedUrl, setEmbedUrl] = useState("");
   const [targetTeams, setTargetTeams] = useState<string[]>([]);
+  const [targetLeaders, setTargetLeaders] = useState<string[]>([]);
   const [isActive, setIsActive] = useState(true);
 
   const resetForm = () => {
@@ -71,6 +74,7 @@ const TeamFeedbackForms: React.FC = () => {
     setDescription("");
     setEmbedUrl("");
     setTargetTeams([]);
+    setTargetLeaders([]);
     setIsActive(true);
     setSelectedForm(null);
   };
@@ -86,6 +90,7 @@ const TeamFeedbackForms: React.FC = () => {
     setDescription(form.description || "");
     setEmbedUrl(form.embed_url);
     setTargetTeams(form.target_teams || []);
+    setTargetLeaders((form as any).target_leaders || []);
     setIsActive(form.is_active);
     setDialogOpen(true);
   };
@@ -93,23 +98,22 @@ const TeamFeedbackForms: React.FC = () => {
   const handleSave = async () => {
     if (!name.trim() || !embedUrl.trim()) return;
 
+    const formData = {
+      name,
+      description: description || null,
+      embed_url: embedUrl,
+      target_teams: targetTeams.length > 0 ? targetTeams : null,
+      target_leaders: targetLeaders.length > 0 ? targetLeaders : null,
+      is_active: isActive,
+    };
+
     if (selectedForm) {
       await updateForm.mutateAsync({
         id: selectedForm.id,
-        name,
-        description: description || null,
-        embed_url: embedUrl,
-        target_teams: targetTeams.length > 0 ? targetTeams : null,
-        is_active: isActive,
-      });
+        ...formData,
+      } as any);
     } else {
-      await createForm.mutateAsync({
-        name,
-        description: description || null,
-        embed_url: embedUrl,
-        target_teams: targetTeams.length > 0 ? targetTeams : null,
-        is_active: isActive,
-      });
+      await createForm.mutateAsync(formData as any);
     }
 
     setDialogOpen(false);
@@ -181,16 +185,26 @@ const TeamFeedbackForms: React.FC = () => {
                         {form.description || "-"}
                       </TableCell>
                       <TableCell>
-                        {form.target_teams && form.target_teams.length > 0 ? (
-                          <Badge variant="outline" className="text-xs">
-                            <Users className="h-3 w-3 mr-1" />
-                            {form.target_teams.length} equipos
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary" className="text-xs">
-                            Todos
-                          </Badge>
-                        )}
+                        <div className="flex flex-wrap gap-1">
+                          {form.target_teams && form.target_teams.length > 0 && (
+                            <Badge variant="outline" className="text-xs">
+                              <Users className="h-3 w-3 mr-1" />
+                              {form.target_teams.length} equipos
+                            </Badge>
+                          )}
+                          {(form as any).target_leaders && (form as any).target_leaders.length > 0 && (
+                            <Badge variant="outline" className="text-xs">
+                              <Crown className="h-3 w-3 mr-1" />
+                              {(form as any).target_leaders.length} líderes
+                            </Badge>
+                          )}
+                          {(!form.target_teams || form.target_teams.length === 0) &&
+                           (!(form as any).target_leaders || (form as any).target_leaders.length === 0) && (
+                            <Badge variant="secondary" className="text-xs">
+                              Todos
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge
@@ -295,9 +309,21 @@ const TeamFeedbackForms: React.FC = () => {
                 </p>
               </div>
 
-              <TeamSelector
-                selectedTeams={targetTeams}
-                onTeamsChange={setTargetTeams}
+              <div className="space-y-2">
+                <Label>Equipos (opcional)</Label>
+                <TeamSelector
+                  selectedTeams={targetTeams}
+                  onTeamsChange={setTargetTeams}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Selecciona equipos que verán este formulario
+                </p>
+              </div>
+
+              <LeaderSelector
+                selectedLeaders={targetLeaders}
+                onLeadersChange={setTargetLeaders}
+                label="Líderes específicos (opcional)"
               />
 
               <div className="flex items-center justify-between">

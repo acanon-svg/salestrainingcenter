@@ -5,6 +5,8 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 import { ChatbotSettings } from "@/components/chatbot/ChatbotSettings";
 import { RoleManagementDialog } from "@/components/users/RoleManagementDialog";
 import { AssignPointsDialog } from "@/components/users/AssignPointsDialog";
+import { UserEditDialog } from "@/components/users/UserEditDialog";
+import { PortalSectionManager } from "@/components/admin/PortalSectionManager";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Users, Eye, Shield, Loader2, Mail, Building, MapPin, UserCheck, Calendar, Trophy, Settings, UserPlus, Bot, UserCog, Star, Crown } from "lucide-react";
+import { Search, Users, Eye, Shield, Loader2, Mail, Building, MapPin, UserCheck, Calendar, Trophy, Settings, UserPlus, Bot, UserCog, Star, Crown, Pencil, LayoutDashboard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
@@ -62,6 +64,7 @@ const UserManagement: React.FC = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [isPointsDialogOpen, setIsPointsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isUpdatingSettings, setIsUpdatingSettings] = useState(false);
 
   const ALL_ROLES = ["student", "lider", "creator", "admin"] as const;
@@ -164,6 +167,11 @@ const UserManagement: React.FC = () => {
     setIsPointsDialogOpen(true);
   };
 
+  const handleEditUser = (user: UserProfile) => {
+    setSelectedUser(user);
+    setIsEditDialogOpen(true);
+  };
+
 
   const getInitials = (name: string | null) => {
     if (!name) return "U";
@@ -245,7 +253,7 @@ const UserManagement: React.FC = () => {
 
         {/* Main Tabs */}
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 max-w-xl">
+          <TabsList className="grid w-full grid-cols-4 max-w-2xl">
             <TabsTrigger value="users" className="gap-2">
               <Users className="h-4 w-4" />
               Usuarios
@@ -253,6 +261,10 @@ const UserManagement: React.FC = () => {
             <TabsTrigger value="hierarchy" className="gap-2">
               <Crown className="h-4 w-4" />
               Jerarquía Líderes
+            </TabsTrigger>
+            <TabsTrigger value="sections" className="gap-2">
+              <LayoutDashboard className="h-4 w-4" />
+              Secciones
             </TabsTrigger>
             <TabsTrigger value="chatbot" className="gap-2">
               <Bot className="h-4 w-4" />
@@ -401,6 +413,15 @@ const UserManagement: React.FC = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditUser(user)}
+                              className="gap-1"
+                              title="Editar datos"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -578,10 +599,22 @@ const UserManagement: React.FC = () => {
           user={selectedUser}
           onPointsUpdated={fetchUsers}
         />
+
+        {/* Edit User Dialog */}
+        <UserEditDialog
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          user={selectedUser}
+          onUserUpdated={fetchUsers}
+        />
           </TabsContent>
 
           <TabsContent value="hierarchy" className="mt-6">
             <LeaderHierarchyManager />
+          </TabsContent>
+
+          <TabsContent value="sections" className="mt-6">
+            <PortalSectionManager />
           </TabsContent>
 
           <TabsContent value="chatbot" className="mt-6">

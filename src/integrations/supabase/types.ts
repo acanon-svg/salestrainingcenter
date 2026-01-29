@@ -1000,6 +1000,45 @@ export type Database = {
         }
         Relationships: []
       }
+      portal_section_configs: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_enabled: boolean
+          section_key: string
+          section_name: string
+          target_leaders: string[] | null
+          target_teams: string[] | null
+          target_users: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_enabled?: boolean
+          section_key: string
+          section_name: string
+          target_leaders?: string[] | null
+          target_teams?: string[] | null
+          target_users?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_enabled?: boolean
+          section_key?: string
+          section_name?: string
+          target_leaders?: string[] | null
+          target_teams?: string[] | null
+          target_users?: string[] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       processes: {
         Row: {
           created_at: string
@@ -1257,6 +1296,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
+          target_leaders: string[] | null
           target_teams: string[] | null
           updated_at: string
         }
@@ -1268,6 +1308,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
+          target_leaders?: string[] | null
           target_teams?: string[] | null
           updated_at?: string
         }
@@ -1279,6 +1320,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+          target_leaders?: string[] | null
           target_teams?: string[] | null
           updated_at?: string
         }
