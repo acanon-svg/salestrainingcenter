@@ -80,12 +80,15 @@ export const PortalSectionManager: React.FC = () => {
   const handleSave = async () => {
     if (!editingConfig) return;
 
+    // Explicitly preserve is_enabled and only update the fields shown in the dialog
     await updateConfig.mutateAsync({
       id: editingConfig.id,
-      section_name: sectionName.trim(),
+      section_name: sectionName.trim() || editingConfig.section_name,
       description: sectionDescription.trim() || null,
       target_teams: selectedTeams.length > 0 ? selectedTeams : null,
       target_users: selectedUsers.length > 0 ? selectedUsers : null,
+      // Explicitly preserve is_enabled to prevent accidental disabling
+      is_enabled: editingConfig.is_enabled,
     });
 
     setDialogOpen(false);
