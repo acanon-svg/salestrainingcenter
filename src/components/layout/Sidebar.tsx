@@ -24,20 +24,34 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import addiTrainingLogo from "@/assets/addi-training-logo.svg";
+import { usePortalSectionConfigs } from "@/hooks/usePortalSectionConfigs";
 
 interface NavItem {
   label: string;
   icon: React.ElementType;
   href: string;
+  sectionKey?: string;
   roles?: ("student" | "creator" | "admin" | "lider" | "analista")[];
 }
 
-const navItems: NavItem[] = [
-  { label: "Home", icon: Home, href: "/dashboard" },
-  { label: "Mis Cursos", icon: BookOpen, href: "/courses" },
-  { label: "Material Formativo", icon: FolderOpen, href: "/materials" },
-  { label: "Ranking", icon: Trophy, href: "/ranking" },
-  { label: "Insignias", icon: Award, href: "/badges" },
+// Map section_key to route paths for dynamic name lookup
+const sectionKeyToHref: Record<string, string> = {
+  dashboard: "/dashboard",
+  courses: "/courses",
+  training_materials: "/materials",
+  ranking: "/ranking",
+  badges: "/badges",
+  tools: "/tools",
+  team_feedback: "/team-feedback-forms",
+  announcements: "/announcements",
+};
+
+const defaultNavItems: NavItem[] = [
+  { label: "Home", icon: Home, href: "/dashboard", sectionKey: "dashboard" },
+  { label: "Mis Cursos", icon: BookOpen, href: "/courses", sectionKey: "courses" },
+  { label: "Material Formativo", icon: FolderOpen, href: "/materials", sectionKey: "training_materials" },
+  { label: "Ranking", icon: Trophy, href: "/ranking", sectionKey: "ranking" },
+  { label: "Insignias", icon: Award, href: "/badges", sectionKey: "badges" },
   { label: "Notificaciones", icon: Bell, href: "/notifications" },
   { label: "Feedback", icon: MessageSquare, href: "/feedback" },
 ];
@@ -45,16 +59,16 @@ const navItems: NavItem[] = [
 const creatorItems: NavItem[] = [
   { label: "Crear Curso", icon: PlusCircle, href: "/courses/create", roles: ["creator", "admin"] },
   { label: "Mis Creaciones", icon: BookOpen, href: "/my-courses", roles: ["creator", "admin"] },
-  { label: "Anuncios", icon: Bell, href: "/announcements", roles: ["creator", "admin"] },
-  { label: "Herramientas", icon: Wrench, href: "/tools", roles: ["creator", "admin"] },
-  { label: "Feedbacks al Equipo", icon: ClipboardList, href: "/team-feedback-forms", roles: ["creator", "admin"] },
+  { label: "Anuncios", icon: Bell, href: "/announcements", sectionKey: "announcements", roles: ["creator", "admin"] },
+  { label: "Herramientas", icon: Wrench, href: "/tools", sectionKey: "tools", roles: ["creator", "admin"] },
+  { label: "Feedbacks al Equipo", icon: ClipboardList, href: "/team-feedback-forms", sectionKey: "team_feedback", roles: ["creator", "admin"] },
 ];
 
 const leaderItems: NavItem[] = [
   { label: "Mi Equipo", icon: Users, href: "/team", roles: ["lider"] },
   { label: "Reportes Regional", icon: BarChart3, href: "/reports", roles: ["lider"] },
-  { label: "Herramientas", icon: Wrench, href: "/tools", roles: ["lider"] },
-  { label: "Feedbacks al Equipo", icon: ClipboardList, href: "/team-feedback", roles: ["lider"] },
+  { label: "Herramientas", icon: Wrench, href: "/tools", sectionKey: "tools", roles: ["lider"] },
+  { label: "Feedbacks al Equipo", icon: ClipboardList, href: "/team-feedback", sectionKey: "team_feedback", roles: ["lider"] },
 ];
 
 const analistaItems: NavItem[] = [
@@ -68,8 +82,9 @@ const adminItems: NavItem[] = [
 ];
 
 export const Sidebar: React.FC = () => {
-  const { profile, roles, signOut, hasRole } = useAuth();
+  const { profile, roles, signOut, hasRole, user } = useAuth();
   const location = useLocation();
+  const { configs, isSectionVisibleForUser } = usePortalSectionConfigs();
 
   const isActive = (href: string) => location.pathname === href;
 
@@ -83,12 +98,29 @@ export const Sidebar: React.FC = () => {
       .slice(0, 2);
   };
 
+  // Get custom section name from config, or use default
+  const getSectionLabel = (item: NavItem): string => {
+    if (!item.sectionKey || !configs) return item.label;
+    const config = configs.find((c) => c.section_key === item.sectionKey);
+    return config?.section_name || item.label;
+  };
+
+  // Check if a nav item is visible based on portal config
+  const isNavItemVisible = (item: NavItem): boolean => {
+    if (!item.sectionKey || !configs || !user?.id) return true;
+    const config = configs.find((c) => c.section_key === item.sectionKey);
+    if (!config) return true;
+    return isSectionVisibleForUser(config, profile?.team || null, user.id);
+  };
+
+  const visibleNavItems = defaultNavItems.filter(isNavItemVisible);
+
   const visibleCreatorItems = creatorItems.filter(
-    (item) => !item.roles || item.roles.some((role) => hasRole(role))
+    (item) => (!item.roles || item.roles.some((role) => hasRole(role))) && isNavItemVisible(item)
   );
 
   const visibleLeaderItems = leaderItems.filter(
-    (item) => !item.roles || item.roles.some((role) => hasRole(role))
+    (item) => (!item.roles || item.roles.some((role) => hasRole(role))) && isNavItemVisible(item)
   );
 
   const visibleAnalistaItems = analistaItems.filter(
@@ -117,7 +149,7 @@ export const Sidebar: React.FC = () => {
         {/* Navigation */}
         <ScrollArea className="flex-1 px-3 py-4">
           <nav className="space-y-1">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const Icon = item.icon;
               return (
                 <Link
@@ -131,7 +163,7 @@ export const Sidebar: React.FC = () => {
                   )}
                 >
                   <Icon className="h-5 w-5" />
-                  {item.label}
+                  {getSectionLabel(item)}
                 </Link>
               );
             })}
@@ -183,7 +215,7 @@ export const Sidebar: React.FC = () => {
                       )}
                     >
                       <Icon className="h-5 w-5" />
-                      {item.label}
+                      {getSectionLabel(item)}
                     </Link>
                   );
                 })}
@@ -237,7 +269,7 @@ export const Sidebar: React.FC = () => {
                       )}
                     >
                       <Icon className="h-5 w-5" />
-                      {item.label}
+                      {getSectionLabel(item)}
                     </Link>
                   );
                 })}
