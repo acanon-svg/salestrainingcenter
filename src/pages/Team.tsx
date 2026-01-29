@@ -2,33 +2,59 @@ import React from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLeaderRegion } from "@/hooks/useLeaderRegion";
+import { useLeaderHierarchy } from "@/hooks/useLeaderHierarchy";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, Shield, MapPin, Loader2, Trophy, Target, BookOpen } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Users, Shield, MapPin, Loader2, Trophy, Target, BookOpen, UserCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { LevelBadge } from "@/components/gamification/LevelBadge";
+import { TeamMemberTable, TeamMember } from "@/components/team/TeamMemberTable";
+import { SubordinateLeaderCard } from "@/components/team/SubordinateLeaderCard";
 
-interface TeamMember {
+interface SubordinateLeader {
   id: string;
   user_id: string;
   full_name: string | null;
   email: string;
   avatar_url: string | null;
   team: string | null;
+  regional: string | null;
   company_role: string | null;
   points: number;
-  badges_count: number;
 }
 
 const Team: React.FC = () => {
   const { user, hasRole } = useAuth();
   const { data: leaderRegion, isLoading: regionLoading } = useLeaderRegion(user?.id);
+  const { useSubordinates } = useLeaderHierarchy();
   const isLeader = hasRole("lider");
 
+  // Fetch subordinate leader relationships
+  const { data: subordinateRelations } = useSubordinates(user?.id || "");
+
+  // Fetch full profiles of subordinate leaders
+  const { data: subordinateLeaders, isLoading: subordinatesLoading } = useQuery({
+    queryKey: ["subordinate-leader-profiles", subordinateRelations],
+    queryFn: async () => {
+      if (!subordinateRelations || subordinateRelations.length === 0) return [];
+      
+      const subordinateIds = subordinateRelations.map((r) => r.subordinate_id);
+      
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, user_id, full_name, email, avatar_url, team, regional, company_role, points")
+        .in("user_id", subordinateIds)
+        .order("full_name");
+
+      if (error) throw error;
+      return data as SubordinateLeader[];
+    },
+    enabled: !!subordinateRelations && subordinateRelations.length > 0,
+  });
+
+  // Fetch direct team members (same region as the leader)
   const { data: teamMembers, isLoading: membersLoading } = useQuery({
     queryKey: ["team-members", leaderRegion?.regional],
     queryFn: async () => {
@@ -84,27 +110,10 @@ const Team: React.FC = () => {
     );
   }
 
-  if (!leaderRegion) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Card className="w-full max-w-md text-center">
-            <CardHeader>
-              <MapPin className="h-12 w-12 mx-auto text-muted-foreground" />
-              <CardTitle>Sin Región Asignada</CardTitle>
-              <CardDescription>
-                Aún no tienes una región asignada. Contacta al administrador para que te asigne una región.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
   const totalPoints = teamMembers?.reduce((sum, m) => sum + m.points, 0) || 0;
   const avgPoints = teamMembers?.length ? Math.round(totalPoints / teamMembers.length) : 0;
   const topPerformer = teamMembers?.[0];
+  const hasSubordinates = subordinateLeaders && subordinateLeaders.length > 0;
 
   return (
     <DashboardLayout>
@@ -117,152 +126,134 @@ const Team: React.FC = () => {
               Mi Equipo
             </h1>
             <p className="text-muted-foreground mt-1">
-              Supervisa el progreso de los miembros de tu región
+              Supervisa el progreso de tu equipo y líderes subordinados
             </p>
           </div>
-          <Badge variant="secondary" className="text-lg px-4 py-2 flex items-center gap-2">
-            <MapPin className="h-4 w-4" />
-            {leaderRegion.regional}
-          </Badge>
+          {leaderRegion?.regional && (
+            <Badge variant="secondary" className="text-lg px-4 py-2 flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              {leaderRegion.regional}
+            </Badge>
+          )}
         </div>
 
-        {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-primary/10">
-                  <Users className="h-6 w-6 text-primary" />
+        {/* Stats - Only show if leader has a region */}
+        {leaderRegion?.regional && (
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-full bg-primary/10">
+                    <Users className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{teamMembers?.length || 0}</p>
+                    <p className="text-sm text-muted-foreground">Miembros Directos</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-2xl font-bold">{teamMembers?.length || 0}</p>
-                  <p className="text-sm text-muted-foreground">Miembros</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-full bg-addi-orange/10">
+                    <Trophy className="h-6 w-6 text-addi-orange" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{totalPoints.toLocaleString()}</p>
+                    <p className="text-sm text-muted-foreground">Puntos Totales</p>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-addi-orange/10">
-                  <Trophy className="h-6 w-6 text-addi-orange" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-full bg-addi-cyan/10">
+                    <Target className="h-6 w-6 text-addi-cyan" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{avgPoints.toLocaleString()}</p>
+                    <p className="text-sm text-muted-foreground">Promedio Puntos</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-2xl font-bold">{totalPoints.toLocaleString()}</p>
-                  <p className="text-sm text-muted-foreground">Puntos Totales</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={topPerformer?.avatar_url || undefined} />
+                    <AvatarFallback className="bg-primary/10 text-primary">
+                      {getInitials(topPerformer?.full_name || null)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <p className="font-bold truncate">{topPerformer?.full_name || "N/A"}</p>
+                    <p className="text-sm text-muted-foreground">Top del Equipo</p>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-addi-cyan/10">
-                  <Target className="h-6 w-6 text-addi-cyan" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{avgPoints.toLocaleString()}</p>
-                  <p className="text-sm text-muted-foreground">Promedio Puntos</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={topPerformer?.avatar_url || undefined} />
-                  <AvatarFallback className="bg-primary/10 text-primary">
-                    {getInitials(topPerformer?.full_name || null)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="min-w-0">
-                  <p className="font-bold truncate">{topPerformer?.full_name || "N/A"}</p>
-                  <p className="text-sm text-muted-foreground">Top del Equipo</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
-        {/* Team Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5 text-primary" />
-              Miembros del Equipo
-            </CardTitle>
-            <CardDescription>
-              Rendimiento detallado de cada miembro de tu región
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {membersLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">#</TableHead>
-                      <TableHead>Miembro</TableHead>
-                      <TableHead>Cargo</TableHead>
-                      <TableHead>Equipo</TableHead>
-                      <TableHead className="text-center">Nivel</TableHead>
-                      <TableHead className="text-center">Puntos</TableHead>
-                      <TableHead className="text-center">Insignias</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {teamMembers?.map((member, index) => (
-                      <TableRow key={member.id}>
-                        <TableCell className="font-medium text-muted-foreground">
-                          {index + 1}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-9 w-9">
-                              <AvatarImage src={member.avatar_url || undefined} />
-                              <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                                {getInitials(member.full_name)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-medium">{member.full_name || "Sin nombre"}</p>
-                              <p className="text-xs text-muted-foreground">{member.email}</p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>{member.company_role || "-"}</TableCell>
-                        <TableCell>{member.team || "-"}</TableCell>
-                        <TableCell className="text-center">
-                          <LevelBadge points={member.points} size="sm" />
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="outline" className="bg-addi-orange/10 text-addi-orange border-addi-orange/20">
-                            {member.points.toLocaleString()}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="secondary">{member.badges_count}</Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {(!teamMembers || teamMembers.length === 0) && (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                          No hay miembros en esta región
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Subordinate Leaders Section */}
+        {hasSubordinates && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserCheck className="h-5 w-5 text-primary" />
+                Líderes Subordinados
+              </CardTitle>
+              <CardDescription>
+                Líderes bajo tu supervisión - expande para ver sus equipos
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {subordinatesLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              ) : (
+                subordinateLeaders?.map((leader) => (
+                  <SubordinateLeaderCard key={leader.id} leader={leader} />
+                ))
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Direct Team Table */}
+        {leaderRegion?.regional ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5 text-primary" />
+                {hasSubordinates ? "Mi Equipo Directo" : "Miembros del Equipo"}
+              </CardTitle>
+              <CardDescription>
+                Rendimiento detallado de cada miembro de tu región ({leaderRegion.regional})
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <TeamMemberTable members={teamMembers} isLoading={membersLoading} />
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="text-center">
+            <CardHeader>
+              <MapPin className="h-12 w-12 mx-auto text-muted-foreground" />
+              <CardTitle>Sin Región Asignada</CardTitle>
+              <CardDescription>
+                {hasSubordinates 
+                  ? "No tienes una región directa asignada, pero puedes ver los equipos de tus líderes subordinados arriba."
+                  : "Aún no tienes una región asignada. Contacta al administrador para que te asigne una región."
+                }
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        )}
       </div>
     </DashboardLayout>
   );
