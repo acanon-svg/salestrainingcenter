@@ -8,6 +8,7 @@ export interface TeamFeedbackForm {
   description: string | null;
   embed_url: string;
   target_teams: string[] | null;
+  target_leaders: string[] | null;
   is_active: boolean;
   created_by: string | null;
   created_at: string;
@@ -37,6 +38,7 @@ export const useTeamFeedbackForms = () => {
       description?: string | null;
       embed_url: string;
       target_teams?: string[] | null;
+      target_leaders?: string[] | null;
       is_active?: boolean;
     }) => {
       const { data, error } = await supabase
