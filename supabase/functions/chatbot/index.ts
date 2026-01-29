@@ -22,6 +22,33 @@ interface TeamData {
   description: string | null;
 }
 
+interface Course {
+  title: string;
+  description: string | null;
+  dimension: string;
+  difficulty: string;
+  points: number;
+}
+
+interface TrainingMaterial {
+  title: string;
+  description: string | null;
+  type: string;
+  keywords: string[] | null;
+}
+
+interface Announcement {
+  title: string;
+  content: string | null;
+  type: string;
+}
+
+interface GlossaryTerm {
+  term: string;
+  definition: string;
+  example: string | null;
+}
+
 function validateMessages(messages: unknown): { valid: boolean; error?: string } {
   if (!Array.isArray(messages)) {
     return { valid: false, error: "El formato de mensajes es inválido." };
@@ -81,6 +108,76 @@ function formatTeamDataForContext(teamData: TeamData[]): string {
   context += "Puedes usar estos datos para responder preguntas sobre resultados, métricas y desempeño del equipo. ";
   context += "Cuando el usuario pregunte sobre resultados o datos del equipo, usa esta información para dar respuestas precisas.\n";
   
+  return context;
+}
+
+function formatCoursesForContext(courses: Course[]): string {
+  if (!courses || courses.length === 0) return "";
+
+  let context = "\n\n---\nCURSOS DISPONIBLES EN LA PLATAFORMA:\n";
+  
+  for (const course of courses) {
+    context += `\n### ${course.title}`;
+    if (course.description) {
+      context += `\n${course.description}`;
+    }
+    context += `\n- Dimensión: ${course.dimension}, Dificultad: ${course.difficulty}, Puntos: ${course.points}`;
+  }
+  
+  context += "\n---\n";
+  return context;
+}
+
+function formatMaterialsForContext(materials: TrainingMaterial[]): string {
+  if (!materials || materials.length === 0) return "";
+
+  let context = "\n\n---\nMATERIALES DE FORMACIÓN:\n";
+  
+  for (const material of materials) {
+    context += `\n### ${material.title} (${material.type})`;
+    if (material.description) {
+      context += `\n${material.description}`;
+    }
+    if (material.keywords && material.keywords.length > 0) {
+      context += `\n- Palabras clave: ${material.keywords.join(", ")}`;
+    }
+  }
+  
+  context += "\n---\n";
+  return context;
+}
+
+function formatAnnouncementsForContext(announcements: Announcement[]): string {
+  if (!announcements || announcements.length === 0) return "";
+
+  let context = "\n\n---\nANUNCIOS RECIENTES:\n";
+  
+  for (const announcement of announcements) {
+    context += `\n### ${announcement.title} (${announcement.type})`;
+    if (announcement.content) {
+      context += `\n${announcement.content.slice(0, 300)}...`;
+    }
+  }
+  
+  context += "\n---\n";
+  return context;
+}
+
+function formatGlossaryForContext(terms: GlossaryTerm[]): string {
+  if (!terms || terms.length === 0) return "";
+
+  let context = "\n\n---\nGLOSARIO DE TÉRMINOS:\n";
+  
+  for (const term of terms) {
+    context += `\n### ${term.term}`;
+    context += `\n${term.definition}`;
+    if (term.example) {
+      context += `\nEjemplo: ${term.example}`;
+    }
+  }
+  
+  context += "\n---\n";
+  context += "Usa este glosario para explicar términos técnicos cuando el usuario pregunte.\n";
   return context;
 }
 
@@ -158,19 +255,45 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Fetch system prompt and team data server-side
-    const [configResult, teamDataResult] = await Promise.all([
+    // Fetch all context data in parallel
+    const [configResult, teamDataResult, coursesResult, materialsResult, announcementsResult, glossaryResult] = await Promise.all([
       supabase.from("chatbot_config").select("system_prompt").single(),
       supabase.from("chatbot_team_data").select("data_name, data_content, description").order("created_at", { ascending: false }),
+      supabase.from("courses").select("title, description, dimension, difficulty, points").eq("status", "published").limit(50),
+      supabase.from("training_materials").select("title, description, type, keywords").eq("is_published", true).limit(50),
+      supabase.from("announcements").select("title, content, type").order("created_at", { ascending: false }).limit(10),
+      supabase.from("glossary_terms").select("term, definition, example").limit(100),
     ]);
 
     let systemPrompt = configResult.data?.system_prompt || 
       "Eres un asistente virtual experto en procesos comerciales. Responde de manera clara, concisa y profesional en español.";
 
-    // Append team data context to system prompt
+    // Append all context to system prompt
+    systemPrompt += "\n\nTienes acceso a toda la información de la plataforma de capacitación. Usa este conocimiento para ayudar a los usuarios.";
+    
     const teamData = teamDataResult.data as TeamData[] | null;
     if (teamData && teamData.length > 0) {
       systemPrompt += formatTeamDataForContext(teamData);
+    }
+
+    const courses = coursesResult.data as Course[] | null;
+    if (courses && courses.length > 0) {
+      systemPrompt += formatCoursesForContext(courses);
+    }
+
+    const materials = materialsResult.data as TrainingMaterial[] | null;
+    if (materials && materials.length > 0) {
+      systemPrompt += formatMaterialsForContext(materials);
+    }
+
+    const announcements = announcementsResult.data as Announcement[] | null;
+    if (announcements && announcements.length > 0) {
+      systemPrompt += formatAnnouncementsForContext(announcements);
+    }
+
+    const glossary = glossaryResult.data as GlossaryTerm[] | null;
+    if (glossary && glossary.length > 0) {
+      systemPrompt += formatGlossaryForContext(glossary);
     }
 
     // Sanitize messages before sending to AI
