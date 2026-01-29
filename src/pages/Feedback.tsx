@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
@@ -19,6 +18,17 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   MessageSquare,
   Send,
   Plus,
@@ -28,59 +38,25 @@ import {
   AlertCircle,
   Star,
   Loader2,
+  Trash2,
+  User,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
-import { useToast } from "@/hooks/use-toast";
-
-// Mock feedback data
-const mockFeedback = [
-  {
-    id: "1",
-    subject: "Mejora en módulo de ventas",
-    message: "Sería útil agregar más ejemplos prácticos en el módulo de cierre de ventas.",
-    status: "implemented",
-    response: "¡Gracias por tu sugerencia! Ya agregamos 5 nuevos casos de estudio.",
-    points_awarded: 50,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(),
-    responded_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
-  },
-  {
-    id: "2",
-    subject: "Quiz muy largo",
-    message: "El quiz del curso de compliance tiene muchas preguntas. Podría dividirse en secciones.",
-    status: "in_progress",
-    response: null,
-    points_awarded: 0,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(),
-  },
-  {
-    id: "3",
-    subject: "Videos no cargan en móvil",
-    message: "Los videos del curso de onboarding no cargan correctamente en dispositivos móviles.",
-    status: "pending",
-    response: null,
-    points_awarded: 0,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-  },
-  {
-    id: "4",
-    subject: "Agregar subtítulos en inglés",
-    message: "Sería genial tener subtítulos en inglés para practicar el idioma.",
-    status: "rejected",
-    response: "Por el momento nos enfocamos en contenido en español, pero lo consideramos para el futuro.",
-    points_awarded: 25,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(),
-    responded_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 6).toISOString(),
-  },
-];
+import { Skeleton } from "@/components/ui/skeleton";
+import { useFeedback, useCreateFeedback, useDeleteFeedback, Feedback as FeedbackType } from "@/hooks/useFeedback";
+import { useCourses } from "@/hooks/useCourses";
 
 const Feedback: React.FC = () => {
-  const { profile } = useAuth();
-  const { toast } = useToast();
-  const [feedbackList, setFeedbackList] = useState(mockFeedback);
+  const { profile, hasRole } = useAuth();
+  const isCreatorOrAdmin = hasRole("creator") || hasRole("admin");
+  
+  const { data: feedbackList = [], isLoading } = useFeedback();
+  const { data: courses = [] } = useCourses({ status: "published" });
+  const createFeedback = useCreateFeedback();
+  const deleteFeedback = useDeleteFeedback();
+  
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newFeedback, setNewFeedback] = useState({
     subject: "",
     message: "",
@@ -123,41 +99,23 @@ const Feedback: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!newFeedback.subject || !newFeedback.message) {
-      toast({
-        title: "Error",
-        description: "Por favor completa todos los campos",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!newFeedback.subject || !newFeedback.message) return;
 
-    setIsSubmitting(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    const newItem = {
-      id: Date.now().toString(),
+    await createFeedback.mutateAsync({
       subject: newFeedback.subject,
       message: newFeedback.message,
-      status: "pending",
-      response: null,
-      points_awarded: 0,
-      created_at: new Date().toISOString(),
-    };
+      course_id: newFeedback.course_id || undefined,
+    });
 
-    setFeedbackList([newItem, ...feedbackList]);
     setNewFeedback({ subject: "", message: "", course_id: "" });
     setIsDialogOpen(false);
-    setIsSubmitting(false);
-
-    toast({
-      title: "¡Feedback enviado!",
-      description: "Gracias por tu sugerencia. Te notificaremos cuando sea revisada.",
-    });
   };
 
-  const totalPoints = feedbackList.reduce((sum, f) => sum + f.points_awarded, 0);
+  const handleDelete = async (feedbackId: string) => {
+    await deleteFeedback.mutateAsync(feedbackId);
+  };
+
+  const totalPoints = feedbackList.reduce((sum, f) => sum + (f.points_awarded || 0), 0);
   const pendingCount = feedbackList.filter((f) => f.status === "pending").length;
   const implementedCount = feedbackList.filter((f) => f.status === "implemented").length;
 
@@ -169,86 +127,95 @@ const Feedback: React.FC = () => {
           <div>
             <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
               <MessageSquare className="w-8 h-8 text-primary" />
-              Feedback y Sugerencias
+              {isCreatorOrAdmin ? "Gestión de Feedback" : "Feedback y Sugerencias"}
             </h1>
             <p className="text-muted-foreground">
-              Ayúdanos a mejorar la plataforma con tus ideas
+              {isCreatorOrAdmin 
+                ? "Revisa y gestiona las sugerencias de los usuarios" 
+                : "Ayúdanos a mejorar la plataforma con tus ideas"}
             </p>
           </div>
 
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Plus className="w-4 h-4" />
-                Nuevo Feedback
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Enviar Feedback</DialogTitle>
-                <DialogDescription>
-                  Tu opinión nos ayuda a mejorar. Recibirás puntos cuando tu feedback sea revisado.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="subject">Asunto</Label>
-                  <Input
-                    id="subject"
-                    placeholder="Resumen de tu sugerencia"
-                    value={newFeedback.subject}
-                    onChange={(e) =>
-                      setNewFeedback({ ...newFeedback, subject: e.target.value })
-                    }
-                  />
+          {!isCreatorOrAdmin && (
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  Nuevo Feedback
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Enviar Feedback</DialogTitle>
+                  <DialogDescription>
+                    Tu opinión nos ayuda a mejorar. Recibirás puntos cuando tu feedback sea revisado.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="subject">Asunto</Label>
+                    <Input
+                      id="subject"
+                      placeholder="Resumen de tu sugerencia"
+                      value={newFeedback.subject}
+                      onChange={(e) =>
+                        setNewFeedback({ ...newFeedback, subject: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="message">Descripción</Label>
+                    <Textarea
+                      id="message"
+                      placeholder="Describe tu sugerencia con detalle..."
+                      rows={4}
+                      value={newFeedback.message}
+                      onChange={(e) =>
+                        setNewFeedback({ ...newFeedback, message: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="course">Curso relacionado (opcional)</Label>
+                    <Select
+                      value={newFeedback.course_id}
+                      onValueChange={(value) =>
+                        setNewFeedback({ ...newFeedback, course_id: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona un curso" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="general">Sugerencia general</SelectItem>
+                        {courses.map((course) => (
+                          <SelectItem key={course.id} value={course.id}>
+                            {course.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="message">Descripción</Label>
-                  <Textarea
-                    id="message"
-                    placeholder="Describe tu sugerencia con detalle..."
-                    rows={4}
-                    value={newFeedback.message}
-                    onChange={(e) =>
-                      setNewFeedback({ ...newFeedback, message: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="course">Curso relacionado (opcional)</Label>
-                  <Select
-                    value={newFeedback.course_id}
-                    onValueChange={(value) =>
-                      setNewFeedback({ ...newFeedback, course_id: value })
-                    }
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button 
+                    onClick={handleSubmit} 
+                    disabled={createFeedback.isPending || !newFeedback.subject || !newFeedback.message}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona un curso" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="general">Sugerencia general</SelectItem>
-                      <SelectItem value="1">Técnicas de Ventas</SelectItem>
-                      <SelectItem value="2">Compliance 2024</SelectItem>
-                      <SelectItem value="3">Onboarding</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button onClick={handleSubmit} disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  ) : (
-                    <Send className="w-4 h-4 mr-2" />
-                  )}
-                  Enviar
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                    {createFeedback.isPending ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : (
+                      <Send className="w-4 h-4 mr-2" />
+                    )}
+                    Enviar
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
 
         {/* Stats */}
@@ -261,7 +228,9 @@ const Feedback: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{feedbackList.length}</p>
-                  <p className="text-sm text-muted-foreground">Total enviados</p>
+                  <p className="text-sm text-muted-foreground">
+                    {isCreatorOrAdmin ? "Total recibidos" : "Total enviados"}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -282,12 +251,12 @@ const Feedback: React.FC = () => {
           <Card className="border-border/50">
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
-                <div className="p-3 rounded-lg bg-addi-yellow/10">
-                  <Star className="w-6 h-6 text-addi-yellow" />
+                <div className="p-3 rounded-lg bg-warning/10">
+                  <Clock className="w-6 h-6 text-warning" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{totalPoints}</p>
-                  <p className="text-sm text-muted-foreground">Puntos ganados</p>
+                  <p className="text-2xl font-bold">{pendingCount}</p>
+                  <p className="text-sm text-muted-foreground">Pendientes</p>
                 </div>
               </div>
             </CardContent>
@@ -297,53 +266,110 @@ const Feedback: React.FC = () => {
         {/* Feedback List */}
         <Card className="border-border/50">
           <CardHeader>
-            <CardTitle>Mis Sugerencias</CardTitle>
+            <CardTitle>{isCreatorOrAdmin ? "Todos los Feedbacks" : "Mis Sugerencias"}</CardTitle>
             <CardDescription>
-              Historial de feedback enviado y sus respuestas
+              {isCreatorOrAdmin 
+                ? "Historial de feedback recibido de usuarios"
+                : "Historial de feedback enviado y sus respuestas"}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {feedbackList.map((feedback) => (
-                <div
-                  key={feedback.id}
-                  className="p-4 rounded-lg border border-border/50 space-y-3"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-medium">{feedback.subject}</h3>
-                        {getStatusBadge(feedback.status)}
+            {isLoading ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-32 w-full" />
+                ))}
+              </div>
+            ) : feedbackList.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>No hay feedback registrado aún.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {feedbackList.map((feedback) => (
+                  <div
+                    key={feedback.id}
+                    className="p-4 rounded-lg border border-border/50 space-y-3"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <h3 className="font-medium">{feedback.subject}</h3>
+                          {getStatusBadge(feedback.status)}
+                        </div>
+                        <p className="text-sm text-muted-foreground">{feedback.message}</p>
+                        
+                        {isCreatorOrAdmin && feedback.sender_profile && (
+                          <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                            <User className="w-3 h-3" />
+                            <span>
+                              {feedback.sender_profile.full_name || feedback.sender_profile.email}
+                            </span>
+                          </div>
+                        )}
                       </div>
-                      <p className="text-sm text-muted-foreground">{feedback.message}</p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(feedback.created_at), {
+                            addSuffix: true,
+                            locale: es,
+                          })}
+                        </span>
+                        
+                        {isCreatorOrAdmin && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>¿Eliminar este feedback?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Esta acción no se puede deshacer. El feedback será eliminado permanentemente.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDelete(feedback.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Eliminar
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                      </div>
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(feedback.created_at), {
-                        addSuffix: true,
-                        locale: es,
-                      })}
-                    </span>
+
+                    {feedback.response && (
+                      <div className="p-3 rounded-lg bg-muted/50 ml-4 border-l-2 border-primary">
+                        <p className="text-sm font-medium text-primary mb-1">Respuesta:</p>
+                        <p className="text-sm text-muted-foreground">{feedback.response}</p>
+                      </div>
+                    )}
+
+                    {(feedback.points_awarded ?? 0) > 0 && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Star className="w-4 h-4 text-addi-yellow" />
+                        <span className="font-medium text-addi-yellow">
+                          +{feedback.points_awarded} puntos
+                        </span>
+                        <span className="text-muted-foreground">por tu feedback</span>
+                      </div>
+                    )}
                   </div>
-
-                  {feedback.response && (
-                    <div className="p-3 rounded-lg bg-muted/50 ml-4 border-l-2 border-primary">
-                      <p className="text-sm font-medium text-primary mb-1">Respuesta:</p>
-                      <p className="text-sm text-muted-foreground">{feedback.response}</p>
-                    </div>
-                  )}
-
-                  {feedback.points_awarded > 0 && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Star className="w-4 h-4 text-addi-yellow" />
-                      <span className="font-medium text-addi-yellow">
-                        +{feedback.points_awarded} puntos
-                      </span>
-                      <span className="text-muted-foreground">por tu feedback</span>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
