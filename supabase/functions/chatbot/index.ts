@@ -16,10 +16,17 @@ interface ChatMessage {
   content: string;
 }
 
-interface TeamData {
+interface TeamDataRaw {
   data_name: string;
   data_content: Record<string, unknown>;
   description: string | null;
+}
+
+interface TeamDataProcessed {
+  data_name: string;
+  data_content: Record<string, unknown> | unknown[];
+  description: string | null;
+  source_type: "json" | "google_sheet";
 }
 
 interface Course {
@@ -89,7 +96,7 @@ function validateMessages(messages: unknown): { valid: boolean; error?: string }
   return { valid: true };
 }
 
-function formatTeamDataForContext(teamData: TeamData[]): string {
+function formatTeamDataForContext(teamData: TeamDataProcessed[]): string {
   if (!teamData || teamData.length === 0) {
     return "";
   }
@@ -101,6 +108,9 @@ function formatTeamDataForContext(teamData: TeamData[]): string {
     if (data.description) {
       context += ` - ${data.description}`;
     }
+    if (data.source_type === "google_sheet") {
+      context += ` (Fuente: Google Sheets)`;
+    }
     context += `\n${JSON.stringify(data.data_content, null, 2)}\n`;
   }
   
@@ -109,6 +119,135 @@ function formatTeamDataForContext(teamData: TeamData[]): string {
   context += "Cuando el usuario pregunte sobre resultados o datos del equipo, usa esta información para dar respuestas precisas.\n";
   
   return context;
+}
+
+// Convert CSV text to array of objects
+function csvToJson(csvText: string): Record<string, string>[] {
+  const lines = csvText.trim().split("\n");
+  if (lines.length < 2) return [];
+  
+  // Parse headers - handle quoted values
+  const parseRow = (row: string): string[] => {
+    const result: string[] = [];
+    let current = "";
+    let inQuotes = false;
+    
+    for (let i = 0; i < row.length; i++) {
+      const char = row[i];
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === "," && !inQuotes) {
+        result.push(current.trim());
+        current = "";
+      } else {
+        current += char;
+      }
+    }
+    result.push(current.trim());
+    return result;
+  };
+  
+  const headers = parseRow(lines[0]);
+  const data: Record<string, string>[] = [];
+  
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const values = parseRow(lines[i]);
+    const row: Record<string, string> = {};
+    
+    headers.forEach((header, index) => {
+      row[header] = values[index] || "";
+    });
+    
+    data.push(row);
+  }
+  
+  return data;
+}
+
+// Extract Google Sheet ID from URL and generate CSV export URL
+function getGoogleSheetCsvUrl(url: string): string | null {
+  try {
+    const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) {
+      const sheetId = match[1];
+      // Try to extract gid (sheet tab id) if present
+      const gidMatch = url.match(/gid=(\d+)/);
+      const gid = gidMatch ? gidMatch[1] : "0";
+      return `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// Fetch and parse Google Sheet data
+async function fetchGoogleSheetData(url: string): Promise<Record<string, string>[] | null> {
+  try {
+    const csvUrl = getGoogleSheetCsvUrl(url);
+    if (!csvUrl) {
+      console.error("Could not extract Google Sheet ID from URL:", url);
+      return null;
+    }
+    
+    const response = await fetch(csvUrl, {
+      headers: {
+        "Accept": "text/csv",
+      },
+    });
+    
+    if (!response.ok) {
+      console.error("Failed to fetch Google Sheet:", response.status, response.statusText);
+      return null;
+    }
+    
+    const csvText = await response.text();
+    return csvToJson(csvText);
+  } catch (error) {
+    console.error("Error fetching Google Sheet:", error);
+    return null;
+  }
+}
+
+// Process team data, fetching Google Sheets content as needed
+async function processTeamData(rawData: TeamDataRaw[]): Promise<TeamDataProcessed[]> {
+  const processed: TeamDataProcessed[] = [];
+  
+  for (const data of rawData) {
+    const content = data.data_content as Record<string, unknown>;
+    
+    if (content.__type === "google_sheet" && typeof content.url === "string") {
+      // Fetch Google Sheet data
+      const sheetData = await fetchGoogleSheetData(content.url);
+      if (sheetData && sheetData.length > 0) {
+        processed.push({
+          data_name: data.data_name,
+          data_content: sheetData,
+          description: data.description,
+          source_type: "google_sheet",
+        });
+      } else {
+        // If fetch fails, still include a note
+        processed.push({
+          data_name: data.data_name,
+          data_content: { error: "No se pudo cargar el Google Sheet. Verifica que esté publicado." },
+          description: data.description,
+          source_type: "google_sheet",
+        });
+      }
+    } else {
+      // Regular JSON data
+      processed.push({
+        data_name: data.data_name,
+        data_content: content,
+        description: data.description,
+        source_type: "json",
+      });
+    }
+  }
+  
+  return processed;
 }
 
 function formatCoursesForContext(courses: Course[]): string {
@@ -271,9 +410,13 @@ serve(async (req) => {
     // Append all context to system prompt
     systemPrompt += "\n\nTienes acceso a toda la información de la plataforma de capacitación. Usa este conocimiento para ayudar a los usuarios.";
     
-    const teamData = teamDataResult.data as TeamData[] | null;
-    if (teamData && teamData.length > 0) {
-      systemPrompt += formatTeamDataForContext(teamData);
+    // Process team data (including fetching Google Sheets)
+    const rawTeamData = teamDataResult.data as TeamDataRaw[] | null;
+    if (rawTeamData && rawTeamData.length > 0) {
+      const processedTeamData = await processTeamData(rawTeamData);
+      if (processedTeamData.length > 0) {
+        systemPrompt += formatTeamDataForContext(processedTeamData);
+      }
     }
 
     const courses = coursesResult.data as Course[] | null;

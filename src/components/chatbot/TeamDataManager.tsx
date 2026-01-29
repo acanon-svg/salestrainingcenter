@@ -24,6 +24,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Database, 
   Plus, 
@@ -32,10 +33,31 @@ import {
   Loader2, 
   FileSpreadsheet,
   Eye,
-  Calendar
+  Calendar,
+  Link as LinkIcon,
+  FileJson
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+
+type DataType = "json" | "google_sheet";
+
+interface FormData {
+  dataName: string;
+  description: string;
+  jsonContent: string;
+  googleSheetUrl: string;
+  dataType: DataType;
+}
+
+const isGoogleSheetUrl = (url: string): boolean => {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.hostname === "docs.google.com" && urlObj.pathname.includes("/spreadsheets/");
+  } catch {
+    return false;
+  }
+};
 
 export const TeamDataManager: React.FC = () => {
   const { teamData, isLoading, addTeamData, updateTeamData, deleteTeamData } = useChatbotTeamData();
@@ -46,10 +68,12 @@ export const TeamDataManager: React.FC = () => {
   const [selectedData, setSelectedData] = useState<TeamDataEntry | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     dataName: "",
     description: "",
     jsonContent: "",
+    googleSheetUrl: "",
+    dataType: "json",
   });
 
   const resetForm = () => {
@@ -57,21 +81,35 @@ export const TeamDataManager: React.FC = () => {
       dataName: "",
       description: "",
       jsonContent: "",
+      googleSheetUrl: "",
+      dataType: "json",
     });
   };
 
   const handleAdd = async () => {
-    if (!formData.dataName.trim() || !formData.jsonContent.trim()) {
-      return;
-    }
+    if (!formData.dataName.trim()) return;
+    
+    if (formData.dataType === "json" && !formData.jsonContent.trim()) return;
+    if (formData.dataType === "google_sheet" && !formData.googleSheetUrl.trim()) return;
 
     try {
-      const parsedContent = JSON.parse(formData.jsonContent);
+      let dataContent: Record<string, unknown>;
+      
+      if (formData.dataType === "json") {
+        dataContent = JSON.parse(formData.jsonContent);
+      } else {
+        // Store Google Sheet URL as a special format the edge function will recognize
+        dataContent = {
+          __type: "google_sheet",
+          url: formData.googleSheetUrl.trim(),
+        };
+      }
+      
       setIsSubmitting(true);
       
       const success = await addTeamData(
         formData.dataName,
-        parsedContent,
+        dataContent,
         formData.description
       );
 
@@ -87,18 +125,29 @@ export const TeamDataManager: React.FC = () => {
   };
 
   const handleEdit = async () => {
-    if (!selectedData || !formData.dataName.trim() || !formData.jsonContent.trim()) {
-      return;
-    }
+    if (!selectedData || !formData.dataName.trim()) return;
+    
+    if (formData.dataType === "json" && !formData.jsonContent.trim()) return;
+    if (formData.dataType === "google_sheet" && !formData.googleSheetUrl.trim()) return;
 
     try {
-      const parsedContent = JSON.parse(formData.jsonContent);
+      let dataContent: Record<string, unknown>;
+      
+      if (formData.dataType === "json") {
+        dataContent = JSON.parse(formData.jsonContent);
+      } else {
+        dataContent = {
+          __type: "google_sheet",
+          url: formData.googleSheetUrl.trim(),
+        };
+      }
+      
       setIsSubmitting(true);
       
       const success = await updateTeamData(
         selectedData.id,
         formData.dataName,
-        parsedContent,
+        dataContent,
         formData.description
       );
 
@@ -123,10 +172,13 @@ export const TeamDataManager: React.FC = () => {
 
   const openEditDialog = (data: TeamDataEntry) => {
     setSelectedData(data);
+    const isGoogleSheet = (data.data_content as Record<string, unknown>)?.__type === "google_sheet";
     setFormData({
       dataName: data.data_name,
       description: data.description || "",
-      jsonContent: JSON.stringify(data.data_content, null, 2),
+      jsonContent: isGoogleSheet ? "" : JSON.stringify(data.data_content, null, 2),
+      googleSheetUrl: isGoogleSheet ? ((data.data_content as Record<string, unknown>).url as string) || "" : "",
+      dataType: isGoogleSheet ? "google_sheet" : "json",
     });
     setIsEditDialogOpen(true);
   };
@@ -184,7 +236,7 @@ export const TeamDataManager: React.FC = () => {
                     Agregar Datos del Equipo
                   </DialogTitle>
                   <DialogDescription>
-                    Pega los datos en formato JSON. Puedes exportar de Google Sheets como JSON o copiar desde cualquier fuente.
+                    Agrega datos en formato JSON o vincula un Google Sheet público para que el chatbot pueda interpretarlos.
                   </DialogDescription>
                 </DialogHeader>
                 
@@ -209,24 +261,64 @@ export const TeamDataManager: React.FC = () => {
                     />
                   </div>
                   
-                  <div className="space-y-2">
-                    <Label htmlFor="jsonContent">
-                      Datos en formato JSON *
-                    </Label>
-                    <Textarea
-                      id="jsonContent"
-                      value={formData.jsonContent}
-                      onChange={(e) => setFormData({ ...formData, jsonContent: e.target.value })}
-                      placeholder={`{\n  "ventas_totales": 150000,\n  "meta": 200000,\n  "equipos": [\n    { "nombre": "Equipo A", "ventas": 50000 }\n  ]\n}`}
-                      rows={10}
-                      className={`font-mono text-sm ${!isValidJson(formData.jsonContent) ? "border-destructive" : ""}`}
-                    />
-                    {!isValidJson(formData.jsonContent) && (
-                      <p className="text-xs text-destructive">
-                        El JSON no es válido. Verifica la sintaxis.
-                      </p>
-                    )}
-                  </div>
+                  <Tabs value={formData.dataType} onValueChange={(v) => setFormData({ ...formData, dataType: v as DataType })}>
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="json" className="gap-2">
+                        <FileJson className="h-4 w-4" />
+                        JSON
+                      </TabsTrigger>
+                      <TabsTrigger value="google_sheet" className="gap-2">
+                        <LinkIcon className="h-4 w-4" />
+                        Google Sheets
+                      </TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="json" className="space-y-2 mt-4">
+                      <Label htmlFor="jsonContent">Datos en formato JSON *</Label>
+                      <Textarea
+                        id="jsonContent"
+                        value={formData.jsonContent}
+                        onChange={(e) => setFormData({ ...formData, jsonContent: e.target.value })}
+                        placeholder={`{\n  "ventas_totales": 150000,\n  "meta": 200000,\n  "equipos": [\n    { "nombre": "Equipo A", "ventas": 50000 }\n  ]\n}`}
+                        rows={10}
+                        className={`font-mono text-sm ${!isValidJson(formData.jsonContent) ? "border-destructive" : ""}`}
+                      />
+                      {!isValidJson(formData.jsonContent) && formData.jsonContent.trim() && (
+                        <p className="text-xs text-destructive">
+                          El JSON no es válido. Verifica la sintaxis.
+                        </p>
+                      )}
+                    </TabsContent>
+                    
+                    <TabsContent value="google_sheet" className="space-y-4 mt-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="googleSheetUrl">URL del Google Sheet *</Label>
+                        <Input
+                          id="googleSheetUrl"
+                          value={formData.googleSheetUrl}
+                          onChange={(e) => setFormData({ ...formData, googleSheetUrl: e.target.value })}
+                          placeholder="https://docs.google.com/spreadsheets/d/..."
+                        />
+                        {formData.googleSheetUrl && !isGoogleSheetUrl(formData.googleSheetUrl) && (
+                          <p className="text-xs text-destructive">
+                            La URL no parece ser un Google Sheet válido.
+                          </p>
+                        )}
+                      </div>
+                      <div className="p-3 rounded-lg bg-muted/50 text-sm space-y-2">
+                        <p className="font-medium">📋 Instrucciones:</p>
+                        <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                          <li>Abre tu Google Sheet</li>
+                          <li>Ve a <strong>Archivo → Compartir → Publicar en la web</strong></li>
+                          <li>Selecciona la hoja y formato <strong>CSV</strong></li>
+                          <li>Copia la URL generada y pégala aquí</li>
+                        </ol>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          También puedes usar la URL normal del Sheet si está configurado como "Cualquier persona con el enlace puede ver".
+                        </p>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
                 </div>
                 
                 <DialogFooter>
@@ -243,8 +335,8 @@ export const TeamDataManager: React.FC = () => {
                     onClick={handleAdd}
                     disabled={
                       !formData.dataName.trim() ||
-                      !formData.jsonContent.trim() ||
-                      !isValidJson(formData.jsonContent) ||
+                      (formData.dataType === "json" && (!formData.jsonContent.trim() || !isValidJson(formData.jsonContent))) ||
+                      (formData.dataType === "google_sheet" && (!formData.googleSheetUrl.trim() || !isGoogleSheetUrl(formData.googleSheetUrl))) ||
                       isSubmitting
                     }
                   >
@@ -276,7 +368,14 @@ export const TeamDataManager: React.FC = () => {
                   className="flex items-center justify-between p-3 rounded-lg border bg-muted/30"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{data.data_name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium truncate">{data.data_name}</p>
+                      {(data.data_content as Record<string, unknown>)?.__type === "google_sheet" && (
+                        <span className="text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-2 py-0.5 rounded-full">
+                          Google Sheet
+                        </span>
+                      )}
+                    </div>
                     {data.description && (
                       <p className="text-sm text-muted-foreground truncate">
                         {data.description}
@@ -345,21 +444,51 @@ export const TeamDataManager: React.FC = () => {
               />
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="editJsonContent">Datos en formato JSON *</Label>
-              <Textarea
-                id="editJsonContent"
-                value={formData.jsonContent}
-                onChange={(e) => setFormData({ ...formData, jsonContent: e.target.value })}
-                rows={10}
-                className={`font-mono text-sm ${!isValidJson(formData.jsonContent) ? "border-destructive" : ""}`}
-              />
-              {!isValidJson(formData.jsonContent) && (
-                <p className="text-xs text-destructive">
-                  El JSON no es válido. Verifica la sintaxis.
-                </p>
-              )}
-            </div>
+            <Tabs value={formData.dataType} onValueChange={(v) => setFormData({ ...formData, dataType: v as DataType })}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="json" className="gap-2">
+                  <FileJson className="h-4 w-4" />
+                  JSON
+                </TabsTrigger>
+                <TabsTrigger value="google_sheet" className="gap-2">
+                  <LinkIcon className="h-4 w-4" />
+                  Google Sheets
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="json" className="space-y-2 mt-4">
+                <Label htmlFor="editJsonContent">Datos en formato JSON *</Label>
+                <Textarea
+                  id="editJsonContent"
+                  value={formData.jsonContent}
+                  onChange={(e) => setFormData({ ...formData, jsonContent: e.target.value })}
+                  rows={10}
+                  className={`font-mono text-sm ${!isValidJson(formData.jsonContent) ? "border-destructive" : ""}`}
+                />
+                {!isValidJson(formData.jsonContent) && formData.jsonContent.trim() && (
+                  <p className="text-xs text-destructive">
+                    El JSON no es válido. Verifica la sintaxis.
+                  </p>
+                )}
+              </TabsContent>
+              
+              <TabsContent value="google_sheet" className="space-y-4 mt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="editGoogleSheetUrl">URL del Google Sheet *</Label>
+                  <Input
+                    id="editGoogleSheetUrl"
+                    value={formData.googleSheetUrl}
+                    onChange={(e) => setFormData({ ...formData, googleSheetUrl: e.target.value })}
+                    placeholder="https://docs.google.com/spreadsheets/d/..."
+                  />
+                  {formData.googleSheetUrl && !isGoogleSheetUrl(formData.googleSheetUrl) && (
+                    <p className="text-xs text-destructive">
+                      La URL no parece ser un Google Sheet válido.
+                    </p>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
           
           <DialogFooter>
@@ -377,8 +506,8 @@ export const TeamDataManager: React.FC = () => {
               onClick={handleEdit}
               disabled={
                 !formData.dataName.trim() ||
-                !formData.jsonContent.trim() ||
-                !isValidJson(formData.jsonContent) ||
+                (formData.dataType === "json" && (!formData.jsonContent.trim() || !isValidJson(formData.jsonContent))) ||
+                (formData.dataType === "google_sheet" && (!formData.googleSheetUrl.trim() || !isGoogleSheetUrl(formData.googleSheetUrl))) ||
                 isSubmitting
               }
             >
@@ -400,9 +529,26 @@ export const TeamDataManager: React.FC = () => {
           </DialogHeader>
           
           <div className="overflow-auto max-h-[50vh]">
-            <pre className="bg-muted p-4 rounded-lg text-sm font-mono overflow-x-auto">
-              {selectedData ? JSON.stringify(selectedData.data_content, null, 2) : ""}
-            </pre>
+            {(selectedData?.data_content as Record<string, unknown>)?.__type === "google_sheet" ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <LinkIcon className="h-5 w-5 text-green-600" />
+                  <span className="font-medium text-green-700 dark:text-green-400">Google Sheet vinculado</span>
+                </div>
+                <a 
+                  href={(selectedData?.data_content as Record<string, unknown>)?.url as string}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-primary hover:underline break-all"
+                >
+                  {(selectedData?.data_content as Record<string, unknown>)?.url as string}
+                </a>
+              </div>
+            ) : (
+              <pre className="bg-muted p-4 rounded-lg text-sm font-mono overflow-x-auto">
+                {selectedData ? JSON.stringify(selectedData.data_content, null, 2) : ""}
+              </pre>
+            )}
           </div>
           
           <DialogFooter>
