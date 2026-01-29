@@ -53,6 +53,7 @@ const creatorItems: NavItem[] = [
 const leaderItems: NavItem[] = [
   { label: "Mi Equipo", icon: Users, href: "/team", roles: ["lider"] },
   { label: "Reportes Regional", icon: BarChart3, href: "/reports", roles: ["lider"] },
+  { label: "Herramientas", icon: Wrench, href: "/tools", roles: ["lider"] },
   { label: "Feedbacks al Equipo", icon: ClipboardList, href: "/team-feedback", roles: ["lider"] },
 ];
 
