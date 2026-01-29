@@ -48,11 +48,6 @@ export const ChatbotBubble: React.FC = () => {
     return () => clearInterval(interval);
   }, [refetchConfig]);
 
-  // Only show for logged in users when enabled
-  if (configLoading || !config?.enabled || !user) {
-    return null;
-  }
-
   const scrollToBottom = () => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -80,6 +75,11 @@ export const ChatbotBubble: React.FC = () => {
       setMessages([{ role: "assistant", content: welcomeContent }]);
     }
   }, [isOpen, config?.welcome_message, hasNewUpdate]);
+
+  // Only show for logged in users when enabled - MUST be after all hooks
+  if (configLoading || !config?.enabled || !user) {
+    return null;
+  }
 
   const handleSend = async () => {
     if (!input.trim() || isStreaming) return;
