@@ -130,26 +130,31 @@ const TeamFeedbackView: React.FC = () => {
           open={!!selectedForm}
           onOpenChange={() => setSelectedForm(null)}
         >
-          <DialogContent className="max-w-4xl h-[85vh] flex flex-col">
-            <DialogHeader className="flex-shrink-0">
-              <DialogTitle className="flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  {selectedForm?.name}
-                </span>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleOpenExternal}
-                  className="ml-4"
-                >
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Abrir en nueva pestaña
-                </Button>
-              </DialogTitle>
-            </DialogHeader>
-            
-            <div className="flex-1 min-h-0 relative">
+          {/*
+            Important: Keep the iframe in a scrollable area and allow Google Forms
+            to do user-initiated navigation (auth/redirects) when needed.
+          */}
+          <DialogContent className="max-w-5xl h-[90vh] p-0 overflow-hidden">
+            <div className="flex h-full flex-col">
+              <DialogHeader className="flex-shrink-0 border-b p-6 pb-4">
+                <DialogTitle className="flex items-center justify-between gap-3">
+                  <span className="flex items-center gap-2 min-w-0">
+                    <FileText className="h-5 w-5 flex-shrink-0" />
+                    <span className="truncate">{selectedForm?.name}</span>
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleOpenExternal}
+                    className="flex-shrink-0"
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Abrir en nueva pestaña
+                  </Button>
+                </DialogTitle>
+              </DialogHeader>
+
+              <div className="flex-1 min-h-0 relative">
               {iframeLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
                   <div className="flex flex-col items-center gap-3">
@@ -179,19 +184,19 @@ const TeamFeedbackView: React.FC = () => {
               ) : selectedForm && (
                 <iframe
                   src={getEmbeddableUrl(selectedForm.embed_url)}
-                  width="100%"
-                  height="100%"
-                  style={{ 
-                    minHeight: "calc(85vh - 120px)", 
-                    border: "none",
-                    borderRadius: "8px"
-                  }}
+                  className="h-full w-full"
+                  style={{ border: "none" }}
                   title={selectedForm.name}
                   onLoad={handleIframeLoad}
                   onError={() => setIframeError(true)}
+                  // Some Google Forms need user-initiated redirects/popups (e.g. auth)
+                  // to fully render inside an embed.
+                  sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
+                  allow="clipboard-write"
                   referrerPolicy="no-referrer-when-downgrade"
                 />
               )}
+              </div>
             </div>
           </DialogContent>
         </Dialog>
