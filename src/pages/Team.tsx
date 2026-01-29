@@ -1,13 +1,11 @@
 import React from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { useLeaderRegion } from "@/hooks/useLeaderRegion";
 import { useLeaderHierarchy } from "@/hooks/useLeaderHierarchy";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Users, Shield, MapPin, Loader2, Trophy, Target, BookOpen, UserCheck } from "lucide-react";
+import { Users, Shield, Loader2, Trophy, Target, BookOpen, UserCheck, Briefcase } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { TeamMemberTable, TeamMember } from "@/components/team/TeamMemberTable";
@@ -26,10 +24,12 @@ interface SubordinateLeader {
 }
 
 const Team: React.FC = () => {
-  const { user, hasRole } = useAuth();
-  const { data: leaderRegion, isLoading: regionLoading } = useLeaderRegion(user?.id);
+  const { user, hasRole, profile } = useAuth();
   const { useSubordinates } = useLeaderHierarchy();
   const isLeader = hasRole("lider");
+
+  // Get leader's team from their profile
+  const leaderTeam = profile?.team;
 
   // Fetch subordinate leader relationships
   const { data: subordinateRelations } = useSubordinates(user?.id || "");
@@ -54,22 +54,22 @@ const Team: React.FC = () => {
     enabled: !!subordinateRelations && subordinateRelations.length > 0,
   });
 
-  // Fetch direct team members (same region as the leader)
+  // Fetch direct team members (same TEAM as the leader, not region)
   const { data: teamMembers, isLoading: membersLoading } = useQuery({
-    queryKey: ["team-members", leaderRegion?.regional],
+    queryKey: ["team-members-by-team", leaderTeam],
     queryFn: async () => {
-      if (!leaderRegion?.regional) return [];
+      if (!leaderTeam) return [];
       
       const { data, error } = await supabase
         .from("profiles")
         .select("id, user_id, full_name, email, avatar_url, team, company_role, points, badges_count")
-        .eq("regional", leaderRegion.regional)
+        .eq("team", leaderTeam)
         .order("points", { ascending: false });
 
       if (error) throw error;
       return data as TeamMember[];
     },
-    enabled: !!leaderRegion?.regional,
+    enabled: !!leaderTeam,
   });
 
   const getInitials = (name: string | null) => {
@@ -100,7 +100,7 @@ const Team: React.FC = () => {
     );
   }
 
-  if (regionLoading) {
+  if (!profile) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -129,16 +129,16 @@ const Team: React.FC = () => {
               Supervisa el progreso de tu equipo y líderes subordinados
             </p>
           </div>
-          {leaderRegion?.regional && (
+          {leaderTeam && (
             <Badge variant="secondary" className="text-lg px-4 py-2 flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              {leaderRegion.regional}
+              <Briefcase className="h-4 w-4" />
+              {leaderTeam}
             </Badge>
           )}
         </div>
 
-        {/* Stats - Only show if leader has a region */}
-        {leaderRegion?.regional && (
+        {/* Stats - Only show if leader has a team */}
+        {leaderTeam && (
           <div className="grid gap-4 md:grid-cols-4">
             <Card>
               <CardContent className="pt-6">
@@ -225,7 +225,7 @@ const Team: React.FC = () => {
         )}
 
         {/* Direct Team Table */}
-        {leaderRegion?.regional ? (
+        {leaderTeam ? (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -233,7 +233,7 @@ const Team: React.FC = () => {
                 {hasSubordinates ? "Mi Equipo Directo" : "Miembros del Equipo"}
               </CardTitle>
               <CardDescription>
-                Rendimiento detallado de cada miembro de tu región ({leaderRegion.regional})
+                Rendimiento detallado de cada miembro de tu equipo ({leaderTeam})
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -243,12 +243,12 @@ const Team: React.FC = () => {
         ) : (
           <Card className="text-center">
             <CardHeader>
-              <MapPin className="h-12 w-12 mx-auto text-muted-foreground" />
-              <CardTitle>Sin Región Asignada</CardTitle>
+              <Briefcase className="h-12 w-12 mx-auto text-muted-foreground" />
+              <CardTitle>Sin Equipo Asignado</CardTitle>
               <CardDescription>
                 {hasSubordinates 
-                  ? "No tienes una región directa asignada, pero puedes ver los equipos de tus líderes subordinados arriba."
-                  : "Aún no tienes una región asignada. Contacta al administrador para que te asigne una región."
+                  ? "No tienes un equipo directo asignado, pero puedes ver los equipos de tus líderes subordinados arriba."
+                  : "Aún no tienes un equipo asignado. Contacta al administrador para que te asigne un equipo."
                 }
               </CardDescription>
             </CardHeader>
