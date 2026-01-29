@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +22,8 @@ import {
   ArrowLeft,
   Loader2,
   Users,
+  CreditCard,
+  Power,
 } from "lucide-react";
 import { useTools, Tool } from "@/hooks/useTools";
 import { useAuth } from "@/contexts/AuthContext";
@@ -28,6 +31,19 @@ import { TeamSelector } from "@/components/tools/TeamSelector";
 import { SalesCommissionCalculator } from "@/components/tools/SalesCommissionCalculator";
 import { CommissionConfigManager } from "@/components/tools/CommissionConfigManager";
 import { useMyCommissionConfig } from "@/hooks/useCommissionCalculatorConfig";
+import { AddiPlansCalculator } from "@/components/tools/AddiPlansCalculator";
+import { useToast } from "@/hooks/use-toast";
+
+// Pre-built tools that can be enabled
+const PREBUILT_TOOLS = [
+  {
+    id: "addi-plans-calculator",
+    name: "Calculadora de Planes Addi",
+    description: "Calcula las comisiones y pagos según el plan del aliado (7, 30 o 60 días)",
+    type: "addi_plans_calculator",
+    icon: CreditCard,
+  },
+];
 
 const ToolCard: React.FC<{
   tool: Tool;
@@ -37,6 +53,7 @@ const ToolCard: React.FC<{
   isCreator: boolean;
 }> = ({ tool, onConfigure, onUse, onEditTeams, isCreator }) => {
   const hasTeamRestriction = tool.target_teams && tool.target_teams.length > 0;
+  const isAddiPlans = tool.type === "addi_plans_calculator";
   
   return (
     <Card className="hover:border-primary/50 transition-colors">
@@ -44,7 +61,11 @@ const ToolCard: React.FC<{
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-primary/10">
-              <Calculator className="h-6 w-6 text-primary" />
+              {isAddiPlans ? (
+                <CreditCard className="h-6 w-6 text-primary" />
+              ) : (
+                <Calculator className="h-6 w-6 text-primary" />
+              )}
             </div>
             <div>
               <CardTitle className="text-lg">{tool.name}</CardTitle>
@@ -72,7 +93,7 @@ const ToolCard: React.FC<{
             <Calculator className="h-4 w-4 mr-2" />
             Usar Herramienta
           </Button>
-          {isCreator && (
+          {isCreator && !isAddiPlans && (
             <>
               <Button variant="outline" onClick={onEditTeams} title="Equipos">
                 <Users className="h-4 w-4" />
@@ -82,19 +103,87 @@ const ToolCard: React.FC<{
               </Button>
             </>
           )}
+          {isCreator && isAddiPlans && (
+            <Button variant="outline" onClick={onEditTeams} title="Equipos">
+              <Users className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
   );
 };
 
+const PrebuiltToolCard: React.FC<{
+  prebuilt: typeof PREBUILT_TOOLS[0];
+  existingTool: Tool | undefined;
+  onEnable: () => void;
+  onDisable: () => void;
+  isPending: boolean;
+}> = ({ prebuilt, existingTool, onEnable, onDisable, isPending }) => {
+  const IconComponent = prebuilt.icon;
+  const isEnabled = !!existingTool?.is_active;
+
+  return (
+    <Card className={`border-dashed ${isEnabled ? 'border-green-500/50 bg-green-500/5' : 'border-muted-foreground/30'}`}>
+      <CardHeader>
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-lg ${isEnabled ? 'bg-green-500/10' : 'bg-muted'}`}>
+              <IconComponent className={`h-6 w-6 ${isEnabled ? 'text-green-600' : 'text-muted-foreground'}`} />
+            </div>
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                {prebuilt.name}
+                <Badge variant="outline" className="text-xs">
+                  Preconstruida
+                </Badge>
+              </CardTitle>
+              <CardDescription className="mt-1">{prebuilt.description}</CardDescription>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {isPending ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Switch
+                checked={isEnabled}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    onEnable();
+                  } else {
+                    onDisable();
+                  }
+                }}
+              />
+            )}
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground">
+          {isEnabled 
+            ? "✅ Habilitada - Los usuarios pueden usar esta herramienta"
+            : "Activa el switch para habilitar esta herramienta"}
+        </p>
+      </CardContent>
+    </Card>
+  );
+};
+
 const ToolViewer: React.FC<{
-  toolId: string;
+  tool: Tool;
   userId: string | undefined;
   userTeam: string | null | undefined;
   userRole: "student" | "lider" | "admin" | "creator";
-}> = ({ toolId, userId, userTeam, userRole }) => {
-  const { data: config, isLoading } = useMyCommissionConfig(toolId, userId, userTeam);
+}> = ({ tool, userId, userTeam, userRole }) => {
+  // For Addi Plans calculator, no config needed
+  if (tool.type === "addi_plans_calculator") {
+    return <AddiPlansCalculator />;
+  }
+
+  // For commission calculator, use config
+  const { data: config, isLoading } = useMyCommissionConfig(tool.id, userId, userTeam);
 
   if (isLoading) {
     return (
@@ -123,6 +212,7 @@ const ToolViewer: React.FC<{
 const Tools: React.FC = () => {
   const { hasRole, profile, user } = useAuth();
   const { tools, isLoading, createTool, updateTool } = useTools();
+  const { toast } = useToast();
   const isCreator = hasRole("creator") || hasRole("admin");
 
   const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
@@ -133,6 +223,49 @@ const Tools: React.FC = () => {
   const [newToolDescription, setNewToolDescription] = useState("");
   const [newToolTeams, setNewToolTeams] = useState<string[]>([]);
   const [editingToolTeams, setEditingToolTeams] = useState<string[]>([]);
+  const [enablingPrebuilt, setEnablingPrebuilt] = useState<string | null>(null);
+
+  // Find existing prebuilt tools
+  const getExistingPrebuiltTool = (type: string) => {
+    return tools?.find(t => t.type === type);
+  };
+
+  const handleEnablePrebuilt = async (prebuilt: typeof PREBUILT_TOOLS[0]) => {
+    setEnablingPrebuilt(prebuilt.id);
+    try {
+      const existing = getExistingPrebuiltTool(prebuilt.type);
+      if (existing) {
+        await updateTool.mutateAsync({ id: existing.id, is_active: true });
+      } else {
+        await createTool.mutateAsync({
+          name: prebuilt.name,
+          description: prebuilt.description,
+          type: prebuilt.type,
+          is_active: true,
+        });
+      }
+      toast({ title: `${prebuilt.name} habilitada` });
+    } catch (error) {
+      toast({ title: "Error al habilitar herramienta", variant: "destructive" });
+    } finally {
+      setEnablingPrebuilt(null);
+    }
+  };
+
+  const handleDisablePrebuilt = async (prebuilt: typeof PREBUILT_TOOLS[0]) => {
+    setEnablingPrebuilt(prebuilt.id);
+    try {
+      const existing = getExistingPrebuiltTool(prebuilt.type);
+      if (existing) {
+        await updateTool.mutateAsync({ id: existing.id, is_active: false });
+        toast({ title: `${prebuilt.name} deshabilitada` });
+      }
+    } catch (error) {
+      toast({ title: "Error al deshabilitar herramienta", variant: "destructive" });
+    } finally {
+      setEnablingPrebuilt(null);
+    }
+  };
 
   const handleCreateTool = async () => {
     if (!newToolName.trim()) return;
@@ -173,6 +306,11 @@ const Tools: React.FC = () => {
     return "student";
   };
 
+  // Filter active tools for non-creators
+  const visibleTools = isCreator 
+    ? tools 
+    : tools?.filter(t => t.is_active);
+
   if (mode === "configure" && selectedTool) {
     return (
       <DashboardLayout>
@@ -210,7 +348,7 @@ const Tools: React.FC = () => {
             </div>
           </div>
           <ToolViewer 
-            toolId={selectedTool.id} 
+            tool={selectedTool}
             userId={user?.id} 
             userTeam={profile?.team}
             userRole={getUserRole()} 
@@ -242,29 +380,56 @@ const Tools: React.FC = () => {
           )}
         </div>
 
+        {/* Pre-built Tools Section (only for creators) */}
+        {isCreator && (
+          <div className="space-y-3">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Power className="h-5 w-5" />
+              Herramientas Preconstruidas
+            </h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              {PREBUILT_TOOLS.map((prebuilt) => (
+                <PrebuiltToolCard
+                  key={prebuilt.id}
+                  prebuilt={prebuilt}
+                  existingTool={getExistingPrebuiltTool(prebuilt.type)}
+                  onEnable={() => handleEnablePrebuilt(prebuilt)}
+                  onDisable={() => handleDisablePrebuilt(prebuilt)}
+                  isPending={enablingPrebuilt === prebuilt.id}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Tools Grid */}
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-        ) : tools && tools.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {tools.map((tool) => (
-              <ToolCard
-                key={tool.id}
-                tool={tool}
-                onConfigure={() => {
-                  setSelectedTool(tool);
-                  setMode("configure");
-                }}
-                onUse={() => {
-                  setSelectedTool(tool);
-                  setMode("use");
-                }}
-                onEditTeams={() => openTeamsDialog(tool)}
-                isCreator={isCreator}
-              />
-            ))}
+        ) : visibleTools && visibleTools.length > 0 ? (
+          <div className="space-y-3">
+            <h2 className="text-lg font-semibold">
+              {isCreator ? "Todas las Herramientas" : "Herramientas Disponibles"}
+            </h2>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {visibleTools.map((tool) => (
+                <ToolCard
+                  key={tool.id}
+                  tool={tool}
+                  onConfigure={() => {
+                    setSelectedTool(tool);
+                    setMode("configure");
+                  }}
+                  onUse={() => {
+                    setSelectedTool(tool);
+                    setMode("use");
+                  }}
+                  onEditTeams={() => openTeamsDialog(tool)}
+                  isCreator={isCreator}
+                />
+              ))}
+            </div>
           </div>
         ) : (
           <Card>
@@ -273,7 +438,7 @@ const Tools: React.FC = () => {
               <h3 className="text-lg font-semibold mb-2">No hay herramientas</h3>
               <p className="text-muted-foreground mb-4">
                 {isCreator
-                  ? "Crea tu primera herramienta para el equipo comercial."
+                  ? "Crea tu primera herramienta o habilita una preconstruida."
                   : "No hay herramientas disponibles en este momento."}
               </p>
               {isCreator && (
