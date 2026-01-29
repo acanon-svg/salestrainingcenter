@@ -73,7 +73,6 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
         .from("profiles")
         .update({
           full_name: formData.full_name || null,
-          email: formData.email,
           company_role: formData.company_role || null,
           team: formData.team || null,
           regional: formData.regional || null,
@@ -130,17 +129,17 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
           <div className="space-y-2">
             <Label htmlFor="email" className="flex items-center gap-2">
               <Mail className="h-4 w-4 text-muted-foreground" />
-              Email
+              Email (Solo lectura)
             </Label>
             <Input
               id="email"
               type="email"
               value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              placeholder="email@addi.com"
+              disabled
+              className="bg-muted"
             />
             <p className="text-xs text-muted-foreground">
-              Nota: Cambiar el email aquí solo actualiza el perfil, no las credenciales de acceso.
+              El email de acceso no puede ser modificado desde aquí. El usuario debe iniciar sesión con su email original registrado.
             </p>
           </div>
 
