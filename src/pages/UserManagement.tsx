@@ -6,6 +6,7 @@ import { ChatbotSettings } from "@/components/chatbot/ChatbotSettings";
 import { RoleManagementDialog } from "@/components/users/RoleManagementDialog";
 import { AssignPointsDialog } from "@/components/users/AssignPointsDialog";
 import { UserEditDialog } from "@/components/users/UserEditDialog";
+import { DeleteUserDialog } from "@/components/users/DeleteUserDialog";
 import { PortalSectionManager } from "@/components/admin/PortalSectionManager";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Users, Eye, Shield, Loader2, Mail, Building, MapPin, UserCheck, Calendar, Trophy, Settings, UserPlus, Bot, UserCog, Star, Crown, Pencil, LayoutDashboard } from "lucide-react";
+import { Search, Users, Eye, Shield, Loader2, Mail, Building, MapPin, UserCheck, Calendar, Trophy, Settings, UserPlus, Bot, UserCog, Star, Crown, Pencil, LayoutDashboard, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
@@ -65,6 +66,7 @@ const UserManagement: React.FC = () => {
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [isPointsDialogOpen, setIsPointsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isUpdatingSettings, setIsUpdatingSettings] = useState(false);
 
   const ALL_ROLES = ["student", "lider", "creator", "admin"] as const;
@@ -170,6 +172,11 @@ const UserManagement: React.FC = () => {
   const handleEditUser = (user: UserProfile) => {
     setSelectedUser(user);
     setIsEditDialogOpen(true);
+  };
+
+  const handleDeleteUser = (user: UserProfile) => {
+    setSelectedUser(user);
+    setIsDeleteDialogOpen(true);
   };
 
 
@@ -440,6 +447,15 @@ const UserManagement: React.FC = () => {
                               <Eye className="h-4 w-4" />
                               Ver perfil
                             </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteUser(user)}
+                              className="gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              title="Eliminar usuario"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -606,6 +622,14 @@ const UserManagement: React.FC = () => {
           onOpenChange={setIsEditDialogOpen}
           user={selectedUser}
           onUserUpdated={fetchUsers}
+        />
+
+        {/* Delete User Dialog */}
+        <DeleteUserDialog
+          open={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+          user={selectedUser}
+          onUserDeleted={fetchUsers}
         />
           </TabsContent>
 
