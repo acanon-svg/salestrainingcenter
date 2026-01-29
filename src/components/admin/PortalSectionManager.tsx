@@ -9,6 +9,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -38,6 +40,7 @@ import {
   Loader2,
   Users,
   User,
+  Pencil,
 } from "lucide-react";
 import { usePortalSectionConfigs, PortalSectionConfig } from "@/hooks/usePortalSectionConfigs";
 import { TeamSelector } from "@/components/tools/TeamSelector";
@@ -60,11 +63,15 @@ export const PortalSectionManager: React.FC = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   
   // Local state for editing
+  const [sectionName, setSectionName] = useState("");
+  const [sectionDescription, setSectionDescription] = useState("");
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
 
   const openEditDialog = (config: PortalSectionConfig) => {
     setEditingConfig(config);
+    setSectionName(config.section_name);
+    setSectionDescription(config.description || "");
     setSelectedTeams(config.target_teams || []);
     setSelectedUsers(config.target_users || []);
     setDialogOpen(true);
@@ -75,6 +82,8 @@ export const PortalSectionManager: React.FC = () => {
 
     await updateConfig.mutateAsync({
       id: editingConfig.id,
+      section_name: sectionName.trim(),
+      description: sectionDescription.trim() || null,
       target_teams: selectedTeams.length > 0 ? selectedTeams : null,
       target_users: selectedUsers.length > 0 ? selectedUsers : null,
     });
@@ -169,7 +178,8 @@ export const PortalSectionManager: React.FC = () => {
                       size="sm"
                       onClick={() => openEditDialog(config)}
                     >
-                      <Settings className="h-4 w-4" />
+                      <Pencil className="h-4 w-4 mr-1" />
+                      Editar
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -185,11 +195,39 @@ export const PortalSectionManager: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {editingConfig && sectionIcons[editingConfig.section_key]}
-              Configurar Visibilidad: {editingConfig?.section_name}
+              Editar Sección
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Pencil className="h-4 w-4 text-muted-foreground" />
+                Nombre de la Sección
+              </Label>
+              <Input
+                value={sectionName}
+                onChange={(e) => setSectionName(e.target.value)}
+                placeholder="Nombre visible en el menú"
+              />
+              <p className="text-xs text-muted-foreground">
+                Este nombre se mostrará en el menú para todos los usuarios que tengan acceso
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                Descripción (opcional)
+              </Label>
+              <Textarea
+                value={sectionDescription}
+                onChange={(e) => setSectionDescription(e.target.value)}
+                placeholder="Descripción breve de la sección"
+                rows={2}
+              />
+            </div>
+
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-muted-foreground" />
