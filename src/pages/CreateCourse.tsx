@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { CoverImageUpload } from "@/components/courses/CoverImageUpload";
 import {
   Plus,
   Save,
@@ -425,21 +426,11 @@ const CreateCourse: React.FC = () => {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="cover">URL de Imagen de Portada</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="cover"
-                        placeholder="https://..."
-                        value={courseData.cover_image_url}
-                        onChange={(e) =>
-                          setCourseData({ ...courseData, cover_image_url: e.target.value })
-                        }
-                      />
-                      <Button variant="outline" size="icon">
-                        <Upload className="w-4 h-4" />
-                      </Button>
-                    </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <CoverImageUpload
+                      currentImageUrl={courseData.cover_image_url}
+                      onImageChange={(url) => setCourseData({ ...courseData, cover_image_url: url })}
+                    />
                   </div>
                 </div>
               </CardContent>

@@ -39,6 +39,7 @@ import {
   Search,
 } from "lucide-react";
 import { dimensionLabels, difficultyLabels, TrainingDimension, DifficultyLevel } from "@/lib/types";
+import { CoverImageUpload } from "@/components/courses/CoverImageUpload";
 import { useToast } from "@/hooks/use-toast";
 import { useCourse, useCourseResources, useCourseMaterials, useCourseQuizzes } from "@/hooks/useCourses";
 import { useUpdateCourse } from "@/hooks/useCreateCourse";
@@ -657,13 +658,10 @@ const EditCourse: React.FC = () => {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="cover">URL de Imagen de Portada</Label>
-                    <Input
-                      id="cover"
-                      placeholder="https://..."
-                      value={courseData.cover_image_url}
-                      onChange={(e) => setCourseData({ ...courseData, cover_image_url: e.target.value })}
+                  <div className="space-y-2 md:col-span-2">
+                    <CoverImageUpload
+                      currentImageUrl={courseData.cover_image_url}
+                      onImageChange={(url) => setCourseData({ ...courseData, cover_image_url: url })}
                     />
                   </div>
                 </div>
