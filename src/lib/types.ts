@@ -6,7 +6,7 @@ export const getSupabaseClient = () => supabase as unknown as SupabaseClient;
 
 // Type definitions for the training app
 
-export type AppRole = "student" | "creator" | "admin" | "lider" | "analista";
+export type AppRole = "student" | "creator" | "admin" | "lider" | "analista" | "qa";
 export type TrainingDimension = "onboarding" | "refuerzo" | "taller" | "entrenamiento";
 export type DifficultyLevel = "basico" | "medio" | "avanzado";
 export type ContentType = "video" | "documento" | "link" | "quiz" | "encuesta";

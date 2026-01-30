@@ -56,7 +56,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 // Role-based Route Component
 const RoleRoute: React.FC<{ 
   children: React.ReactNode; 
-  allowedRoles: ("student" | "creator" | "admin" | "lider" | "analista")[];
+  allowedRoles: ("student" | "creator" | "admin" | "lider" | "analista" | "qa")[];
 }> = ({ children, allowedRoles }) => {
   const { user, roles, isLoading, hasRole } = useAuth();
 
