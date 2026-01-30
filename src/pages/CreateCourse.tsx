@@ -76,7 +76,11 @@ const CreateCourse: React.FC = () => {
   >([]);
 
   const [quizQuestions, setQuizQuestions] = useState<
-    { id: string; question: string; options: { text: string; is_correct: boolean }[] }[]
+    { id: string; question: string; question_type: "multiple_choice" | "true_false"; points: number; options: { text: string; is_correct: boolean }[] }[]
+  >([]);
+
+  const [additionalResources, setAdditionalResources] = useState<
+    { id: string; title: string; url: string }[]
   >([]);
 
   const [newTag, setNewTag] = useState("");
@@ -197,19 +201,44 @@ const CreateCourse: React.FC = () => {
     setMaterials(materials.filter((m) => m.id !== id));
   };
 
-  const handleAddQuestion = () => {
+  const handleAddQuestion = (type: "multiple_choice" | "true_false") => {
+    const options = type === "true_false" 
+      ? [
+          { text: "Verdadero", is_correct: false },
+          { text: "Falso", is_correct: false },
+        ]
+      : [
+          { text: "", is_correct: false },
+          { text: "", is_correct: false },
+          { text: "", is_correct: false },
+          { text: "", is_correct: false },
+        ];
+    
     const newQuestion = {
       id: Date.now().toString(),
       question: "",
-      options: [
-        { text: "", is_correct: false },
-        { text: "", is_correct: false },
-        { text: "", is_correct: false },
-        { text: "", is_correct: false },
-      ],
+      question_type: type,
+      points: 10,
+      options,
     };
     setQuizQuestions([...quizQuestions, newQuestion]);
   };
+
+  const handleAddResource = () => {
+    const newResource = {
+      id: Date.now().toString(),
+      title: "",
+      url: "",
+    };
+    setAdditionalResources([...additionalResources, newResource]);
+  };
+
+  const handleRemoveResource = (id: string) => {
+    setAdditionalResources(additionalResources.filter((r) => r.id !== id));
+  };
+
+  // Calculate total quiz points
+  const totalQuizPoints = quizQuestions.reduce((sum, q) => sum + q.points, 0);
 
   const handleSaveDraft = async () => {
     if (!courseData.title) {
@@ -225,6 +254,7 @@ const CreateCourse: React.FC = () => {
       courseData,
       materials,
       quizQuestions,
+      additionalResources,
       status: "draft",
     });
   };
@@ -243,6 +273,7 @@ const CreateCourse: React.FC = () => {
       courseData,
       materials,
       quizQuestions,
+      additionalResources,
       status: "published",
     });
   };
@@ -282,9 +313,10 @@ const CreateCourse: React.FC = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="basic">Información</TabsTrigger>
             <TabsTrigger value="content">Contenido</TabsTrigger>
+            <TabsTrigger value="resources">Recursos</TabsTrigger>
             <TabsTrigger value="quiz">Quiz</TabsTrigger>
             <TabsTrigger value="gamification">Gamificación</TabsTrigger>
             <TabsTrigger value="settings">Configuración</TabsTrigger>
@@ -508,7 +540,7 @@ const CreateCourse: React.FC = () => {
                     <Link2 className="w-4 h-4 mr-2" />
                     Enlace
                   </Button>
-                  <Button variant="outline" onClick={() => handleAddMaterial("google_embed")}>
+                  <Button variant="outline" onClick={() => handleAddMaterial("documento")}>
                     <FileText className="w-4 h-4 mr-2" />
                     Google Embed
                   </Button>
@@ -564,6 +596,73 @@ const CreateCourse: React.FC = () => {
             </Card>
           </TabsContent>
 
+          {/* Resources Tab */}
+          <TabsContent value="resources" className="mt-6 space-y-6">
+            <Card className="border-border/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Link2 className="w-5 h-5 text-primary" />
+                  Recursos Adicionales
+                </CardTitle>
+                <CardDescription>
+                  Agrega enlaces adicionales que los estudiantes podrán consultar
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <Button variant="outline" onClick={handleAddResource}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Agregar Recurso
+                </Button>
+
+                <div className="space-y-4">
+                  {additionalResources.map((resource, index) => (
+                    <div
+                      key={resource.id}
+                      className="flex items-center gap-4 p-4 rounded-lg border border-border/50"
+                    >
+                      <Link2 className="w-5 h-5 text-muted-foreground" />
+                      <div className="flex-1 grid gap-4 md:grid-cols-2">
+                        <Input
+                          placeholder="Nombre del recurso"
+                          value={resource.title}
+                          onChange={(e) => {
+                            const updated = [...additionalResources];
+                            updated[index].title = e.target.value;
+                            setAdditionalResources(updated);
+                          }}
+                        />
+                        <Input
+                          placeholder="URL del recurso (https://...)"
+                          value={resource.url}
+                          onChange={(e) => {
+                            const updated = [...additionalResources];
+                            updated[index].url = e.target.value;
+                            setAdditionalResources(updated);
+                          }}
+                        />
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleRemoveResource(resource.id)}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+
+                  {additionalResources.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Link2 className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <p>No hay recursos adicionales</p>
+                      <p className="text-sm">Agrega enlaces a documentos, guías o herramientas externas</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Quiz Tab */}
           <TabsContent value="quiz" className="mt-6 space-y-6">
             <Card className="border-border/50">
@@ -577,10 +676,32 @@ const CreateCourse: React.FC = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <Button onClick={handleAddQuestion}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Agregar Pregunta
-                </Button>
+                <div className="flex flex-wrap gap-3">
+                  <Button variant="outline" onClick={() => handleAddQuestion("multiple_choice")}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Selección Múltiple
+                  </Button>
+                  <Button variant="outline" onClick={() => handleAddQuestion("true_false")}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Verdadero/Falso
+                  </Button>
+                </div>
+
+                {quizQuestions.length > 0 && (
+                  <div className="p-4 rounded-lg bg-muted/50">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">Total de puntos:</span>
+                      <span className={`text-lg font-bold ${totalQuizPoints === 100 ? "text-success" : totalQuizPoints > 100 ? "text-destructive" : "text-muted-foreground"}`}>
+                        {totalQuizPoints} / 100 puntos
+                      </span>
+                    </div>
+                    {totalQuizPoints !== 100 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Los puntos deben sumar exactamente 100 para una evaluación correcta
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 <div className="space-y-6">
                   {quizQuestions.map((q, qIndex) => (
@@ -593,6 +714,26 @@ const CreateCourse: React.FC = () => {
                           {qIndex + 1}.
                         </span>
                         <div className="flex-1 space-y-4">
+                          <div className="flex gap-2 items-center">
+                            <Badge variant="outline">
+                              {q.question_type === "true_false" ? "V/F" : "Selección múltiple"}
+                            </Badge>
+                            <div className="flex items-center gap-2 ml-auto">
+                              <Label className="text-sm">Puntos:</Label>
+                              <Input
+                                type="number"
+                                min={1}
+                                max={100}
+                                className="w-20"
+                                value={q.points}
+                                onChange={(e) => {
+                                  const updated = [...quizQuestions];
+                                  updated[qIndex].points = Math.min(100, Math.max(1, parseInt(e.target.value) || 1));
+                                  setQuizQuestions(updated);
+                                }}
+                              />
+                            </div>
+                          </div>
                           <Input
                             placeholder="Escribe la pregunta..."
                             value={q.question}
@@ -602,7 +743,7 @@ const CreateCourse: React.FC = () => {
                               setQuizQuestions(updated);
                             }}
                           />
-                          <div className="grid gap-2 md:grid-cols-2">
+                          <div className={`grid gap-2 ${q.question_type === "true_false" ? "md:grid-cols-2" : "md:grid-cols-2"}`}>
                             {q.options.map((opt, oIndex) => (
                               <div key={oIndex} className="flex items-center gap-2">
                                 <input
@@ -621,16 +762,22 @@ const CreateCourse: React.FC = () => {
                                   }}
                                   className="w-4 h-4"
                                 />
-                                <Input
-                                  placeholder={`Opción ${oIndex + 1}`}
-                                  value={opt.text}
-                                  onChange={(e) => {
-                                    const updated = [...quizQuestions];
-                                    updated[qIndex].options[oIndex].text = e.target.value;
-                                    setQuizQuestions(updated);
-                                  }}
-                                  className={opt.is_correct ? "border-success" : ""}
-                                />
+                                {q.question_type === "true_false" ? (
+                                  <span className={`px-3 py-2 rounded border ${opt.is_correct ? "border-success bg-success/10" : "border-border"}`}>
+                                    {opt.text}
+                                  </span>
+                                ) : (
+                                  <Input
+                                    placeholder={`Opción ${oIndex + 1}`}
+                                    value={opt.text}
+                                    onChange={(e) => {
+                                      const updated = [...quizQuestions];
+                                      updated[qIndex].options[oIndex].text = e.target.value;
+                                      setQuizQuestions(updated);
+                                    }}
+                                    className={opt.is_correct ? "border-success" : ""}
+                                  />
+                                )}
                               </div>
                             ))}
                           </div>

@@ -185,3 +185,20 @@ export const useCourseQuizzes = (courseId: string) => {
     enabled: !!courseId,
   });
 };
+
+export const useCourseResources = (courseId: string) => {
+  return useQuery({
+    queryKey: ["course-resources", courseId],
+    queryFn: async () => {
+      const { data, error } = await client
+        .from("course_resources")
+        .select("*")
+        .eq("course_id", courseId)
+        .order("order_index");
+
+      if (error) throw error;
+      return data as { id: string; course_id: string; title: string; url: string; order_index: number; created_at: string }[];
+    },
+    enabled: !!courseId,
+  });
+};
