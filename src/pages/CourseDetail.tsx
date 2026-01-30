@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DOMPurify from "dompurify";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { useCourse, useCourseMaterials, useCourseQuizzes, useCourseResources, useUpdateEnrollmentProgress, useMyEnrollments } from "@/hooks/useCourses";
+import { useCourse, useCourseMaterials, useCourseQuizzes, useCourseResources, useUpdateEnrollmentProgress, useMyEnrollments, useEnrollInCourse } from "@/hooks/useCourses";
 import { useMaterialProgress, useMarkMaterialComplete } from "@/hooks/useMaterialProgress";
 import { useQuizAttempts, useSubmitQuizAttempt } from "@/hooks/useQuizAttempts";
 import { useCourseFeedback, useSubmitCourseFeedback } from "@/hooks/useFeedback";
@@ -38,7 +38,8 @@ import {
   Download,
   Link2,
   AlertTriangle,
-  Timer
+  Timer,
+  UserPlus
 } from "lucide-react";
 import { dimensionLabels, difficultyLabels, contentTypeLabels, CourseMaterial, Quiz, QuizQuestion } from "@/lib/types";
 import { CourseTimer } from "@/components/courses/CourseTimer";
@@ -117,6 +118,24 @@ const CourseDetail: React.FC = () => {
   const updateProgress = useUpdateEnrollmentProgress();
   const submitQuiz = useSubmitQuizAttempt();
   const submitCourseFeedback = useSubmitCourseFeedback();
+  const enrollMutation = useEnrollInCourse();
+
+  const handleEnroll = async () => {
+    if (!id) return;
+    try {
+      await enrollMutation.mutateAsync(id);
+      toast({
+        title: "¡Inscripción exitosa!",
+        description: "Ya puedes comenzar el curso. El temporizador ha iniciado.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleDownloadDiploma = () => {
     if (!course || !profile) return;
@@ -305,7 +324,49 @@ const CourseDetail: React.FC = () => {
           </div>
         </div>
 
-        {/* Progress bar */}
+        {/* Enrollment CTA - show when NOT enrolled */}
+        {!enrollment && (
+          <Card className="border-primary bg-gradient-to-r from-primary/10 to-primary/5">
+            <CardContent className="py-6">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-full bg-primary/20">
+                    <UserPlus className="w-8 h-8 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold">¿Listo para comenzar?</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Inscríbete para acceder al contenido del curso
+                      {course.time_limit_minutes && (
+                        <span className="block text-warning mt-1">
+                          <Timer className="w-3 h-3 inline mr-1" />
+                          Tendrás {course.time_limit_minutes} minutos para completarlo una vez inscrito
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <Button 
+                  size="lg" 
+                  onClick={handleEnroll}
+                  disabled={enrollMutation.isPending}
+                  className="gap-2 min-w-[200px]"
+                >
+                  {enrollMutation.isPending ? (
+                    <>Inscribiendo...</>
+                  ) : (
+                    <>
+                      <UserPlus className="w-5 h-5" />
+                      Inscribirme ahora
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Progress bar - show when enrolled */}
         {enrollment && (
           <Card className="border-primary/20 bg-primary/5">
             <CardContent className="py-4">
@@ -381,8 +442,117 @@ const CourseDetail: React.FC = () => {
           </Card>
         )}
 
-        {/* Main content - hidden when time expired */}
-        {!isTimeExpired && (
+        {/* Course Preview - show when NOT enrolled */}
+        {!enrollment && (
+          <div className="grid gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2 space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Descripción del curso</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {course.cover_image_url && (
+                    <img
+                      src={course.cover_image_url}
+                      alt={course.title}
+                      className="w-full h-64 object-cover rounded-lg"
+                    />
+                  )}
+                  <p className="text-muted-foreground">{course.description}</p>
+                  
+                  {course.objectives && course.objectives.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-2 flex items-center gap-2">
+                        <Target className="w-4 h-4" />
+                        Objetivos de aprendizaje
+                      </h4>
+                      <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                        {course.objectives.map((obj, i) => (
+                          <li key={i}>{obj}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {course.tags && course.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {course.tags.map((tag, i) => (
+                        <Badge key={i} variant="outline">{tag}</Badge>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Course Info Sidebar */}
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Información del curso</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Dimensión</span>
+                    <Badge variant="secondary">{dimensionLabels[course.dimension]}</Badge>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Dificultad</span>
+                    <Badge variant="outline">{difficultyLabels[course.difficulty]}</Badge>
+                  </div>
+                  {course.estimated_duration_minutes && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Duración estimada</span>
+                      <span className="font-medium">{course.estimated_duration_minutes} min</span>
+                    </div>
+                  )}
+                  {course.time_limit_minutes && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground flex items-center gap-1">
+                        <Timer className="w-3 h-3" />
+                        Límite de tiempo
+                      </span>
+                      <span className="font-medium text-warning">{course.time_limit_minutes} min</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Puntos</span>
+                    <span className="font-medium text-addi-orange">{course.points} pts</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Materiales</span>
+                    <span className="font-medium">{materials?.length || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Quizzes</span>
+                    <span className="font-medium">{quizzes?.length || 0}</span>
+                  </div>
+
+                  <div className="pt-4 border-t">
+                    <Button 
+                      className="w-full gap-2" 
+                      size="lg"
+                      onClick={handleEnroll}
+                      disabled={enrollMutation.isPending}
+                    >
+                      {enrollMutation.isPending ? (
+                        <>Inscribiendo...</>
+                      ) : (
+                        <>
+                          <UserPlus className="w-5 h-5" />
+                          Inscribirme
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {/* Main content - hidden when time expired or not enrolled */}
+        {!isTimeExpired && enrollment && (
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Content viewer */}
           <div className="lg:col-span-2 space-y-4">
