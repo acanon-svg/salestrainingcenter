@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAnnouncements, type Announcement } from "@/hooks/useAnnouncements";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X, Bell, Play, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, Bell, Play, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const AnnouncementBanner: React.FC = () => {
+  const navigate = useNavigate();
   const { announcements, viewedAnnouncements, isLoading, markAsViewed } = useAnnouncements();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [dismissed, setDismissed] = useState<string[]>([]);
@@ -50,59 +52,87 @@ export const AnnouncementBanner: React.FC = () => {
   const currentAnnouncement = visibleAnnouncements[currentIndex];
   const isNew = !viewedAnnouncements.includes(currentAnnouncement.id);
 
-  const handleDismiss = () => {
+  const handleDismiss = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setDismissed(prev => [...prev, currentAnnouncement.id]);
     if (currentIndex >= visibleAnnouncements.length - 1) {
       setCurrentIndex(0);
     }
   };
 
-  const handlePrev = () => {
+  const handlePrev = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setCurrentIndex(prev => 
       prev === 0 ? visibleAnnouncements.length - 1 : prev - 1
     );
   };
 
-  const handleNext = () => {
+  const handleNext = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setCurrentIndex(prev => 
       (prev + 1) % visibleAnnouncements.length
     );
   };
 
-  return (
-    <div className={cn(
-      "relative w-full rounded-lg overflow-hidden transition-all",
-      "bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10",
-      "border border-primary/20",
-      isNew && "ring-2 ring-primary/30"
-    )}>
-      <div className="flex items-center gap-4 p-4">
-        {/* Icon */}
-        <div className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full bg-primary/20 shrink-0">
-          <Bell className="w-5 h-5 text-primary" />
-        </div>
+  const handleBannerClick = () => {
+    // Check if there's a course link
+    if (currentAnnouncement.course_link) {
+      // Check if it's an internal link (same origin)
+      try {
+        const url = new URL(currentAnnouncement.course_link);
+        const currentOrigin = window.location.origin;
+        
+        if (url.origin === currentOrigin) {
+          // Internal navigation
+          navigate(url.pathname);
+        } else {
+          // External link - open in new tab
+          window.open(currentAnnouncement.course_link, "_blank");
+        }
+      } catch {
+        // If URL parsing fails, try as relative path
+        if (currentAnnouncement.course_link.startsWith("/")) {
+          navigate(currentAnnouncement.course_link);
+        } else {
+          window.open(currentAnnouncement.course_link, "_blank");
+        }
+      }
+    }
+  };
 
-        {/* Image/Video preview */}
-        {currentAnnouncement.image_url && (
-          <div className="hidden md:block w-16 h-16 rounded-lg overflow-hidden shrink-0">
-            {currentAnnouncement.video_url ? (
-              <div className="relative w-full h-full">
-                <img
-                  src={currentAnnouncement.image_url}
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                  <Play className="w-6 h-6 text-white" />
-                </div>
-              </div>
-            ) : (
-              <img
-                src={currentAnnouncement.image_url}
-                alt=""
-                className="w-full h-full object-cover"
-              />
-            )}
+  const hasCourseLink = !!currentAnnouncement.course_link;
+
+  return (
+    <div 
+      className={cn(
+        "relative w-full rounded-lg overflow-hidden transition-all",
+        "bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10",
+        "border border-primary/20",
+        isNew && "ring-2 ring-primary/30",
+        hasCourseLink && "cursor-pointer hover:border-primary/40 hover:bg-primary/10"
+      )}
+      onClick={hasCourseLink ? handleBannerClick : undefined}
+    >
+      {/* Banner image if available - 728x90 aspect ratio */}
+      {currentAnnouncement.image_url && (
+        <div className="w-full" style={{ aspectRatio: "728/90" }}>
+          <img
+            src={currentAnnouncement.image_url}
+            alt={currentAnnouncement.title}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      )}
+
+      {/* Content overlay or standalone */}
+      <div className={cn(
+        "flex items-center gap-4 p-4",
+        currentAnnouncement.image_url && "absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent"
+      )}>
+        {/* Icon - only show if no image */}
+        {!currentAnnouncement.image_url && (
+          <div className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full bg-primary/20 shrink-0">
+            <Bell className="w-5 h-5 text-primary" />
           </div>
         )}
 
@@ -114,12 +144,24 @@ export const AnnouncementBanner: React.FC = () => {
                 Nuevo
               </Badge>
             )}
-            <h3 className="font-semibold text-sm truncate">
+            <h3 className={cn(
+              "font-semibold text-sm truncate",
+              currentAnnouncement.image_url && "text-white"
+            )}>
               {currentAnnouncement.title}
             </h3>
+            {hasCourseLink && (
+              <ExternalLink className={cn(
+                "w-3 h-3 shrink-0",
+                currentAnnouncement.image_url ? "text-white/70" : "text-muted-foreground"
+              )} />
+            )}
           </div>
           {currentAnnouncement.content && (
-            <p className="text-xs text-muted-foreground line-clamp-1">
+            <p className={cn(
+              "text-xs line-clamp-1",
+              currentAnnouncement.image_url ? "text-white/80" : "text-muted-foreground"
+            )}>
               {currentAnnouncement.content}
             </p>
           )}
@@ -127,7 +169,10 @@ export const AnnouncementBanner: React.FC = () => {
 
         {/* Points badge */}
         {currentAnnouncement.points_for_viewing && currentAnnouncement.points_for_viewing > 0 && (
-          <Badge variant="outline" className="shrink-0 text-xs">
+          <Badge variant="outline" className={cn(
+            "shrink-0 text-xs",
+            currentAnnouncement.image_url && "border-white/30 text-white"
+          )}>
             +{currentAnnouncement.points_for_viewing} pts
           </Badge>
         )}
@@ -137,8 +182,14 @@ export const AnnouncementBanner: React.FC = () => {
           <Button
             size="sm"
             variant="outline"
-            className="shrink-0 gap-1"
-            onClick={() => window.open(currentAnnouncement.video_url!, "_blank")}
+            className={cn(
+              "shrink-0 gap-1",
+              currentAnnouncement.image_url && "border-white/30 text-white hover:bg-white/20"
+            )}
+            onClick={(e) => {
+              e.stopPropagation();
+              window.open(currentAnnouncement.video_url!, "_blank");
+            }}
           >
             <Play className="w-3 h-3" />
             Ver
@@ -151,18 +202,27 @@ export const AnnouncementBanner: React.FC = () => {
             <Button
               size="icon"
               variant="ghost"
-              className="h-7 w-7"
+              className={cn(
+                "h-7 w-7",
+                currentAnnouncement.image_url && "text-white hover:bg-white/20"
+              )}
               onClick={handlePrev}
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
-            <span className="text-xs text-muted-foreground min-w-[3ch] text-center">
+            <span className={cn(
+              "text-xs min-w-[3ch] text-center",
+              currentAnnouncement.image_url ? "text-white/70" : "text-muted-foreground"
+            )}>
               {currentIndex + 1}/{visibleAnnouncements.length}
             </span>
             <Button
               size="icon"
               variant="ghost"
-              className="h-7 w-7"
+              className={cn(
+                "h-7 w-7",
+                currentAnnouncement.image_url && "text-white hover:bg-white/20"
+              )}
               onClick={handleNext}
             >
               <ChevronRight className="w-4 h-4" />
@@ -174,7 +234,10 @@ export const AnnouncementBanner: React.FC = () => {
         <Button
           size="icon"
           variant="ghost"
-          className="h-7 w-7 shrink-0"
+          className={cn(
+            "h-7 w-7 shrink-0",
+            currentAnnouncement.image_url && "text-white hover:bg-white/20"
+          )}
           onClick={handleDismiss}
         >
           <X className="w-4 h-4" />
