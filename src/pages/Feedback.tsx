@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -40,11 +41,12 @@ import {
   Loader2,
   Trash2,
   User,
+  BookOpen,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useFeedback, useCreateFeedback, useDeleteFeedback, Feedback as FeedbackType } from "@/hooks/useFeedback";
+import { useFeedback, useCreateFeedback, useDeleteFeedback, useRespondToFeedback, Feedback as FeedbackType } from "@/hooks/useFeedback";
 import { useCourses } from "@/hooks/useCourses";
 
 const Feedback: React.FC = () => {
@@ -55,6 +57,7 @@ const Feedback: React.FC = () => {
   const { data: courses = [] } = useCourses({ status: "published" });
   const createFeedback = useCreateFeedback();
   const deleteFeedback = useDeleteFeedback();
+  const respondToFeedback = useRespondToFeedback();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newFeedback, setNewFeedback] = useState({
@@ -118,6 +121,38 @@ const Feedback: React.FC = () => {
   const totalPoints = feedbackList.reduce((sum, f) => sum + (f.points_awarded || 0), 0);
   const pendingCount = feedbackList.filter((f) => f.status === "pending").length;
   const implementedCount = feedbackList.filter((f) => f.status === "implemented").length;
+  
+  // Separate feedback by type for creators
+  const courseFeedbacks = feedbackList.filter((f) => f.feedback_type === "course");
+  const generalFeedbacks = feedbackList.filter((f) => f.feedback_type !== "course");
+
+  // Helper to render star rating
+  const renderStars = (rating: number | null) => {
+    if (!rating) return null;
+    return (
+      <div className="flex items-center gap-0.5">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <Star
+            key={star}
+            className={`w-4 h-4 ${
+              star <= rating 
+                ? "fill-addi-yellow text-addi-yellow" 
+                : "text-muted-foreground"
+            }`}
+          />
+        ))}
+        <span className="ml-2 text-sm font-medium">{rating}/5</span>
+      </div>
+    );
+  };
+
+  const handleMarkAsReviewed = async (feedbackId: string) => {
+    await respondToFeedback.mutateAsync({
+      feedbackId,
+      response: "Revisado",
+      status: "implemented",
+    });
+  };
 
   return (
     <DashboardLayout>
@@ -266,10 +301,10 @@ const Feedback: React.FC = () => {
         {/* Feedback List */}
         <Card className="border-border/50">
           <CardHeader>
-            <CardTitle>{isCreatorOrAdmin ? "Todos los Feedbacks" : "Mis Sugerencias"}</CardTitle>
+            <CardTitle>{isCreatorOrAdmin ? "Gestión de Feedbacks" : "Mis Sugerencias"}</CardTitle>
             <CardDescription>
               {isCreatorOrAdmin 
-                ? "Historial de feedback recibido de usuarios"
+                ? "Revisa y gestiona los feedbacks de cursos y sugerencias generales"
                 : "Historial de feedback enviado y sus respuestas"}
             </CardDescription>
           </CardHeader>
@@ -280,6 +315,210 @@ const Feedback: React.FC = () => {
                   <Skeleton key={i} className="h-32 w-full" />
                 ))}
               </div>
+            ) : isCreatorOrAdmin ? (
+              // Tabs for creators/admins
+              <Tabs defaultValue="courses" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="courses" className="gap-2">
+                    <BookOpen className="w-4 h-4" />
+                    Cursos ({courseFeedbacks.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="general" className="gap-2">
+                    <MessageSquare className="w-4 h-4" />
+                    General ({generalFeedbacks.length})
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="courses" className="mt-4">
+                  {courseFeedbacks.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <p>No hay feedback de cursos aún.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {courseFeedbacks.map((feedback) => (
+                        <div
+                          key={feedback.id}
+                          className="p-4 rounded-lg border border-border/50 space-y-3"
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                {feedback.course && (
+                                  <Badge variant="secondary" className="gap-1">
+                                    <BookOpen className="w-3 h-3" />
+                                    {feedback.course.title}
+                                  </Badge>
+                                )}
+                                {getStatusBadge(feedback.status)}
+                              </div>
+                              
+                              {/* Star Rating */}
+                              {feedback.rating && (
+                                <div className="mb-2">
+                                  {renderStars(feedback.rating)}
+                                </div>
+                              )}
+                              
+                              <p className="text-sm text-muted-foreground">{feedback.message}</p>
+                              
+                              {feedback.sender_profile && (
+                                <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                                  <User className="w-3 h-3" />
+                                  <span>
+                                    {feedback.sender_profile.full_name || feedback.sender_profile.email}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">
+                                {formatDistanceToNow(new Date(feedback.created_at), {
+                                  addSuffix: true,
+                                  locale: es,
+                                })}
+                              </span>
+                              
+                              {feedback.status === "pending" && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleMarkAsReviewed(feedback.id)}
+                                  disabled={respondToFeedback.isPending}
+                                >
+                                  <CheckCircle className="w-4 h-4 mr-1" />
+                                  Marcar revisado
+                                </Button>
+                              )}
+                              
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="text-destructive hover:text-destructive"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>¿Eliminar este feedback?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Esta acción no se puede deshacer. El feedback será eliminado permanentemente.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleDelete(feedback.id)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Eliminar
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="general" className="mt-4">
+                  {generalFeedbacks.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <p>No hay sugerencias generales aún.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {generalFeedbacks.map((feedback) => (
+                        <div
+                          key={feedback.id}
+                          className="p-4 rounded-lg border border-border/50 space-y-3"
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                <h3 className="font-medium">{feedback.subject}</h3>
+                                {getStatusBadge(feedback.status)}
+                              </div>
+                              <p className="text-sm text-muted-foreground">{feedback.message}</p>
+                              
+                              {feedback.sender_profile && (
+                                <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                                  <User className="w-3 h-3" />
+                                  <span>
+                                    {feedback.sender_profile.full_name || feedback.sender_profile.email}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">
+                                {formatDistanceToNow(new Date(feedback.created_at), {
+                                  addSuffix: true,
+                                  locale: es,
+                                })}
+                              </span>
+                              
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="text-destructive hover:text-destructive"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>¿Eliminar este feedback?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Esta acción no se puede deshacer. El feedback será eliminado permanentemente.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleDelete(feedback.id)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Eliminar
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </div>
+
+                          {feedback.response && (
+                            <div className="p-3 rounded-lg bg-muted/50 ml-4 border-l-2 border-primary">
+                              <p className="text-sm font-medium text-primary mb-1">Respuesta:</p>
+                              <p className="text-sm text-muted-foreground">{feedback.response}</p>
+                            </div>
+                          )}
+
+                          {(feedback.points_awarded ?? 0) > 0 && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <Star className="w-4 h-4 text-addi-yellow" />
+                              <span className="font-medium text-addi-yellow">
+                                +{feedback.points_awarded} puntos
+                              </span>
+                              <span className="text-muted-foreground">por tu feedback</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
             ) : feedbackList.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
@@ -297,17 +536,22 @@ const Feedback: React.FC = () => {
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <h3 className="font-medium">{feedback.subject}</h3>
                           {getStatusBadge(feedback.status)}
+                          {feedback.feedback_type === "course" && (
+                            <Badge variant="secondary" className="gap-1">
+                              <BookOpen className="w-3 h-3" />
+                              Curso
+                            </Badge>
+                          )}
                         </div>
-                        <p className="text-sm text-muted-foreground">{feedback.message}</p>
                         
-                        {isCreatorOrAdmin && feedback.sender_profile && (
-                          <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                            <User className="w-3 h-3" />
-                            <span>
-                              {feedback.sender_profile.full_name || feedback.sender_profile.email}
-                            </span>
+                        {/* Star Rating for course feedback */}
+                        {feedback.rating && (
+                          <div className="mb-2">
+                            {renderStars(feedback.rating)}
                           </div>
                         )}
+                        
+                        <p className="text-sm text-muted-foreground">{feedback.message}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-muted-foreground">
@@ -316,37 +560,6 @@ const Feedback: React.FC = () => {
                             locale: es,
                           })}
                         </span>
-                        
-                        {isCreatorOrAdmin && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-destructive hover:text-destructive"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>¿Eliminar este feedback?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Esta acción no se puede deshacer. El feedback será eliminado permanentemente.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleDelete(feedback.id)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  Eliminar
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
                       </div>
                     </div>
 

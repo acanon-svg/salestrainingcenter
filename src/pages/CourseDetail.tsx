@@ -5,6 +5,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useCourse, useCourseMaterials, useCourseQuizzes, useCourseResources, useUpdateEnrollmentProgress, useMyEnrollments } from "@/hooks/useCourses";
 import { useMaterialProgress, useMarkMaterialComplete } from "@/hooks/useMaterialProgress";
 import { useQuizAttempts, useSubmitQuizAttempt } from "@/hooks/useQuizAttempts";
+import { useCourseFeedback, useSubmitCourseFeedback } from "@/hooks/useFeedback";
 import { useAuth } from "@/contexts/AuthContext";
 import { generateDiploma } from "@/lib/generateDiploma";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { KeywordsGlossary } from "@/components/glossary/KeywordsGlossary";
 import { GoogleDocEmbed, isGoogleUrl } from "@/components/materials/GoogleDocEmbed";
+import { CourseFeedbackForm } from "@/components/courses/CourseFeedbackForm";
 import { 
   ArrowLeft, 
   Play, 
@@ -109,10 +111,12 @@ const CourseDetail: React.FC = () => {
   const { data: resources, isLoading: loadingResources } = useCourseResources(id || "");
   const { data: materialProgress } = useMaterialProgress(id || "");
   const { data: enrollments } = useMyEnrollments();
+  const { data: existingFeedback, isLoading: loadingFeedback } = useCourseFeedback(id || "");
   
   const markComplete = useMarkMaterialComplete();
   const updateProgress = useUpdateEnrollmentProgress();
   const submitQuiz = useSubmitQuizAttempt();
+  const submitCourseFeedback = useSubmitCourseFeedback();
 
   const handleDownloadDiploma = () => {
     if (!course || !profile) return;
@@ -324,6 +328,24 @@ const CourseDetail: React.FC = () => {
               </p>
             </CardContent>
           </Card>
+        )}
+
+        {/* Course Feedback Section - show when course is completed */}
+        {enrollment?.status === "completed" && !loadingFeedback && (
+          <CourseFeedbackForm
+            courseId={id || ""}
+            courseTitle={course.title}
+            onSubmit={async (data) => {
+              await submitCourseFeedback.mutateAsync({
+                courseId: id || "",
+                courseTitle: course.title,
+                rating: data.rating,
+                message: data.message,
+              });
+            }}
+            isSubmitting={submitCourseFeedback.isPending}
+            hasSubmitted={!!existingFeedback}
+          />
         )}
 
         {/* Course Timer - show when enrolled and course has time limit */}

@@ -619,10 +619,12 @@ export type Database = {
         Row: {
           course_id: string | null
           created_at: string
+          feedback_type: string | null
           id: string
           material_id: string | null
           message: string
           points_awarded: number | null
+          rating: number | null
           recipient_id: string | null
           responded_at: string | null
           response: string | null
@@ -634,10 +636,12 @@ export type Database = {
         Insert: {
           course_id?: string | null
           created_at?: string
+          feedback_type?: string | null
           id?: string
           material_id?: string | null
           message: string
           points_awarded?: number | null
+          rating?: number | null
           recipient_id?: string | null
           responded_at?: string | null
           response?: string | null
@@ -649,10 +653,12 @@ export type Database = {
         Update: {
           course_id?: string | null
           created_at?: string
+          feedback_type?: string | null
           id?: string
           material_id?: string | null
           message?: string
           points_awarded?: number | null
+          rating?: number | null
           recipient_id?: string | null
           responded_at?: string | null
           response?: string | null
