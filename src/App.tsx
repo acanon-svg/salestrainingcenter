@@ -277,14 +277,6 @@ const AppRoutes = () => {
           </RoleRoute>
         }
       />
-      <Route
-        path="/settings"
-        element={
-          <RoleRoute allowedRoles={["admin"]}>
-            <Dashboard />
-          </RoleRoute>
-        }
-      />
       
       {/* Catch-all */}
       <Route path="*" element={<NotFound />} />

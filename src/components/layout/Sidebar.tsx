@@ -9,7 +9,6 @@ import {
   User,
   Bell,
   MessageSquare,
-  Settings,
   LogOut,
   PlusCircle,
   FolderOpen,
@@ -78,7 +77,6 @@ const analistaItems: NavItem[] = [
 const adminItems: NavItem[] = [
   { label: "Usuarios", icon: Users, href: "/users", roles: ["admin"] },
   { label: "Reportes", icon: BarChart3, href: "/reports", roles: ["admin"] },
-  { label: "Configuración", icon: Settings, href: "/settings", roles: ["admin"] },
 ];
 
 export const Sidebar: React.FC = () => {
