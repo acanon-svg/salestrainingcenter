@@ -94,12 +94,21 @@ export const useCreateCourse = () => {
 
       // 2. Create materials if any
       if (materials.length > 0) {
+        // Map content types to valid enum values
+        const mapContentType = (type: string): "video" | "documento" | "link" | "quiz" | "encuesta" => {
+          if (type === "google_embed") return "documento";
+          if (["video", "documento", "link", "quiz", "encuesta"].includes(type)) {
+            return type as "video" | "documento" | "link" | "quiz" | "encuesta";
+          }
+          return "documento"; // Default fallback
+        };
+
         const materialsToInsert = materials
           .filter(m => m.title && m.content_url)
           .map((material, index) => ({
             course_id: course.id,
             title: material.title,
-            type: material.type as "video" | "documento" | "link" | "quiz" | "encuesta",
+            type: mapContentType(material.type),
             content_url: material.content_url,
             order_index: index,
             is_required: true,

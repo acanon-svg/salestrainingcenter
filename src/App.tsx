@@ -16,6 +16,7 @@ import Badges from "@/pages/Badges";
 import Notifications from "@/pages/Notifications";
 import Feedback from "@/pages/Feedback";
 import CreateCourse from "@/pages/CreateCourse";
+import EditCourse from "@/pages/EditCourse";
 import MyCourses from "@/pages/MyCourses";
 import Reports from "@/pages/Reports";
 import UserManagement from "@/pages/UserManagement";
@@ -205,6 +206,14 @@ const AppRoutes = () => {
         element={
           <RoleRoute allowedRoles={["creator", "admin"]}>
             <MyCourses />
+          </RoleRoute>
+        }
+      />
+      <Route
+        path="/courses/:id/edit"
+        element={
+          <RoleRoute allowedRoles={["creator", "admin"]}>
+            <EditCourse />
           </RoleRoute>
         }
       />
