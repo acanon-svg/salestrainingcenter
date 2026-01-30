@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DOMPurify from "dompurify";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { useCourse, useCourseMaterials, useCourseQuizzes, useUpdateEnrollmentProgress, useMyEnrollments } from "@/hooks/useCourses";
+import { useCourse, useCourseMaterials, useCourseQuizzes, useCourseResources, useUpdateEnrollmentProgress, useMyEnrollments } from "@/hooks/useCourses";
 import { useMaterialProgress, useMarkMaterialComplete } from "@/hooks/useMaterialProgress";
 import { useQuizAttempts, useSubmitQuizAttempt } from "@/hooks/useQuizAttempts";
 import { useAuth } from "@/contexts/AuthContext";
@@ -30,8 +30,10 @@ import {
   Video,
   FileQuestion,
   ChevronRight,
+  ChevronLeft,
   Award,
-  Download
+  Download,
+  Link2
 } from "lucide-react";
 import { dimensionLabels, difficultyLabels, contentTypeLabels, CourseMaterial, Quiz, QuizQuestion } from "@/lib/types";
 
@@ -44,6 +46,7 @@ const CourseDetail: React.FC = () => {
   const { data: course, isLoading: loadingCourse } = useCourse(id || "");
   const { data: materials, isLoading: loadingMaterials } = useCourseMaterials(id || "");
   const { data: quizzes, isLoading: loadingQuizzes } = useCourseQuizzes(id || "");
+  const { data: resources, isLoading: loadingResources } = useCourseResources(id || "");
   const { data: materialProgress } = useMaterialProgress(id || "");
   const { data: enrollments } = useMyEnrollments();
   
@@ -75,6 +78,7 @@ const CourseDetail: React.FC = () => {
   const [quizStartTime, setQuizStartTime] = useState<Date | null>(null);
   const [showQuizResults, setShowQuizResults] = useState(false);
   const [lastQuizScore, setLastQuizScore] = useState<{ score: number; passed: boolean } | null>(null);
+  const [currentMaterialIndex, setCurrentMaterialIndex] = useState<number>(0);
 
   const enrollment = enrollments?.find((e) => e.course_id === id);
   const completedMaterialIds = new Set(materialProgress?.filter((p) => p.completed).map((p) => p.material_id) || []);
@@ -384,7 +388,7 @@ const CourseDetail: React.FC = () => {
                     )}
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                   {selectedMaterial.type === "video" && selectedMaterial.content_url && (
                     <div className="aspect-video bg-secondary rounded-lg overflow-hidden">
                       <video
@@ -423,6 +427,60 @@ const CourseDetail: React.FC = () => {
                           <ExternalLink className="w-4 h-4 mr-2" />
                           Abrir enlace
                         </a>
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Slide Navigation */}
+                  {materials && materials.length > 1 && (
+                    <div className="flex items-center justify-between pt-4 border-t border-border">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          const prevIndex = currentMaterialIndex - 1;
+                          if (prevIndex >= 0) {
+                            setCurrentMaterialIndex(prevIndex);
+                            setSelectedMaterial(materials[prevIndex] as CourseMaterial);
+                          }
+                        }}
+                        disabled={currentMaterialIndex === 0}
+                      >
+                        <ChevronLeft className="w-4 h-4 mr-2" />
+                        Anterior
+                      </Button>
+                      
+                      <div className="flex items-center gap-2">
+                        {materials.map((_, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => {
+                              setCurrentMaterialIndex(idx);
+                              setSelectedMaterial(materials[idx] as CourseMaterial);
+                            }}
+                            className={`w-3 h-3 rounded-full transition-all ${
+                              idx === currentMaterialIndex 
+                                ? "bg-primary scale-110" 
+                                : completedMaterialIds.has(materials[idx].id)
+                                  ? "bg-success"
+                                  : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          const nextIndex = currentMaterialIndex + 1;
+                          if (nextIndex < materials.length) {
+                            setCurrentMaterialIndex(nextIndex);
+                            setSelectedMaterial(materials[nextIndex] as CourseMaterial);
+                          }
+                        }}
+                        disabled={currentMaterialIndex === materials.length - 1}
+                      >
+                        Siguiente
+                        <ChevronRight className="w-4 h-4 ml-2" />
                       </Button>
                     </div>
                   )}
@@ -478,14 +536,18 @@ const CourseDetail: React.FC = () => {
           {/* Sidebar - Content list */}
           <div className="space-y-4">
             <Tabs defaultValue="materials">
-              <TabsList className="w-full">
-                <TabsTrigger value="materials" className="flex-1">
+              <TabsList className="w-full grid grid-cols-3">
+                <TabsTrigger value="materials">
                   <BookOpen className="w-4 h-4 mr-2" />
                   Materiales
                 </TabsTrigger>
-                <TabsTrigger value="quizzes" className="flex-1">
+                <TabsTrigger value="quizzes">
                   <FileQuestion className="w-4 h-4 mr-2" />
                   Quizzes
+                </TabsTrigger>
+                <TabsTrigger value="resources">
+                  <Link2 className="w-4 h-4 mr-2" />
+                  Recursos
                 </TabsTrigger>
               </TabsList>
 
@@ -506,6 +568,7 @@ const CourseDetail: React.FC = () => {
                         onClick={() => {
                           setSelectedMaterial(material as CourseMaterial);
                           setSelectedQuiz(null);
+                          setCurrentMaterialIndex(index);
                         }}
                         className={`w-full text-left p-3 rounded-lg border transition-all ${
                           isSelected 
@@ -575,6 +638,39 @@ const CourseDetail: React.FC = () => {
                 ) : (
                   <p className="text-center text-muted-foreground py-8">
                     No hay quizzes disponibles
+                  </p>
+                )}
+              </TabsContent>
+
+              <TabsContent value="resources" className="mt-4 space-y-2">
+                {loadingResources ? (
+                  <Skeleton className="h-16 w-full" />
+                ) : resources && resources.length > 0 ? (
+                  resources.map((resource) => (
+                    <a
+                      key={resource.id}
+                      href={resource.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full text-left p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all flex items-center gap-3"
+                    >
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <Link2 className="w-4 h-4 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate text-primary hover:underline">
+                          {resource.title}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {resource.url}
+                        </p>
+                      </div>
+                      <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                    </a>
+                  ))
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">
+                    No hay recursos adicionales
                   </p>
                 )}
               </TabsContent>

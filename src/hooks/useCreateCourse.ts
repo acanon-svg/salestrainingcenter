@@ -34,13 +34,22 @@ interface Material {
 interface QuizQuestion {
   id: string;
   question: string;
+  question_type?: "multiple_choice" | "true_false";
+  points?: number;
   options: { text: string; is_correct: boolean }[];
+}
+
+interface AdditionalResource {
+  id: string;
+  title: string;
+  url: string;
 }
 
 interface CreateCoursePayload {
   courseData: CourseData;
   materials: Material[];
   quizQuestions: QuizQuestion[];
+  additionalResources?: AdditionalResource[];
   status: "draft" | "published";
 }
 
@@ -51,7 +60,7 @@ export const useCreateCourse = () => {
   const navigate = useNavigate();
 
   return useMutation({
-    mutationFn: async ({ courseData, materials, quizQuestions, status }: CreateCoursePayload) => {
+    mutationFn: async ({ courseData, materials, quizQuestions, additionalResources, status }: CreateCoursePayload) => {
       if (!user?.id) throw new Error("Usuario no autenticado");
 
       // 1. Create the course
@@ -127,14 +136,14 @@ export const useCreateCourse = () => {
 
           if (quizError) throw quizError;
 
-          // Create questions
+          // Create questions with individual points
           const questionsToInsert = validQuestions.map((q, index) => ({
             quiz_id: quiz.id,
             question: q.question,
-            question_type: "multiple_choice",
+            question_type: q.question_type || "multiple_choice",
             options: q.options.filter(o => o.text),
             order_index: index,
-            points: 10,
+            points: q.points || 10,
           }));
 
           const { error: questionsError } = await supabase
@@ -142,6 +151,26 @@ export const useCreateCourse = () => {
             .insert(questionsToInsert);
 
           if (questionsError) throw questionsError;
+        }
+      }
+
+      // 4. Create additional resources if any
+      if (additionalResources && additionalResources.length > 0) {
+        const resourcesToInsert = additionalResources
+          .filter(r => r.title && r.url)
+          .map((resource, index) => ({
+            course_id: course.id,
+            title: resource.title,
+            url: resource.url,
+            order_index: index,
+          }));
+
+        if (resourcesToInsert.length > 0) {
+          const { error: resourcesError } = await supabase
+            .from("course_resources")
+            .insert(resourcesToInsert);
+
+          if (resourcesError) throw resourcesError;
         }
       }
 
