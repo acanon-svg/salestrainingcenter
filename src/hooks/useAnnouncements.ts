@@ -15,6 +15,7 @@ export interface Announcement {
   expires_at: string | null;
   created_by: string | null;
   created_at: string;
+  course_link: string | null;
 }
 
 export const useAnnouncements = () => {

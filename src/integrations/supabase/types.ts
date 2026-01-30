@@ -49,6 +49,7 @@ export type Database = {
       announcements: {
         Row: {
           content: string | null
+          course_link: string | null
           created_at: string
           created_by: string | null
           expires_at: string | null
@@ -63,6 +64,7 @@ export type Database = {
         }
         Insert: {
           content?: string | null
+          course_link?: string | null
           created_at?: string
           created_by?: string | null
           expires_at?: string | null
@@ -77,6 +79,7 @@ export type Database = {
         }
         Update: {
           content?: string | null
+          course_link?: string | null
           created_at?: string
           created_by?: string | null
           expires_at?: string | null

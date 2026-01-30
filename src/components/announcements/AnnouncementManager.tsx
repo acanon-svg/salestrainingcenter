@@ -37,7 +37,6 @@ import {
   Plus,
   Edit,
   Trash2,
-  Image,
   Video,
   Calendar,
   Users,
@@ -45,9 +44,11 @@ import {
   Eye,
   X,
   Loader2,
+  Link2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { AnnouncementImageUpload } from "./AnnouncementImageUpload";
 
 interface Announcement {
   id: string;
@@ -62,6 +63,7 @@ interface Announcement {
   expires_at: string | null;
   created_by: string | null;
   created_at: string;
+  course_link: string | null;
 }
 
 interface AnnouncementFormData {
@@ -74,6 +76,7 @@ interface AnnouncementFormData {
   points_for_viewing: number;
   starts_at: string;
   expires_at: string;
+  course_link: string;
 }
 
 const defaultFormData: AnnouncementFormData = {
@@ -86,6 +89,7 @@ const defaultFormData: AnnouncementFormData = {
   points_for_viewing: 0,
   starts_at: new Date().toISOString().slice(0, 16),
   expires_at: "",
+  course_link: "",
 };
 
 export const AnnouncementManager: React.FC = () => {
@@ -143,6 +147,7 @@ export const AnnouncementManager: React.FC = () => {
         starts_at: data.starts_at,
         expires_at: data.expires_at || null,
         created_by: user?.id,
+        course_link: data.course_link || null,
       });
 
       if (error) throw error;
@@ -172,6 +177,7 @@ export const AnnouncementManager: React.FC = () => {
           points_for_viewing: data.points_for_viewing || 0,
           starts_at: data.starts_at,
           expires_at: data.expires_at || null,
+          course_link: data.course_link || null,
         })
         .eq("id", id);
 
@@ -221,6 +227,7 @@ export const AnnouncementManager: React.FC = () => {
       points_for_viewing: announcement.points_for_viewing || 0,
       starts_at: announcement.starts_at.slice(0, 16),
       expires_at: announcement.expires_at?.slice(0, 16) || "",
+      course_link: announcement.course_link || "",
     });
     setIsOpen(true);
   };
@@ -319,32 +326,41 @@ export const AnnouncementManager: React.FC = () => {
                   />
                 </div>
 
-                {/* Media */}
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="image_url" className="flex items-center gap-2">
-                      <Image className="h-4 w-4" />
-                      URL de Imagen
-                    </Label>
-                    <Input
-                      id="image_url"
-                      placeholder="https://..."
-                      value={formData.image_url}
-                      onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="video_url" className="flex items-center gap-2">
-                      <Video className="h-4 w-4" />
-                      URL de Video
-                    </Label>
-                    <Input
-                      id="video_url"
-                      placeholder="https://..."
-                      value={formData.video_url}
-                      onChange={(e) => setFormData({ ...formData, video_url: e.target.value })}
-                    />
-                  </div>
+                {/* Image Upload */}
+                <AnnouncementImageUpload
+                  currentImageUrl={formData.image_url}
+                  onImageChange={(url) => setFormData({ ...formData, image_url: url })}
+                />
+
+                {/* Video URL */}
+                <div className="space-y-2">
+                  <Label htmlFor="video_url" className="flex items-center gap-2">
+                    <Video className="h-4 w-4" />
+                    URL de Video (opcional)
+                  </Label>
+                  <Input
+                    id="video_url"
+                    placeholder="https://youtube.com/..."
+                    value={formData.video_url}
+                    onChange={(e) => setFormData({ ...formData, video_url: e.target.value })}
+                  />
+                </div>
+
+                {/* Course Link */}
+                <div className="space-y-2">
+                  <Label htmlFor="course_link" className="flex items-center gap-2">
+                    <Link2 className="h-4 w-4" />
+                    Link del Curso
+                  </Label>
+                  <Input
+                    id="course_link"
+                    placeholder="https://salestrainingcenter.lovable.app/courses/..."
+                    value={formData.course_link}
+                    onChange={(e) => setFormData({ ...formData, course_link: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Pega el link universal del curso. Al hacer clic en el anuncio, el usuario será redirigido a este curso.
+                  </p>
                 </div>
 
                 {/* Dates */}
@@ -484,6 +500,12 @@ export const AnnouncementManager: React.FC = () => {
                       <Badge variant="secondary" className="text-xs">Programado</Badge>
                     ) : (
                       <Badge variant="outline" className="text-xs">Expirado</Badge>
+                    )}
+                    {announcement.course_link && (
+                      <Badge variant="outline" className="text-xs gap-1">
+                        <Link2 className="h-3 w-3" />
+                        Con link
+                      </Badge>
                     )}
                   </div>
                   {announcement.content && (
