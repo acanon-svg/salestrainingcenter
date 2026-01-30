@@ -50,6 +50,7 @@ export interface Course {
   status: CourseStatus;
   points: number;
   estimated_duration_minutes: number | null;
+  time_limit_minutes: number | null;
   language: string;
   subtitles_enabled: boolean;
   target_audience: string[] | null;
