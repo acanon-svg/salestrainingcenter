@@ -327,7 +327,15 @@ const EditCourse: React.FC = () => {
       });
 
       // 2. Update materials - delete existing and insert new
-      await supabase.from("course_materials").delete().eq("course_id", id);
+      const { error: deleteMaterialsError } = await supabase
+        .from("course_materials")
+        .delete()
+        .eq("course_id", id);
+      
+      if (deleteMaterialsError) {
+        console.error("Error deleting materials:", deleteMaterialsError);
+        throw deleteMaterialsError;
+      }
       
       const materialsToInsert = materials
         .filter(m => m.title && m.content_url)
@@ -341,14 +349,39 @@ const EditCourse: React.FC = () => {
         }));
 
       if (materialsToInsert.length > 0) {
-        await supabase.from("course_materials").insert(materialsToInsert);
+        const { error: insertMaterialsError } = await supabase
+          .from("course_materials")
+          .insert(materialsToInsert);
+        
+        if (insertMaterialsError) {
+          console.error("Error inserting materials:", insertMaterialsError);
+          throw insertMaterialsError;
+        }
       }
 
       // 3. Update quiz - delete existing quiz and questions, then recreate
       if (quizzes && quizzes.length > 0) {
         const quizId = quizzes[0].id;
-        await supabase.from("quiz_questions").delete().eq("quiz_id", quizId);
-        await supabase.from("quizzes").delete().eq("id", quizId);
+        
+        const { error: deleteQuestionsError } = await supabase
+          .from("quiz_questions")
+          .delete()
+          .eq("quiz_id", quizId);
+        
+        if (deleteQuestionsError) {
+          console.error("Error deleting quiz questions:", deleteQuestionsError);
+          throw deleteQuestionsError;
+        }
+        
+        const { error: deleteQuizError } = await supabase
+          .from("quizzes")
+          .delete()
+          .eq("id", quizId);
+        
+        if (deleteQuizError) {
+          console.error("Error deleting quiz:", deleteQuizError);
+          throw deleteQuizError;
+        }
       }
 
       // Create new quiz if there are questions
@@ -369,7 +402,12 @@ const EditCourse: React.FC = () => {
           .select()
           .single();
 
-        if (!quizError && newQuiz) {
+        if (quizError) {
+          console.error("Error creating quiz:", quizError);
+          throw quizError;
+        }
+
+        if (newQuiz) {
           const questionsToInsert = validQuestions.map((q, index) => ({
             quiz_id: newQuiz.id,
             question: q.question,
@@ -379,12 +417,27 @@ const EditCourse: React.FC = () => {
             points: q.points || 10,
           }));
 
-          await supabase.from("quiz_questions").insert(questionsToInsert);
+          const { error: insertQuestionsError } = await supabase
+            .from("quiz_questions")
+            .insert(questionsToInsert);
+          
+          if (insertQuestionsError) {
+            console.error("Error inserting quiz questions:", insertQuestionsError);
+            throw insertQuestionsError;
+          }
         }
       }
 
       // 4. Update resources
-      await supabase.from("course_resources").delete().eq("course_id", id);
+      const { error: deleteResourcesError } = await supabase
+        .from("course_resources")
+        .delete()
+        .eq("course_id", id);
+      
+      if (deleteResourcesError) {
+        console.error("Error deleting resources:", deleteResourcesError);
+        throw deleteResourcesError;
+      }
 
       const resourcesToInsert = additionalResources
         .filter(r => r.title && r.url)
@@ -396,7 +449,14 @@ const EditCourse: React.FC = () => {
         }));
 
       if (resourcesToInsert.length > 0) {
-        await supabase.from("course_resources").insert(resourcesToInsert);
+        const { error: insertResourcesError } = await supabase
+          .from("course_resources")
+          .insert(resourcesToInsert);
+        
+        if (insertResourcesError) {
+          console.error("Error inserting resources:", insertResourcesError);
+          throw insertResourcesError;
+        }
       }
 
       // Invalidate all course-related queries to ensure all users see the updates
@@ -412,11 +472,11 @@ const EditCourse: React.FC = () => {
         title: "Curso actualizado",
         description: "Los cambios se han guardado correctamente y están visibles para todos los usuarios.",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating course:", error);
       toast({
         title: "Error",
-        description: "No se pudieron guardar los cambios",
+        description: error?.message || "No se pudieron guardar los cambios",
         variant: "destructive",
       });
     }
