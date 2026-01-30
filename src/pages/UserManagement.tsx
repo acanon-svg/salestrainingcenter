@@ -8,6 +8,7 @@ import { AssignPointsDialog } from "@/components/users/AssignPointsDialog";
 import { UserEditDialog } from "@/components/users/UserEditDialog";
 import { DeleteUserDialog } from "@/components/users/DeleteUserDialog";
 import { PortalSectionManager } from "@/components/admin/PortalSectionManager";
+import { DataResetManager } from "@/components/admin/DataResetManager";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Users, Eye, Shield, Loader2, Mail, Building, MapPin, UserCheck, Calendar, Trophy, Settings, UserPlus, Bot, UserCog, Star, Crown, Pencil, LayoutDashboard, Trash2 } from "lucide-react";
+import { Search, Users, Eye, Shield, Loader2, Mail, Building, MapPin, UserCheck, Calendar, Trophy, Settings, UserPlus, Bot, UserCog, Star, Crown, Pencil, LayoutDashboard, Trash2, Database } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
@@ -260,18 +261,22 @@ const UserManagement: React.FC = () => {
 
         {/* Main Tabs */}
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 max-w-2xl">
+          <TabsList className="grid w-full grid-cols-5 max-w-3xl">
             <TabsTrigger value="users" className="gap-2">
               <Users className="h-4 w-4" />
               Usuarios
             </TabsTrigger>
             <TabsTrigger value="hierarchy" className="gap-2">
               <Crown className="h-4 w-4" />
-              Jerarquía Líderes
+              Jerarquía
             </TabsTrigger>
             <TabsTrigger value="sections" className="gap-2">
               <LayoutDashboard className="h-4 w-4" />
               Secciones
+            </TabsTrigger>
+            <TabsTrigger value="data" className="gap-2">
+              <Database className="h-4 w-4" />
+              Datos
             </TabsTrigger>
             <TabsTrigger value="chatbot" className="gap-2">
               <Bot className="h-4 w-4" />
@@ -639,6 +644,18 @@ const UserManagement: React.FC = () => {
 
           <TabsContent value="sections" className="mt-6">
             <PortalSectionManager />
+          </TabsContent>
+
+          <TabsContent value="data" className="mt-6">
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-bold mb-2">Gestión de Datos</h2>
+                <p className="text-muted-foreground">
+                  Herramientas para administrar y reiniciar datos del sistema
+                </p>
+              </div>
+              <DataResetManager />
+            </div>
           </TabsContent>
 
           <TabsContent value="chatbot" className="mt-6">
