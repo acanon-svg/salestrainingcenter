@@ -243,13 +243,15 @@ export const useUpdateCourse = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Invalidate all course-related queries to ensure all users see updates
       queryClient.invalidateQueries({ queryKey: ["courses"] });
       queryClient.invalidateQueries({ queryKey: ["my-courses"] });
-      toast({
-        title: "Curso actualizado",
-        description: "Los cambios se han guardado correctamente.",
-      });
+      queryClient.invalidateQueries({ queryKey: ["course", data.id] });
+      queryClient.invalidateQueries({ queryKey: ["course-materials", data.id] });
+      queryClient.invalidateQueries({ queryKey: ["course-quizzes", data.id] });
+      queryClient.invalidateQueries({ queryKey: ["course-resources", data.id] });
+      queryClient.invalidateQueries({ queryKey: ["enrollments"] });
     },
     onError: (error: Error) => {
       toast({
