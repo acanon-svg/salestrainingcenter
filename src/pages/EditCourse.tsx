@@ -37,6 +37,7 @@ import {
   Calendar,
   UserPlus,
   Search,
+  Timer,
 } from "lucide-react";
 import { dimensionLabels, difficultyLabels, TrainingDimension, DifficultyLevel } from "@/lib/types";
 import { CoverImageUpload } from "@/components/courses/CoverImageUpload";
@@ -45,6 +46,7 @@ import { useCourse, useCourseResources, useCourseMaterials, useCourseQuizzes } f
 import { useUpdateCourse } from "@/hooks/useCreateCourse";
 import { useAvailableTeams, useAvailableUsers } from "@/hooks/useCourseTargeting";
 import { supabase } from "@/integrations/supabase/client";
+import { CourseShareLink } from "@/components/courses/CourseShareLink";
 
 const EditCourse: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -73,6 +75,7 @@ const EditCourse: React.FC = () => {
     difficulty: "basico" as DifficultyLevel,
     points: 100,
     estimated_duration_minutes: 30,
+    time_limit_minutes: 60,
     language: "es",
     subtitles_enabled: false,
     target_audience: [] as string[],
@@ -117,6 +120,7 @@ const EditCourse: React.FC = () => {
         difficulty: course.difficulty as DifficultyLevel,
         points: course.points || 100,
         estimated_duration_minutes: course.estimated_duration_minutes || 30,
+        time_limit_minutes: (course as any).time_limit_minutes || 60,
         language: course.language || "es",
         subtitles_enabled: course.subtitles_enabled || false,
         target_audience: course.target_audience || [],
@@ -644,7 +648,7 @@ const EditCourse: React.FC = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="duration">Duración (minutos)</Label>
+                    <Label htmlFor="duration">Duración Estimada (minutos)</Label>
                     <Input
                       id="duration"
                       type="number"
@@ -656,6 +660,31 @@ const EditCourse: React.FC = () => {
                         })
                       }
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Tiempo estimado para completar el curso (informativo)
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="time_limit" className="flex items-center gap-2">
+                      <Timer className="w-4 h-4 text-primary" />
+                      Tiempo Límite (minutos) *
+                    </Label>
+                    <Input
+                      id="time_limit"
+                      type="number"
+                      min="1"
+                      value={courseData.time_limit_minutes}
+                      onChange={(e) =>
+                        setCourseData({
+                          ...courseData,
+                          time_limit_minutes: parseInt(e.target.value) || 60,
+                        })
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Tiempo máximo que tiene el estudiante para completar el curso después de inscribirse.
+                    </p>
                   </div>
 
                   <div className="space-y-2 md:col-span-2">
@@ -1104,6 +1133,11 @@ const EditCourse: React.FC = () => {
 
           {/* Settings Tab */}
           <TabsContent value="settings" className="mt-6 space-y-6">
+            {/* Course Share Link - only show if course is published */}
+            {course.status === "published" && (
+              <CourseShareLink courseId={id || ""} courseTitle={courseData.title} />
+            )}
+
             <Card className="border-border/50">
               <CardHeader>
                 <CardTitle>Configuración Avanzada</CardTitle>

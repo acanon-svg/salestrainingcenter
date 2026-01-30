@@ -13,6 +13,7 @@ interface CourseData {
   difficulty: DifficultyLevel;
   points: number;
   estimated_duration_minutes: number;
+  time_limit_minutes?: number;
   language: string;
   subtitles_enabled: boolean;
   target_audience: string[];
@@ -74,6 +75,7 @@ export const useCreateCourse = () => {
           difficulty: courseData.difficulty,
           points: courseData.points,
           estimated_duration_minutes: courseData.estimated_duration_minutes || null,
+          time_limit_minutes: courseData.time_limit_minutes || 60,
           language: courseData.language,
           subtitles_enabled: courseData.subtitles_enabled,
           target_audience: courseData.target_audience.length > 0 ? courseData.target_audience : null,
