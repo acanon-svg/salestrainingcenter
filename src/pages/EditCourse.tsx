@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,6 +50,7 @@ const EditCourse: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   
   const { data: course, isLoading: courseLoading } = useCourse(id || "");
   const { data: resources = [] } = useCourseResources(id || "");
@@ -397,9 +399,18 @@ const EditCourse: React.FC = () => {
         await supabase.from("course_resources").insert(resourcesToInsert);
       }
 
+      // Invalidate all course-related queries to ensure all users see the updates
+      await queryClient.invalidateQueries({ queryKey: ["courses"] });
+      await queryClient.invalidateQueries({ queryKey: ["my-courses"] });
+      await queryClient.invalidateQueries({ queryKey: ["course", id] });
+      await queryClient.invalidateQueries({ queryKey: ["course-materials", id] });
+      await queryClient.invalidateQueries({ queryKey: ["course-quizzes", id] });
+      await queryClient.invalidateQueries({ queryKey: ["course-resources", id] });
+      await queryClient.invalidateQueries({ queryKey: ["enrollments"] });
+
       toast({
         title: "Curso actualizado",
-        description: "Los cambios se han guardado correctamente.",
+        description: "Los cambios se han guardado correctamente y están visibles para todos los usuarios.",
       });
     } catch (error) {
       console.error("Error updating course:", error);
