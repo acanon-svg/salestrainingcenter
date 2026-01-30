@@ -1568,7 +1568,7 @@ export type Database = {
       publish_scheduled_courses: { Args: never; Returns: undefined }
     }
     Enums: {
-      app_role: "student" | "creator" | "admin" | "lider" | "analista"
+      app_role: "student" | "creator" | "admin" | "lider" | "analista" | "qa"
       content_type: "video" | "documento" | "link" | "quiz" | "encuesta"
       course_status: "draft" | "published" | "archived"
       difficulty_level: "basico" | "medio" | "avanzado"
@@ -1700,7 +1700,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["student", "creator", "admin", "lider", "analista"],
+      app_role: ["student", "creator", "admin", "lider", "analista", "qa"],
       content_type: ["video", "documento", "link", "quiz", "encuesta"],
       course_status: ["draft", "published", "archived"],
       difficulty_level: ["basico", "medio", "avanzado"],

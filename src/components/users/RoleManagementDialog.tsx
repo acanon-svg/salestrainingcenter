@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -25,12 +25,13 @@ import {
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, Shield, BookOpen, Crown, Users, Check, ChevronsUpDown, Plus, Building, MapPin, UsersRound, LineChart } from "lucide-react";
+import { Loader2, Shield, BookOpen, Crown, Users, Check, ChevronsUpDown, Plus, Building, MapPin, UsersRound, LineChart, ClipboardCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUserRoles, useAddRole, useRemoveRole, AppRole } from "@/hooks/useUserRoles";
 import { useLeaderRegion, useAssignLeaderRegion, useRemoveLeaderRegion } from "@/hooks/useLeaderRegion";
 import { useRegionals } from "@/hooks/useRegionals";
 import { useUpdateProfile } from "@/hooks/useUpdateProfile";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface RoleManagementDialogProps {
   open: boolean;
@@ -46,7 +47,8 @@ interface RoleManagementDialogProps {
   onProfileUpdated?: () => void;
 }
 
-const roleConfig: { role: AppRole; label: string; description: string; icon: React.ElementType }[] = [
+// Base roles visible to all admins
+const baseRoleConfig: { role: AppRole; label: string; description: string; icon: React.ElementType }[] = [
   {
     role: "student",
     label: "Estudiante",
@@ -79,12 +81,21 @@ const roleConfig: { role: AppRole; label: string; description: string; icon: Rea
   },
 ];
 
+// QA role - only assignable by creators
+const qaRoleConfig: { role: AppRole; label: string; description: string; icon: React.ElementType } = {
+  role: "qa",
+  label: "Líder de Calidad",
+  description: "Acceso igual a estudiante para revisión de calidad",
+  icon: ClipboardCheck,
+};
+
 export const RoleManagementDialog: React.FC<RoleManagementDialogProps> = ({
   open,
   onOpenChange,
   user,
   onProfileUpdated,
 }) => {
+  const { hasRole } = useAuth();
   const { data: userRoles, isLoading: rolesLoading } = useUserRoles(user?.user_id);
   const { data: leaderRegion, isLoading: regionLoading } = useLeaderRegion(user?.user_id);
   const { data: regionals, isLoading: regionalsLoading } = useRegionals();
@@ -94,6 +105,18 @@ export const RoleManagementDialog: React.FC<RoleManagementDialogProps> = ({
   const assignRegion = useAssignLeaderRegion();
   const removeRegion = useRemoveLeaderRegion();
   const updateProfile = useUpdateProfile();
+
+  // Check if current user is a creator (can assign QA role)
+  const isCreator = hasRole("creator");
+
+  // Build role config based on current user's permissions
+  const roleConfig = useMemo(() => {
+    // Creators can see and assign the QA role
+    if (isCreator) {
+      return [...baseRoleConfig, qaRoleConfig];
+    }
+    return baseRoleConfig;
+  }, [isCreator]);
 
   // Profile fields state
   const [companyRole, setCompanyRole] = useState<string>("");
