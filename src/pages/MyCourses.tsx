@@ -175,9 +175,11 @@ const MyCourses: React.FC = () => {
                   <Eye className="w-4 h-4" />
                 </Button>
               </Link>
-              <Button variant="ghost" size="icon">
-                <Edit className="w-4 h-4" />
-              </Button>
+              <Link to={`/courses/${course.id}/edit`}>
+                <Button variant="ghost" size="icon">
+                  <Edit className="w-4 h-4" />
+                </Button>
+              </Link>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
