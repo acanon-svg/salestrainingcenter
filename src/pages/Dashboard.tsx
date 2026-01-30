@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   BookOpen,
   Trophy,
@@ -11,6 +12,7 @@ import {
   Clock,
   Star,
   Calendar,
+  AlertCircle,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -20,6 +22,13 @@ import { LevelCard } from "@/components/gamification/LevelCard";
 import { getLevelProgress, getPointsToNextLevel } from "@/lib/userLevel";
 import { AnnouncementCarousel } from "@/components/announcements/AnnouncementCarousel";
 import { useAutoPublishScheduledCourses } from "@/hooks/useScheduledCourses";
+import {
+  useDashboardStats,
+  useRecentCourses,
+  usePendingCourses,
+  useUserBadgesForDashboard,
+} from "@/hooks/useDashboardStats";
+import { Link } from "react-router-dom";
 
 const Dashboard: React.FC = () => {
   const { profile, roles } = useAuth();
@@ -27,34 +36,20 @@ const Dashboard: React.FC = () => {
   // Auto-publish scheduled courses when dashboard loads
   useAutoPublishScheduledCourses();
 
-  // Mock data - will be replaced with real data from the database
-  const stats = {
-    completedCourses: 12,
-    averageScore: 85,
-    totalPoints: profile?.points || 0,
-    badgesCount: profile?.badges_count || 0,
-    pendingCourses: 3,
-    rankingPosition: 15,
-    totalTeamMembers: 120,
+  // Real data from hooks
+  const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  const { data: recentCourses, isLoading: recentLoading } = useRecentCourses(5);
+  const { data: pendingCourses, isLoading: pendingLoading } = usePendingCourses(5);
+  const { data: badges, isLoading: badgesLoading } = useUserBadgesForDashboard();
+
+  const roleLabels: Record<string, string> = {
+    student: "Estudiante",
+    creator: "Creador",
+    admin: "Administrador",
+    lider: "Líder",
+    analista: "Reporting & Data",
+    qa: "Líder de Calidad",
   };
-
-  const recentCourses = [
-    { id: 1, name: "Onboarding Ventas", progress: 100, score: 92, completedAt: new Date() },
-    { id: 2, name: "Técnicas de Negociación", progress: 75, score: null, completedAt: null },
-    { id: 3, name: "Manejo de Objeciones", progress: 30, score: null, completedAt: null },
-  ];
-
-  const pendingCourses = [
-    { id: 4, name: "Actualización de Producto", dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), priority: "high" },
-    { id: 5, name: "Compliance 2024", dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), priority: "medium" },
-  ];
-
-  const badges = [
-    { id: 1, name: "Primer Curso", icon: "🎓", earned: true },
-    { id: 2, name: "Racha de 5", icon: "🔥", earned: true },
-    { id: 3, name: "Perfeccionista", icon: "⭐", earned: false },
-    { id: 4, name: "Velocista", icon: "⚡", earned: true },
-  ];
 
   return (
     <DashboardLayout>
@@ -91,10 +86,16 @@ const Dashboard: React.FC = () => {
               <BookOpen className="h-5 w-5 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{stats.completedCourses}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                +3 este mes
-              </p>
+              {statsLoading ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                <>
+                  <div className="text-3xl font-bold">{stats?.completedCourses || 0}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {stats?.inProgressCourses || 0} en progreso
+                  </p>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -106,8 +107,14 @@ const Dashboard: React.FC = () => {
               <Star className="h-5 w-5 text-warning" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{stats.averageScore}%</div>
-              <Progress value={stats.averageScore} className="mt-2 h-2" />
+              {statsLoading ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                <>
+                  <div className="text-3xl font-bold">{stats?.averageScore || 0}%</div>
+                  <Progress value={stats?.averageScore || 0} className="mt-2 h-2" />
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -116,18 +123,24 @@ const Dashboard: React.FC = () => {
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Puntos Acumulados
               </CardTitle>
-              <LevelBadge points={stats.totalPoints} size="sm" />
+              <LevelBadge points={stats?.totalPoints || 0} size="sm" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{stats.totalPoints.toLocaleString()}</div>
-              <div className="mt-2 space-y-1">
-                <Progress value={getLevelProgress(stats.totalPoints)} className="h-2" />
-                <p className="text-xs text-muted-foreground">
-                  {getPointsToNextLevel(stats.totalPoints) 
-                    ? `${getPointsToNextLevel(stats.totalPoints)?.toLocaleString()} pts para subir de nivel`
-                    : "¡Nivel máximo!"}
-                </p>
-              </div>
+              {statsLoading ? (
+                <Skeleton className="h-8 w-20" />
+              ) : (
+                <>
+                  <div className="text-3xl font-bold">{(stats?.totalPoints || 0).toLocaleString()}</div>
+                  <div className="mt-2 space-y-1">
+                    <Progress value={getLevelProgress(stats?.totalPoints || 0)} className="h-2" />
+                    <p className="text-xs text-muted-foreground">
+                      {getPointsToNextLevel(stats?.totalPoints || 0) 
+                        ? `${getPointsToNextLevel(stats?.totalPoints || 0)?.toLocaleString()} pts para subir de nivel`
+                        : "¡Nivel máximo!"}
+                    </p>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -139,10 +152,18 @@ const Dashboard: React.FC = () => {
               <Trophy className="h-5 w-5 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">#{stats.rankingPosition}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                de {stats.totalTeamMembers} miembros
-              </p>
+              {statsLoading ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                <>
+                  <div className="text-3xl font-bold">
+                    {stats?.rankingPosition ? `#${stats.rankingPosition}` : "-"}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    de {stats?.totalUsers || 0} usuarios
+                  </p>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -158,21 +179,49 @@ const Dashboard: React.FC = () => {
               <CardDescription>Tu progreso en los últimos cursos</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {recentCourses.map((course) => (
-                <div key={course.id} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-sm">{course.name}</span>
-                    {course.score !== null ? (
-                      <Badge variant="secondary" className="bg-success/10 text-success">
-                        {course.score}%
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline">{course.progress}%</Badge>
-                    )}
-                  </div>
-                  <Progress value={course.progress} className="h-2" />
+              {recentLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="space-y-2">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-2 w-full" />
+                    </div>
+                  ))}
                 </div>
-              ))}
+              ) : recentCourses && recentCourses.length > 0 ? (
+                recentCourses.map((course) => (
+                  <Link 
+                    key={course.id} 
+                    to={`/courses/${course.id}`}
+                    className="block space-y-2 hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm">{course.name}</span>
+                      {course.score !== null ? (
+                        <Badge variant="secondary" className="bg-success/10 text-success">
+                          {course.score}%
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline">{course.progress}%</Badge>
+                      )}
+                    </div>
+                    <Progress value={course.progress} className="h-2" />
+                  </Link>
+                ))
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <BookOpen className="h-10 w-10 text-muted-foreground/50 mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    No tienes cursos activos aún
+                  </p>
+                  <Link 
+                    to="/courses" 
+                    className="text-sm text-primary hover:underline mt-2"
+                  >
+                    Explorar cursos disponibles
+                  </Link>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -183,27 +232,58 @@ const Dashboard: React.FC = () => {
                 <Calendar className="h-5 w-5 text-primary" />
                 Cursos Pendientes
               </CardTitle>
-              <CardDescription>No olvides completarlos a tiempo</CardDescription>
+              <CardDescription>Cursos que aún no has completado</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {pendingCourses.map((course) => (
-                <div
-                  key={course.id}
-                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-2 h-2 rounded-full ${
-                        course.priority === "high" ? "bg-destructive" : "bg-warning"
-                      }`}
-                    />
-                    <span className="font-medium text-sm">{course.name}</span>
-                  </div>
-                  <span className="text-xs text-muted-foreground">
-                    Vence: {format(course.dueDate, "d MMM", { locale: es })}
-                  </span>
+              {pendingLoading ? (
+                <div className="space-y-3">
+                  {[1, 2].map((i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
                 </div>
-              ))}
+              ) : pendingCourses && pendingCourses.length > 0 ? (
+                pendingCourses.map((course) => {
+                  const isExpiringSoon = course.expiresAt && 
+                    new Date(course.expiresAt).getTime() - Date.now() < 7 * 24 * 60 * 60 * 1000;
+                  
+                  return (
+                    <Link
+                      key={course.id}
+                      to={`/courses/${course.id}`}
+                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-2 h-2 rounded-full ${
+                            isExpiringSoon ? "bg-destructive" : 
+                            course.progress > 0 ? "bg-warning" : "bg-muted-foreground"
+                          }`}
+                        />
+                        <div>
+                          <span className="font-medium text-sm block">{course.name}</span>
+                          {course.progress > 0 && (
+                            <span className="text-xs text-muted-foreground">
+                              {course.progress}% completado
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {course.expiresAt && (
+                        <span className={`text-xs ${isExpiringSoon ? "text-destructive" : "text-muted-foreground"}`}>
+                          Vence: {format(new Date(course.expiresAt), "d MMM", { locale: es })}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <AlertCircle className="h-10 w-10 text-muted-foreground/50 mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    ¡Estás al día! No tienes cursos pendientes
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -211,7 +291,7 @@ const Dashboard: React.FC = () => {
         {/* Level and Badges Row */}
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Level Card */}
-          <LevelCard points={stats.totalPoints} />
+          <LevelCard points={stats?.totalPoints || 0} />
 
           {/* Badges Section */}
           <Card className="border-border/50">
@@ -221,36 +301,59 @@ const Dashboard: React.FC = () => {
                 Mis Insignias
               </CardTitle>
               <CardDescription>
-                Has obtenido {badges.filter((b) => b.earned).length} de {badges.length} insignias
+                {badgesLoading ? (
+                  <Skeleton className="h-4 w-40" />
+                ) : badges && badges.length > 0 ? (
+                  `Has obtenido ${badges.filter((b) => b.earned).length} de ${badges.length} insignias`
+                ) : (
+                  "Aún no hay insignias disponibles"
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap gap-4">
-                {badges.map((badge) => (
-                  <div
-                    key={badge.id}
-                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all ${
-                      badge.earned
-                        ? "border-primary/20 bg-primary/5"
-                        : "border-border opacity-40 grayscale"
-                    }`}
-                  >
-                    <span className="text-3xl">{badge.icon}</span>
-                    <span className="text-xs font-medium text-center">{badge.name}</span>
-                  </div>
-                ))}
-              </div>
+              {badgesLoading ? (
+                <div className="flex flex-wrap gap-4">
+                  {[1, 2, 3, 4].map((i) => (
+                    <Skeleton key={i} className="h-20 w-20 rounded-xl" />
+                  ))}
+                </div>
+              ) : badges && badges.length > 0 ? (
+                <div className="flex flex-wrap gap-4">
+                  {badges.slice(0, 8).map((badge) => (
+                    <div
+                      key={badge.id}
+                      className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all ${
+                        badge.earned
+                          ? "border-primary/20 bg-primary/5"
+                          : "border-border opacity-40 grayscale"
+                      }`}
+                    >
+                      <span className="text-3xl">{badge.icon || "🏅"}</span>
+                      <span className="text-xs font-medium text-center max-w-[80px] truncate">
+                        {badge.name}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <Award className="h-10 w-10 text-muted-foreground/50 mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    Las insignias se irán desbloqueando a medida que completes cursos
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
 
         {/* Role indicators */}
         {roles.length > 0 && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm text-muted-foreground">Tus roles:</span>
             {roles.map((role) => (
               <Badge key={role} variant="secondary" className="capitalize">
-                {role === "student" ? "Estudiante" : role === "creator" ? "Creador" : "Administrador"}
+                {roleLabels[role] || role}
               </Badge>
             ))}
           </div>
