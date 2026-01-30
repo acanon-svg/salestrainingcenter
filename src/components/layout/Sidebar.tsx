@@ -22,8 +22,10 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import addiTrainingLogo from "@/assets/addi-training-logo.svg";
 import { usePortalSectionConfigs } from "@/hooks/usePortalSectionConfigs";
+import { useUnreadCourseFeedbackCount } from "@/hooks/useFeedback";
 
 interface NavItem {
   label: string;
@@ -31,6 +33,7 @@ interface NavItem {
   href: string;
   sectionKey?: string;
   roles?: ("student" | "creator" | "admin" | "lider" | "analista")[];
+  showBadge?: boolean;
 }
 
 // Map section_key to route paths for dynamic name lookup
@@ -61,6 +64,7 @@ const creatorItems: NavItem[] = [
   { label: "Anuncios", icon: Bell, href: "/announcements", sectionKey: "announcements", roles: ["creator", "admin"] },
   { label: "Herramientas", icon: Wrench, href: "/tools", sectionKey: "tools", roles: ["creator", "admin"] },
   { label: "Feedbacks al Equipo", icon: ClipboardList, href: "/team-feedback-forms", sectionKey: "team_feedback", roles: ["creator", "admin"] },
+  { label: "Feedback de Cursos", icon: MessageSquare, href: "/feedback", roles: ["creator", "admin"], showBadge: true },
 ];
 
 const leaderItems: NavItem[] = [
@@ -83,6 +87,7 @@ export const Sidebar: React.FC = () => {
   const { profile, roles, signOut, hasRole, user } = useAuth();
   const location = useLocation();
   const { configs, isSectionVisibleForUser } = usePortalSectionConfigs();
+  const { data: unreadFeedbackCount = 0 } = useUnreadCourseFeedbackCount();
 
   const isActive = (href: string) => location.pathname === href;
 
@@ -176,9 +181,10 @@ export const Sidebar: React.FC = () => {
                 </p>
                 {visibleCreatorItems.map((item) => {
                   const Icon = item.icon;
+                  const showBadgeCount = item.showBadge && unreadFeedbackCount > 0;
                   return (
                     <Link
-                      key={item.href}
+                      key={item.href + item.label}
                       to={item.href}
                       className={cn(
                         "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
@@ -187,7 +193,16 @@ export const Sidebar: React.FC = () => {
                           : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                       )}
                     >
-                      <Icon className="h-5 w-5" />
+                      <div className="relative">
+                        <Icon className="h-5 w-5" />
+                        {showBadgeCount && (
+                          <Badge 
+                            className="absolute -top-2 -right-2 h-4 w-4 p-0 flex items-center justify-center text-[10px] bg-destructive text-destructive-foreground"
+                          >
+                            {unreadFeedbackCount > 9 ? "9+" : unreadFeedbackCount}
+                          </Badge>
+                        )}
+                      </div>
                       {item.label}
                     </Link>
                   );
