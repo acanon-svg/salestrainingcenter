@@ -349,9 +349,9 @@ const CourseDetail: React.FC = () => {
         )}
 
         {/* Course Timer - show when enrolled and course has time limit */}
-        {enrollment && (course as any).time_limit_minutes && enrollment.status !== "completed" && (
+        {enrollment && course.time_limit_minutes && enrollment.status !== "completed" && (
           <CourseTimer
-            timeLimitMinutes={(course as any).time_limit_minutes}
+            timeLimitMinutes={course.time_limit_minutes}
             startedAt={enrollment.started_at}
             onTimeExpired={() => {
               setIsTimeExpired(true);

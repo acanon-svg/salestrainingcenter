@@ -103,6 +103,7 @@ export const useEnrollInCourse = () => {
           user_id: user.id,
           course_id: courseId,
           status: "enrolled",
+          started_at: new Date().toISOString(),
         })
         .select()
         .single();
