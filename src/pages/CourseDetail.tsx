@@ -17,6 +17,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { KeywordsGlossary } from "@/components/glossary/KeywordsGlossary";
+import { GoogleDocEmbed, isGoogleUrl } from "@/components/materials/GoogleDocEmbed";
 import { 
   ArrowLeft, 
   Play, 
@@ -36,6 +37,62 @@ import {
   Link2
 } from "lucide-react";
 import { dimensionLabels, difficultyLabels, contentTypeLabels, CourseMaterial, Quiz, QuizQuestion } from "@/lib/types";
+
+// Helper to detect embeddable URLs
+const getEmbedInfo = (url: string): { type: "youtube" | "vimeo" | "google" | "pdf" | "iframe" | "external"; embedUrl: string } | null => {
+  try {
+    const urlObj = new URL(url);
+    
+    // YouTube
+    if (urlObj.hostname.includes("youtube.com") || urlObj.hostname.includes("youtu.be")) {
+      let videoId = "";
+      if (urlObj.hostname.includes("youtu.be")) {
+        videoId = urlObj.pathname.slice(1);
+      } else {
+        videoId = urlObj.searchParams.get("v") || "";
+      }
+      if (videoId) {
+        return { type: "youtube", embedUrl: `https://www.youtube.com/embed/${videoId}` };
+      }
+    }
+    
+    // Vimeo
+    if (urlObj.hostname.includes("vimeo.com")) {
+      const videoId = urlObj.pathname.split("/").pop();
+      if (videoId) {
+        return { type: "vimeo", embedUrl: `https://player.vimeo.com/video/${videoId}` };
+      }
+    }
+    
+    // Google Docs/Sheets/Slides/Drive
+    if (isGoogleUrl(url)) {
+      return { type: "google", embedUrl: url };
+    }
+    
+    // PDF files
+    if (url.toLowerCase().endsWith(".pdf")) {
+      return { type: "pdf", embedUrl: url };
+    }
+    
+    // Loom videos
+    if (urlObj.hostname.includes("loom.com")) {
+      const videoId = urlObj.pathname.split("/").pop();
+      if (videoId) {
+        return { type: "iframe", embedUrl: `https://www.loom.com/embed/${videoId}` };
+      }
+    }
+    
+    // Canva
+    if (urlObj.hostname.includes("canva.com")) {
+      return { type: "iframe", embedUrl: url.replace("/design/", "/design/embed/") };
+    }
+    
+    // Default: external link
+    return { type: "external", embedUrl: url };
+  } catch {
+    return null;
+  }
+};
 
 const CourseDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -389,47 +446,173 @@ const CourseDetail: React.FC = () => {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {selectedMaterial.type === "video" && selectedMaterial.content_url && (
-                    <div className="aspect-video bg-secondary rounded-lg overflow-hidden">
-                      <video
-                        src={selectedMaterial.content_url}
-                        controls
-                        className="w-full h-full"
-                        onEnded={() => handleMarkComplete(selectedMaterial)}
-                      >
-                        Tu navegador no soporta videos.
-                      </video>
-                    </div>
-                  )}
-                  {selectedMaterial.type === "documento" && (
-                    <div className="prose max-w-none">
-                      {selectedMaterial.content_text && (
-                        <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(selectedMaterial.content_text) }} />
-                      )}
-                      {selectedMaterial.content_url && (
-                        <Button asChild className="mt-4">
-                          <a href={selectedMaterial.content_url} target="_blank" rel="noopener noreferrer">
-                            <FileText className="w-4 h-4 mr-2" />
-                            Ver documento
-                          </a>
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                  {selectedMaterial.type === "link" && selectedMaterial.content_url && (
-                    <div className="text-center py-8">
-                      <ExternalLink className="w-16 h-16 text-primary mx-auto mb-4" />
-                      <p className="text-muted-foreground mb-4">
-                        Este material te llevará a un recurso externo.
-                      </p>
-                      <Button asChild>
-                        <a href={selectedMaterial.content_url} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="w-4 h-4 mr-2" />
-                          Abrir enlace
-                        </a>
-                      </Button>
-                    </div>
-                  )}
+                  {/* Render material content based on type and URL */}
+                  {selectedMaterial.content_url && (() => {
+                    const embedInfo = getEmbedInfo(selectedMaterial.content_url);
+                    
+                    // Video type - check if it's YouTube/Vimeo or direct video
+                    if (selectedMaterial.type === "video") {
+                      if (embedInfo?.type === "youtube" || embedInfo?.type === "vimeo") {
+                        return (
+                          <div className="aspect-video bg-secondary rounded-lg overflow-hidden">
+                            <iframe
+                              src={embedInfo.embedUrl}
+                              className="w-full h-full"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                              title={selectedMaterial.title}
+                            />
+                          </div>
+                        );
+                      }
+                      // Direct video file
+                      return (
+                        <div className="aspect-video bg-secondary rounded-lg overflow-hidden">
+                          <video
+                            src={selectedMaterial.content_url}
+                            controls
+                            className="w-full h-full"
+                            onEnded={() => handleMarkComplete(selectedMaterial)}
+                          >
+                            Tu navegador no soporta videos.
+                          </video>
+                        </div>
+                      );
+                    }
+                    
+                    // Document type - embed if possible
+                    if (selectedMaterial.type === "documento") {
+                      // Show text content if available
+                      if (selectedMaterial.content_text) {
+                        return (
+                          <div className="prose max-w-none">
+                            <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(selectedMaterial.content_text) }} />
+                          </div>
+                        );
+                      }
+                      
+                      // Google Docs/Sheets/Slides
+                      if (embedInfo?.type === "google") {
+                        return <GoogleDocEmbed url={selectedMaterial.content_url} />;
+                      }
+                      
+                      // PDF files
+                      if (embedInfo?.type === "pdf") {
+                        return (
+                          <div className="w-full h-[600px] rounded-lg overflow-hidden border">
+                            <iframe
+                              src={selectedMaterial.content_url}
+                              className="w-full h-full"
+                              title={selectedMaterial.title}
+                            />
+                          </div>
+                        );
+                      }
+                      
+                      // Other iframe-embeddable content
+                      if (embedInfo?.type === "iframe") {
+                        return (
+                          <div className="aspect-video bg-secondary rounded-lg overflow-hidden">
+                            <iframe
+                              src={embedInfo.embedUrl}
+                              className="w-full h-full"
+                              allowFullScreen
+                              title={selectedMaterial.title}
+                            />
+                          </div>
+                        );
+                      }
+                      
+                      // Fallback for documents - try to embed with Google Docs Viewer
+                      return (
+                        <div className="space-y-4">
+                          <div className="w-full h-[600px] rounded-lg overflow-hidden border">
+                            <iframe
+                              src={`https://docs.google.com/viewer?url=${encodeURIComponent(selectedMaterial.content_url)}&embedded=true`}
+                              className="w-full h-full"
+                              title={selectedMaterial.title}
+                            />
+                          </div>
+                          <div className="flex justify-end">
+                            <Button variant="outline" size="sm" asChild>
+                              <a href={selectedMaterial.content_url} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="w-4 h-4 mr-2" />
+                                Abrir en nueva pestaña
+                              </a>
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    }
+                    
+                    // Link type - try to embed, fallback to external
+                    if (selectedMaterial.type === "link") {
+                      // YouTube/Vimeo videos
+                      if (embedInfo?.type === "youtube" || embedInfo?.type === "vimeo") {
+                        return (
+                          <div className="aspect-video bg-secondary rounded-lg overflow-hidden">
+                            <iframe
+                              src={embedInfo.embedUrl}
+                              className="w-full h-full"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                              title={selectedMaterial.title}
+                            />
+                          </div>
+                        );
+                      }
+                      
+                      // Google Docs/Sheets/Slides
+                      if (embedInfo?.type === "google") {
+                        return <GoogleDocEmbed url={selectedMaterial.content_url} />;
+                      }
+                      
+                      // Other iframe content (Loom, Canva, etc.)
+                      if (embedInfo?.type === "iframe") {
+                        return (
+                          <div className="aspect-video bg-secondary rounded-lg overflow-hidden">
+                            <iframe
+                              src={embedInfo.embedUrl}
+                              className="w-full h-full"
+                              allowFullScreen
+                              title={selectedMaterial.title}
+                            />
+                          </div>
+                        );
+                      }
+                      
+                      // PDF files
+                      if (embedInfo?.type === "pdf") {
+                        return (
+                          <div className="w-full h-[600px] rounded-lg overflow-hidden border">
+                            <iframe
+                              src={selectedMaterial.content_url}
+                              className="w-full h-full"
+                              title={selectedMaterial.title}
+                            />
+                          </div>
+                        );
+                      }
+                      
+                      // External link - show with open option
+                      return (
+                        <div className="text-center py-8">
+                          <ExternalLink className="w-16 h-16 text-primary mx-auto mb-4" />
+                          <p className="text-muted-foreground mb-4">
+                            Este recurso se abrirá en una nueva pestaña.
+                          </p>
+                          <Button asChild>
+                            <a href={selectedMaterial.content_url} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="w-4 h-4 mr-2" />
+                              Abrir enlace
+                            </a>
+                          </Button>
+                        </div>
+                      );
+                    }
+                    
+                    return null;
+                  })()}
 
                   {/* Slide Navigation */}
                   {materials && materials.length > 1 && (
