@@ -546,6 +546,7 @@ export type Database = {
           target_audience: string[] | null
           target_teams: string[] | null
           target_users: string[] | null
+          time_limit_minutes: number | null
           title: string
           updated_at: string
         }
@@ -571,6 +572,7 @@ export type Database = {
           target_audience?: string[] | null
           target_teams?: string[] | null
           target_users?: string[] | null
+          time_limit_minutes?: number | null
           title: string
           updated_at?: string
         }
@@ -596,6 +598,7 @@ export type Database = {
           target_audience?: string[] | null
           target_teams?: string[] | null
           target_users?: string[] | null
+          time_limit_minutes?: number | null
           title?: string
           updated_at?: string
         }

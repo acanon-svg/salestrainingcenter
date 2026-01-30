@@ -34,9 +34,12 @@ import {
   ChevronLeft,
   Award,
   Download,
-  Link2
+  Link2,
+  AlertTriangle,
+  Timer
 } from "lucide-react";
 import { dimensionLabels, difficultyLabels, contentTypeLabels, CourseMaterial, Quiz, QuizQuestion } from "@/lib/types";
+import { CourseTimer } from "@/components/courses/CourseTimer";
 
 // Helper to detect embeddable URLs
 const getEmbedInfo = (url: string): { type: "youtube" | "vimeo" | "google" | "pdf" | "iframe" | "external"; embedUrl: string } | null => {
@@ -136,6 +139,7 @@ const CourseDetail: React.FC = () => {
   const [showQuizResults, setShowQuizResults] = useState(false);
   const [lastQuizScore, setLastQuizScore] = useState<{ score: number; passed: boolean } | null>(null);
   const [currentMaterialIndex, setCurrentMaterialIndex] = useState<number>(0);
+  const [isTimeExpired, setIsTimeExpired] = useState(false);
 
   const enrollment = enrollments?.find((e) => e.course_id === id);
   const completedMaterialIds = new Set(materialProgress?.filter((p) => p.completed).map((p) => p.material_id) || []);
@@ -322,7 +326,41 @@ const CourseDetail: React.FC = () => {
           </Card>
         )}
 
-        {/* Main content */}
+        {/* Course Timer - show when enrolled and course has time limit */}
+        {enrollment && (course as any).time_limit_minutes && enrollment.status !== "completed" && (
+          <CourseTimer
+            timeLimitMinutes={(course as any).time_limit_minutes}
+            startedAt={enrollment.started_at}
+            onTimeExpired={() => {
+              setIsTimeExpired(true);
+              toast({
+                title: "Tiempo agotado",
+                description: "El tiempo para completar este curso ha expirado. Ya no puedes continuar con el contenido.",
+                variant: "destructive",
+              });
+            }}
+          />
+        )}
+
+        {/* Time expired overlay message */}
+        {isTimeExpired && enrollment?.status !== "completed" && (
+          <Card className="border-destructive bg-destructive/10">
+            <CardContent className="py-6 text-center">
+              <AlertTriangle className="w-12 h-12 text-destructive mx-auto mb-3" />
+              <h3 className="text-lg font-bold text-destructive mb-2">Tiempo Expirado</h3>
+              <p className="text-sm text-muted-foreground">
+                El tiempo asignado para completar este curso ha terminado. 
+                No puedes continuar con el contenido.
+              </p>
+              <Button onClick={() => navigate("/courses")} className="mt-4">
+                Volver a cursos
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Main content - hidden when time expired */}
+        {!isTimeExpired && (
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Content viewer */}
           <div className="lg:col-span-2 space-y-4">
@@ -860,6 +898,7 @@ const CourseDetail: React.FC = () => {
             </Tabs>
           </div>
         </div>
+        )}
       </div>
     </DashboardLayout>
   );

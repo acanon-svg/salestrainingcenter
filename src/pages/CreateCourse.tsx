@@ -35,6 +35,7 @@ import {
   Clock,
   UserPlus,
   Search,
+  Timer,
 } from "lucide-react";
 import { dimensionLabels, difficultyLabels, TrainingDimension, DifficultyLevel } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
@@ -61,6 +62,7 @@ const CreateCourse: React.FC = () => {
     difficulty: "basico" as DifficultyLevel,
     points: 100,
     estimated_duration_minutes: 30,
+    time_limit_minutes: 60, // Required field for course timer
     language: "es",
     subtitles_enabled: false,
     target_audience: [] as string[],
@@ -412,7 +414,7 @@ const CreateCourse: React.FC = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="duration">Duración (minutos)</Label>
+                    <Label htmlFor="duration">Duración Estimada (minutos)</Label>
                     <Input
                       id="duration"
                       type="number"
@@ -424,6 +426,32 @@ const CreateCourse: React.FC = () => {
                         })
                       }
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Tiempo estimado para completar el curso (informativo)
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="time_limit" className="flex items-center gap-2">
+                      <Timer className="w-4 h-4 text-primary" />
+                      Tiempo Límite (minutos) *
+                    </Label>
+                    <Input
+                      id="time_limit"
+                      type="number"
+                      min="1"
+                      value={courseData.time_limit_minutes}
+                      onChange={(e) =>
+                        setCourseData({
+                          ...courseData,
+                          time_limit_minutes: parseInt(e.target.value) || 60,
+                        })
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Tiempo máximo que tiene el estudiante para completar el curso después de inscribirse.
+                      El temporizador se mostrará en verde los primeros 5 min, amarillo después, y rojo los últimos 5 min.
+                    </p>
                   </div>
 
                   <div className="space-y-2 md:col-span-2">

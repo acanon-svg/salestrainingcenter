@@ -20,7 +20,7 @@ import addiTrainingLogo from "@/assets/addi-training-logo.svg";
 import { LevelBadge } from "@/components/gamification/LevelBadge";
 import { LevelCard } from "@/components/gamification/LevelCard";
 import { getLevelProgress, getPointsToNextLevel } from "@/lib/userLevel";
-import { AnnouncementCarousel } from "@/components/announcements/AnnouncementCarousel";
+import { AnnouncementBanner } from "@/components/announcements/AnnouncementBanner";
 import { useAutoPublishScheduledCourses } from "@/hooks/useScheduledCourses";
 import {
   useDashboardStats,
@@ -73,8 +73,8 @@ const Dashboard: React.FC = () => {
           />
         </div>
 
-        {/* Announcements Carousel */}
-        <AnnouncementCarousel />
+        {/* Announcements Banner */}
+        <AnnouncementBanner />
 
         {/* Stats Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
