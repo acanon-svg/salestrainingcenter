@@ -61,6 +61,8 @@ export const useSubmitQuizAttempt = () => {
     }) => {
       if (!user?.id) throw new Error("User not authenticated");
 
+      console.log("[Quiz] Submitting quiz attempt:", { quizId, score, passed, courseId, coursePoints });
+
       // Insert quiz attempt
       const { data, error } = await supabase
         .from("quiz_attempts")
@@ -76,22 +78,37 @@ export const useSubmitQuizAttempt = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("[Quiz] Error inserting attempt:", error);
+        throw error;
+      }
+
+      console.log("[Quiz] Attempt inserted successfully:", data.id);
 
       // If passed and we have course info, update points
       if (passed && courseId && coursePoints && coursePoints > 0) {
+        console.log("[Quiz] User passed! Updating points for course:", courseId);
+        
         // Check if points were already awarded for this course
-        const { data: enrollment } = await supabase
+        const { data: enrollment, error: enrollmentError } = await supabase
           .from("course_enrollments")
-          .select("id, points_earned")
+          .select("id, points_earned, status")
           .eq("user_id", user.id)
           .eq("course_id", courseId)
-          .single();
+          .maybeSingle();
+
+        if (enrollmentError) {
+          console.error("[Quiz] Error fetching enrollment:", enrollmentError);
+        }
+
+        console.log("[Quiz] Enrollment found:", enrollment);
 
         // Only award points if not already awarded
         if (enrollment && (!enrollment.points_earned || enrollment.points_earned === 0)) {
+          console.log("[Quiz] Awarding", coursePoints, "points to enrollment:", enrollment.id);
+          
           // Update enrollment with points earned and score
-          await supabase
+          const { error: updateEnrollmentError } = await supabase
             .from("course_enrollments")
             .update({
               points_earned: coursePoints,
@@ -101,21 +118,44 @@ export const useSubmitQuizAttempt = () => {
             })
             .eq("id", enrollment.id);
 
+          if (updateEnrollmentError) {
+            console.error("[Quiz] Error updating enrollment:", updateEnrollmentError);
+          } else {
+            console.log("[Quiz] Enrollment updated successfully");
+          }
+
           // Get current profile points and update
-          const { data: profile } = await supabase
+          const { data: profile, error: profileFetchError } = await supabase
             .from("profiles")
             .select("points")
             .eq("user_id", user.id)
             .single();
 
+          if (profileFetchError) {
+            console.error("[Quiz] Error fetching profile:", profileFetchError);
+          }
+
           if (profile) {
-            const newPoints = (profile.points || 0) + coursePoints;
-            await supabase
+            const currentPoints = profile.points || 0;
+            const newPoints = currentPoints + coursePoints;
+            console.log("[Quiz] Updating profile points:", currentPoints, "->", newPoints);
+            
+            const { error: updateProfileError } = await supabase
               .from("profiles")
               .update({ points: newPoints })
               .eq("user_id", user.id);
+
+            if (updateProfileError) {
+              console.error("[Quiz] Error updating profile points:", updateProfileError);
+            } else {
+              console.log("[Quiz] Profile points updated successfully to:", newPoints);
+            }
           }
+        } else {
+          console.log("[Quiz] Points already awarded or enrollment not found. Enrollment:", enrollment);
         }
+      } else {
+        console.log("[Quiz] Not awarding points. passed:", passed, "courseId:", courseId, "coursePoints:", coursePoints);
       }
 
       return data;
@@ -125,7 +165,6 @@ export const useSubmitQuizAttempt = () => {
       queryClient.invalidateQueries({ queryKey: ["enrollments"] });
       queryClient.invalidateQueries({ queryKey: ["ranking"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
-      // Also invalidate profile data to reflect new points
       queryClient.invalidateQueries({ queryKey: ["profile"] });
     },
   });
