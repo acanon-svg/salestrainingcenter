@@ -1,10 +1,9 @@
 import React from "react";
-import { ExternalLink } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 interface GoogleDocEmbedProps {
   url: string;
   className?: string;
+  heightClassName?: string;
 }
 
 // Convert Google Docs/Sheets/Slides URLs to embed URLs
@@ -26,7 +25,8 @@ const getEmbedUrl = (url: string): string | null => {
           case "spreadsheets":
             return `https://docs.google.com/spreadsheets/d/${docId}/preview`;
           case "presentation":
-            return `https://docs.google.com/presentation/d/${docId}/embed`;
+            // Usamos /preview para evitar UI extra (p.ej. "Abrir original") del modo /embed
+            return `https://docs.google.com/presentation/d/${docId}/preview`;
           case "forms":
             return `https://docs.google.com/forms/d/${docId}/viewform?embedded=true`;
           default:
@@ -64,6 +64,7 @@ export const isGoogleUrl = (url: string): boolean => {
 export const GoogleDocEmbed: React.FC<GoogleDocEmbedProps> = ({
   url,
   className,
+  heightClassName = "h-[600px]",
 }) => {
   const embedUrl = getEmbedUrl(url);
 
@@ -73,12 +74,9 @@ export const GoogleDocEmbed: React.FC<GoogleDocEmbedProps> = ({
         <p className="text-muted-foreground mb-4">
           No se puede previsualizar este enlace de Google
         </p>
-        <Button variant="outline" asChild>
-          <a href={url} target="_blank" rel="noopener noreferrer">
-            <ExternalLink className="h-4 w-4 mr-2" />
-            Abrir en nueva pestaña
-          </a>
-        </Button>
+        <p className="text-xs text-muted-foreground">
+          Por políticas de la plataforma, no se permite abrir el contenido fuera del visor.
+        </p>
       </div>
     );
   }
@@ -87,18 +85,11 @@ export const GoogleDocEmbed: React.FC<GoogleDocEmbedProps> = ({
     <div className={className}>
       <iframe
         src={embedUrl}
-        className="w-full h-[600px] rounded-lg border"
+        className={`w-full ${heightClassName} rounded-lg border`}
         allow="autoplay"
         allowFullScreen
       />
-      <div className="mt-2 flex justify-end">
-        <Button variant="ghost" size="sm" asChild>
-          <a href={url} target="_blank" rel="noopener noreferrer">
-            <ExternalLink className="h-4 w-4 mr-2" />
-            Abrir original
-          </a>
-        </Button>
-      </div>
     </div>
   );
 };
+
