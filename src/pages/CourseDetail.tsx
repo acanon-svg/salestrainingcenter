@@ -20,6 +20,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { KeywordsGlossary } from "@/components/glossary/KeywordsGlossary";
 import { GoogleDocEmbed, isGoogleUrl } from "@/components/materials/GoogleDocEmbed";
+import { GoogleDriveVideo, isGoogleDriveVideoUrl } from "@/components/materials/GoogleDriveVideo";
 import { CourseFeedbackForm } from "@/components/courses/CourseFeedbackForm";
 import { 
   ArrowLeft, 
@@ -739,8 +740,9 @@ const CourseDetail: React.FC = () => {
                       if (!selectedMaterial.content_url) return null;
                       const embedInfo = getEmbedInfo(selectedMaterial.content_url);
 
-                      // Video type - check if it's YouTube/Vimeo or direct video
+                      // Video type - check if it's YouTube/Vimeo, Google Drive, or direct video
                       if (selectedMaterial.type === "video") {
+                        // YouTube or Vimeo videos
                         if (embedInfo?.type === "youtube" || embedInfo?.type === "vimeo") {
                           return (
                             <div className={`w-full ${heightClassName} bg-secondary rounded-lg overflow-hidden`}>
@@ -754,12 +756,27 @@ const CourseDetail: React.FC = () => {
                             </div>
                           );
                         }
-                        // Direct video file
+                        
+                        // Google Drive videos (MP4, etc.)
+                        if (isGoogleDriveVideoUrl(selectedMaterial.content_url)) {
+                          return (
+                            <GoogleDriveVideo
+                              url={selectedMaterial.content_url}
+                              title={selectedMaterial.title}
+                              heightClassName={heightClassName}
+                              onEnded={() => handleMarkComplete(selectedMaterial)}
+                            />
+                          );
+                        }
+                        
+                        // Direct video file (non-Drive URLs)
                         return (
                           <div className={`w-full ${heightClassName} bg-secondary rounded-lg overflow-hidden`}>
                             <video
                               src={selectedMaterial.content_url}
                               controls
+                              playsInline
+                              preload="auto"
                               className="w-full h-full object-contain"
                               onEnded={() => handleMarkComplete(selectedMaterial)}
                             >
