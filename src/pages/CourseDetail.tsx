@@ -239,6 +239,8 @@ const CourseDetail: React.FC = () => {
         score,
         passed,
         startedAt: quizStartTime,
+        courseId: id,
+        coursePoints: course?.points,
       });
 
       setLastQuizScore({ score, passed, coursePoints: course?.points });
