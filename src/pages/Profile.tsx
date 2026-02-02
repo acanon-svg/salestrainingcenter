@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { LevelBadge } from "@/components/gamification/LevelBadge";
 import { RoleManagementDialog } from "@/components/users/RoleManagementDialog";
 import { ProfileMaterialsSection } from "@/components/materials/ProfileMaterialsSection";
+import { RegionalTeamView } from "@/components/profile/RegionalTeamView";
 import { useQuery } from "@tanstack/react-query";
 
 // Helper to get untyped supabase client for tables not yet in types
@@ -317,6 +318,11 @@ const Profile: React.FC = () => {
         {/* Training Materials Section for Students */}
         {hasRole("student") && !hasRole("creator") && !hasRole("admin") && (
           <ProfileMaterialsSection />
+        )}
+
+        {/* Regional Team View for Leaders */}
+        {hasRole("lider") && profile?.regional && (
+          <RegionalTeamView leaderRegional={profile.regional} />
         )}
 
         {/* Admin: Role Assignment */}
