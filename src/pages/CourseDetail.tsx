@@ -39,10 +39,13 @@ import {
   Link2,
   AlertTriangle,
   Timer,
-  UserPlus
+  UserPlus,
+  Maximize2,
+  Minimize2
 } from "lucide-react";
 import { dimensionLabels, difficultyLabels, contentTypeLabels, CourseMaterial, Quiz, QuizQuestion } from "@/lib/types";
 import { CourseTimer } from "@/components/courses/CourseTimer";
+import { CourseFullscreenDialog } from "@/components/courses/CourseFullscreenDialog";
 
 // Helper to detect embeddable URLs
 const getEmbedInfo = (url: string): { type: "youtube" | "vimeo" | "google" | "pdf" | "iframe" | "external"; embedUrl: string } | null => {
@@ -163,6 +166,7 @@ const CourseDetail: React.FC = () => {
   const [lastQuizScore, setLastQuizScore] = useState<{ score: number; passed: boolean } | null>(null);
   const [currentMaterialIndex, setCurrentMaterialIndex] = useState<number>(0);
   const [isTimeExpired, setIsTimeExpired] = useState(false);
+  const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
 
   const enrollment = enrollments?.find((e) => e.course_id === id);
   const completedMaterialIds = new Set(materialProgress?.filter((p) => p.completed).map((p) => p.material_id) || []);
@@ -673,162 +677,210 @@ const CourseDetail: React.FC = () => {
                         Completado
                       </Badge>
                     )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setIsFullscreenOpen((v) => !v)}
+                      aria-label={isFullscreenOpen ? "Salir de pantalla completa" : "Ver en pantalla completa"}
+                      title={isFullscreenOpen ? "Salir de pantalla completa" : "Pantalla completa"}
+                    >
+                      {isFullscreenOpen ? (
+                        <Minimize2 className="h-4 w-4" />
+                      ) : (
+                        <Maximize2 className="h-4 w-4" />
+                      )}
+                    </Button>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Render material content based on type and URL */}
-                  {selectedMaterial.content_url && (() => {
-                    const embedInfo = getEmbedInfo(selectedMaterial.content_url);
-                    
-                    // Video type - check if it's YouTube/Vimeo or direct video
-                    if (selectedMaterial.type === "video") {
-                      if (embedInfo?.type === "youtube" || embedInfo?.type === "vimeo") {
+                  {(() => {
+                    const contentHeightClass = "h-[calc(100vh-300px)] min-h-[500px]";
+                    const fullscreenHeightClass = "h-[calc(100dvh-96px)]";
+
+                    const renderMaterialContent = (heightClassName: string) => {
+                      if (!selectedMaterial.content_url) return null;
+                      const embedInfo = getEmbedInfo(selectedMaterial.content_url);
+
+                      // Video type - check if it's YouTube/Vimeo or direct video
+                      if (selectedMaterial.type === "video") {
+                        if (embedInfo?.type === "youtube" || embedInfo?.type === "vimeo") {
+                          return (
+                            <div className={`w-full ${heightClassName} bg-secondary rounded-lg overflow-hidden`}>
+                              <iframe
+                                src={embedInfo.embedUrl}
+                                className="w-full h-full"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                title={selectedMaterial.title}
+                              />
+                            </div>
+                          );
+                        }
+                        // Direct video file
                         return (
-                          <div className="w-full h-[calc(100vh-300px)] min-h-[500px] bg-secondary rounded-lg overflow-hidden">
+                          <div className={`w-full ${heightClassName} bg-secondary rounded-lg overflow-hidden`}>
+                            <video
+                              src={selectedMaterial.content_url}
+                              controls
+                              className="w-full h-full object-contain"
+                              onEnded={() => handleMarkComplete(selectedMaterial)}
+                            >
+                              Tu navegador no soporta videos.
+                            </video>
+                          </div>
+                        );
+                      }
+
+                      // Document type - embed if possible
+                      if (selectedMaterial.type === "documento") {
+                        // Show text content if available
+                        if (selectedMaterial.content_text) {
+                          return (
+                            <div className="prose max-w-none">
+                              <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(selectedMaterial.content_text) }} />
+                            </div>
+                          );
+                        }
+
+                        // Google Docs/Sheets/Slides
+                        if (embedInfo?.type === "google") {
+                          return (
+                            <GoogleDocEmbed
+                              url={selectedMaterial.content_url}
+                              heightClassName={heightClassName}
+                            />
+                          );
+                        }
+
+                        // PDF files
+                        if (embedInfo?.type === "pdf") {
+                          return (
+                            <div className={`w-full ${heightClassName} rounded-lg overflow-hidden border`}>
+                              <iframe
+                                src={selectedMaterial.content_url}
+                                className="w-full h-full"
+                                title={selectedMaterial.title}
+                              />
+                            </div>
+                          );
+                        }
+
+                        // Other iframe-embeddable content
+                        if (embedInfo?.type === "iframe") {
+                          return (
+                            <div className={`w-full ${heightClassName} bg-secondary rounded-lg overflow-hidden`}>
+                              <iframe
+                                src={embedInfo.embedUrl}
+                                className="w-full h-full"
+                                allowFullScreen
+                                title={selectedMaterial.title}
+                              />
+                            </div>
+                          );
+                        }
+
+                        // Fallback for documents - try to embed with Google Docs Viewer
+                        return (
+                          <div className={`w-full ${heightClassName} rounded-lg overflow-hidden border`}>
                             <iframe
-                              src={embedInfo.embedUrl}
+                              src={`https://docs.google.com/viewer?url=${encodeURIComponent(selectedMaterial.content_url)}&embedded=true`}
                               className="w-full h-full"
-                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                              allowFullScreen
                               title={selectedMaterial.title}
                             />
                           </div>
                         );
                       }
-                      // Direct video file
-                      return (
-                        <div className="w-full h-[calc(100vh-300px)] min-h-[500px] bg-secondary rounded-lg overflow-hidden">
-                          <video
-                            src={selectedMaterial.content_url}
-                            controls
-                            className="w-full h-full object-contain"
-                            onEnded={() => handleMarkComplete(selectedMaterial)}
-                          >
-                            Tu navegador no soporta videos.
-                          </video>
-                        </div>
-                      );
-                    }
-                    
-                    // Document type - embed if possible
-                    if (selectedMaterial.type === "documento") {
-                      // Show text content if available
-                      if (selectedMaterial.content_text) {
+
+                      // Link type - try to embed
+                      if (selectedMaterial.type === "link") {
+                        // YouTube/Vimeo videos
+                        if (embedInfo?.type === "youtube" || embedInfo?.type === "vimeo") {
+                          return (
+                            <div className={`w-full ${heightClassName} bg-secondary rounded-lg overflow-hidden`}>
+                              <iframe
+                                src={embedInfo.embedUrl}
+                                className="w-full h-full"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                title={selectedMaterial.title}
+                              />
+                            </div>
+                          );
+                        }
+
+                        // Google Docs/Sheets/Slides
+                        if (embedInfo?.type === "google") {
+                          return (
+                            <GoogleDocEmbed
+                              url={selectedMaterial.content_url}
+                              heightClassName={heightClassName}
+                            />
+                          );
+                        }
+
+                        // Other iframe content (Loom, Canva, etc.)
+                        if (embedInfo?.type === "iframe") {
+                          return (
+                            <div className={`w-full ${heightClassName} bg-secondary rounded-lg overflow-hidden`}>
+                              <iframe
+                                src={embedInfo.embedUrl}
+                                className="w-full h-full"
+                                allowFullScreen
+                                title={selectedMaterial.title}
+                              />
+                            </div>
+                          );
+                        }
+
+                        // PDF files
+                        if (embedInfo?.type === "pdf") {
+                          return (
+                            <div className={`w-full ${heightClassName} rounded-lg overflow-hidden border`}>
+                              <iframe
+                                src={selectedMaterial.content_url}
+                                className="w-full h-full"
+                                title={selectedMaterial.title}
+                              />
+                            </div>
+                          );
+                        }
+
+                        // External link - try to embed in an iframe
                         return (
-                          <div className="prose max-w-none">
-                            <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(selectedMaterial.content_text) }} />
-                          </div>
-                        );
-                      }
-                      
-                      // Google Docs/Sheets/Slides
-                      if (embedInfo?.type === "google") {
-                        return <GoogleDocEmbed url={selectedMaterial.content_url} />;
-                      }
-                      
-                      // PDF files
-                      if (embedInfo?.type === "pdf") {
-                        return (
-                          <div className="w-full h-[calc(100vh-300px)] min-h-[500px] rounded-lg overflow-hidden border">
+                          <div className={`w-full ${heightClassName} rounded-lg overflow-hidden border`}>
                             <iframe
                               src={selectedMaterial.content_url}
                               className="w-full h-full"
                               title={selectedMaterial.title}
+                              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
                             />
                           </div>
                         );
                       }
-                      
-                      // Other iframe-embeddable content
-                      if (embedInfo?.type === "iframe") {
-                        return (
-                          <div className="w-full h-[calc(100vh-300px)] min-h-[500px] bg-secondary rounded-lg overflow-hidden">
-                            <iframe
-                              src={embedInfo.embedUrl}
-                              className="w-full h-full"
-                              allowFullScreen
-                              title={selectedMaterial.title}
-                            />
-                          </div>
-                        );
-                      }
-                      
-                      // Fallback for documents - try to embed with Google Docs Viewer
-                      return (
-                        <div className="w-full h-[calc(100vh-300px)] min-h-[500px] rounded-lg overflow-hidden border">
-                          <iframe
-                            src={`https://docs.google.com/viewer?url=${encodeURIComponent(selectedMaterial.content_url)}&embedded=true`}
-                            className="w-full h-full"
-                            title={selectedMaterial.title}
-                          />
-                        </div>
-                      );
-                    }
-                    
-                    // Link type - try to embed, fallback to external
-                    if (selectedMaterial.type === "link") {
-                      // YouTube/Vimeo videos
-                      if (embedInfo?.type === "youtube" || embedInfo?.type === "vimeo") {
-                        return (
-                          <div className="w-full h-[calc(100vh-300px)] min-h-[500px] bg-secondary rounded-lg overflow-hidden">
-                            <iframe
-                              src={embedInfo.embedUrl}
-                              className="w-full h-full"
-                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                              allowFullScreen
-                              title={selectedMaterial.title}
-                            />
-                          </div>
-                        );
-                      }
-                      
-                      // Google Docs/Sheets/Slides
-                      if (embedInfo?.type === "google") {
-                        return <GoogleDocEmbed url={selectedMaterial.content_url} />;
-                      }
-                      
-                      // Other iframe content (Loom, Canva, etc.)
-                      if (embedInfo?.type === "iframe") {
-                        return (
-                          <div className="w-full h-[calc(100vh-300px)] min-h-[500px] bg-secondary rounded-lg overflow-hidden">
-                            <iframe
-                              src={embedInfo.embedUrl}
-                              className="w-full h-full"
-                              allowFullScreen
-                              title={selectedMaterial.title}
-                            />
-                          </div>
-                        );
-                      }
-                      
-                      // PDF files
-                      if (embedInfo?.type === "pdf") {
-                        return (
-                          <div className="w-full h-[calc(100vh-300px)] min-h-[500px] rounded-lg overflow-hidden border">
-                            <iframe
-                              src={selectedMaterial.content_url}
-                              className="w-full h-full"
-                              title={selectedMaterial.title}
-                            />
-                          </div>
-                        );
-                      }
-                      
-                      // External link - try to embed in an iframe
-                      return (
-                        <div className="w-full h-[calc(100vh-300px)] min-h-[500px] rounded-lg overflow-hidden border">
-                          <iframe
-                            src={selectedMaterial.content_url}
-                            className="w-full h-full"
-                            title={selectedMaterial.title}
-                            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-                          />
-                        </div>
-                      );
-                    }
-                    
-                    return null;
+
+                      return null;
+                    };
+
+                    return (
+                      <>
+                        {/* Inline */}
+                        {renderMaterialContent(contentHeightClass)}
+
+                        {/* Fullscreen */}
+                        <CourseFullscreenDialog
+                          open={isFullscreenOpen}
+                          onOpenChange={setIsFullscreenOpen}
+                          title={selectedMaterial.title}
+                        >
+                          {renderMaterialContent(fullscreenHeightClass)}
+                        </CourseFullscreenDialog>
+                      </>
+                    );
                   })()}
+
+                  {/* Render material content based on type and URL */}
+
 
                   {/* Slide Navigation */}
                   {materials && materials.length > 1 && (
