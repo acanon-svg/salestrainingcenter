@@ -292,18 +292,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     try {
       const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      
+      // Ignore "session_not_found" or "Auth session missing" errors - user is already logged out
+      if (error && !error.message?.includes("session") && error.code !== "session_not_found") {
+        throw error;
+      }
+    } catch (error: any) {
+      // Only show error for unexpected issues, not for already-logged-out states
+      if (!error.message?.toLowerCase().includes("session")) {
+        toast({
+          title: "Error al cerrar sesión",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
+    } finally {
+      // Always clear local state regardless of API response
       setUser(null);
       setSession(null);
       setProfile(null);
       setRoles([]);
-    } catch (error: any) {
-      toast({
-        title: "Error al cerrar sesión",
-        description: error.message,
-        variant: "destructive",
-      });
     }
   };
 
