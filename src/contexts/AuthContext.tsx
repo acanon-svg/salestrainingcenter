@@ -97,9 +97,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (profileData) {
         setProfile(profileData as Profile);
         
-        // Check if password change is required
+        // Check if password change is required - only set to true if explicitly false or null
         const passwordChanged = (profileData as Profile).password_changed;
-        setRequiresPasswordChange(passwordChanged !== true);
+        // If password_changed is true, user already changed their password - don't require again
+        if (passwordChanged === true) {
+          setRequiresPasswordChange(false);
+        } else {
+          setRequiresPasswordChange(true);
+        }
         
         // Update last login
         await client
