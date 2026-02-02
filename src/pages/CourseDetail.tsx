@@ -684,7 +684,7 @@ const CourseDetail: React.FC = () => {
                     if (selectedMaterial.type === "video") {
                       if (embedInfo?.type === "youtube" || embedInfo?.type === "vimeo") {
                         return (
-                          <div className="aspect-video bg-secondary rounded-lg overflow-hidden">
+                          <div className="w-full h-[calc(100vh-300px)] min-h-[500px] bg-secondary rounded-lg overflow-hidden">
                             <iframe
                               src={embedInfo.embedUrl}
                               className="w-full h-full"
@@ -697,11 +697,11 @@ const CourseDetail: React.FC = () => {
                       }
                       // Direct video file
                       return (
-                        <div className="aspect-video bg-secondary rounded-lg overflow-hidden">
+                        <div className="w-full h-[calc(100vh-300px)] min-h-[500px] bg-secondary rounded-lg overflow-hidden">
                           <video
                             src={selectedMaterial.content_url}
                             controls
-                            className="w-full h-full"
+                            className="w-full h-full object-contain"
                             onEnded={() => handleMarkComplete(selectedMaterial)}
                           >
                             Tu navegador no soporta videos.
@@ -729,7 +729,7 @@ const CourseDetail: React.FC = () => {
                       // PDF files
                       if (embedInfo?.type === "pdf") {
                         return (
-                          <div className="w-full h-[600px] rounded-lg overflow-hidden border">
+                          <div className="w-full h-[calc(100vh-300px)] min-h-[500px] rounded-lg overflow-hidden border">
                             <iframe
                               src={selectedMaterial.content_url}
                               className="w-full h-full"
@@ -742,7 +742,7 @@ const CourseDetail: React.FC = () => {
                       // Other iframe-embeddable content
                       if (embedInfo?.type === "iframe") {
                         return (
-                          <div className="aspect-video bg-secondary rounded-lg overflow-hidden">
+                          <div className="w-full h-[calc(100vh-300px)] min-h-[500px] bg-secondary rounded-lg overflow-hidden">
                             <iframe
                               src={embedInfo.embedUrl}
                               className="w-full h-full"
@@ -755,22 +755,12 @@ const CourseDetail: React.FC = () => {
                       
                       // Fallback for documents - try to embed with Google Docs Viewer
                       return (
-                        <div className="space-y-4">
-                          <div className="w-full h-[600px] rounded-lg overflow-hidden border">
-                            <iframe
-                              src={`https://docs.google.com/viewer?url=${encodeURIComponent(selectedMaterial.content_url)}&embedded=true`}
-                              className="w-full h-full"
-                              title={selectedMaterial.title}
-                            />
-                          </div>
-                          <div className="flex justify-end">
-                            <Button variant="outline" size="sm" asChild>
-                              <a href={selectedMaterial.content_url} target="_blank" rel="noopener noreferrer">
-                                <ExternalLink className="w-4 h-4 mr-2" />
-                                Abrir en nueva pestaña
-                              </a>
-                            </Button>
-                          </div>
+                        <div className="w-full h-[calc(100vh-300px)] min-h-[500px] rounded-lg overflow-hidden border">
+                          <iframe
+                            src={`https://docs.google.com/viewer?url=${encodeURIComponent(selectedMaterial.content_url)}&embedded=true`}
+                            className="w-full h-full"
+                            title={selectedMaterial.title}
+                          />
                         </div>
                       );
                     }
@@ -780,7 +770,7 @@ const CourseDetail: React.FC = () => {
                       // YouTube/Vimeo videos
                       if (embedInfo?.type === "youtube" || embedInfo?.type === "vimeo") {
                         return (
-                          <div className="aspect-video bg-secondary rounded-lg overflow-hidden">
+                          <div className="w-full h-[calc(100vh-300px)] min-h-[500px] bg-secondary rounded-lg overflow-hidden">
                             <iframe
                               src={embedInfo.embedUrl}
                               className="w-full h-full"
@@ -800,7 +790,7 @@ const CourseDetail: React.FC = () => {
                       // Other iframe content (Loom, Canva, etc.)
                       if (embedInfo?.type === "iframe") {
                         return (
-                          <div className="aspect-video bg-secondary rounded-lg overflow-hidden">
+                          <div className="w-full h-[calc(100vh-300px)] min-h-[500px] bg-secondary rounded-lg overflow-hidden">
                             <iframe
                               src={embedInfo.embedUrl}
                               className="w-full h-full"
@@ -814,7 +804,7 @@ const CourseDetail: React.FC = () => {
                       // PDF files
                       if (embedInfo?.type === "pdf") {
                         return (
-                          <div className="w-full h-[600px] rounded-lg overflow-hidden border">
+                          <div className="w-full h-[calc(100vh-300px)] min-h-[500px] rounded-lg overflow-hidden border">
                             <iframe
                               src={selectedMaterial.content_url}
                               className="w-full h-full"
@@ -824,19 +814,15 @@ const CourseDetail: React.FC = () => {
                         );
                       }
                       
-                      // External link - show with open option
+                      // External link - try to embed in an iframe
                       return (
-                        <div className="text-center py-8">
-                          <ExternalLink className="w-16 h-16 text-primary mx-auto mb-4" />
-                          <p className="text-muted-foreground mb-4">
-                            Este recurso se abrirá en una nueva pestaña.
-                          </p>
-                          <Button asChild>
-                            <a href={selectedMaterial.content_url} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="w-4 h-4 mr-2" />
-                              Abrir enlace
-                            </a>
-                          </Button>
+                        <div className="w-full h-[calc(100vh-300px)] min-h-[500px] rounded-lg overflow-hidden border">
+                          <iframe
+                            src={selectedMaterial.content_url}
+                            className="w-full h-full"
+                            title={selectedMaterial.title}
+                            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                          />
                         </div>
                       );
                     }
