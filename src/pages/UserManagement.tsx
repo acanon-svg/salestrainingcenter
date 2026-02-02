@@ -10,6 +10,7 @@ import { DeleteUserDialog } from "@/components/users/DeleteUserDialog";
 import { ResetPasswordDialog } from "@/components/users/ResetPasswordDialog";
 import { PortalSectionManager } from "@/components/admin/PortalSectionManager";
 import { DataResetManager } from "@/components/admin/DataResetManager";
+import { UserCourseResetManager } from "@/components/admin/UserCourseResetManager";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -681,7 +682,10 @@ const UserManagement: React.FC = () => {
                   Herramientas para administrar y reiniciar datos del sistema
                 </p>
               </div>
-              <DataResetManager />
+              <div className="grid gap-6 lg:grid-cols-2">
+                <UserCourseResetManager />
+                <DataResetManager />
+              </div>
             </div>
           </TabsContent>
 
