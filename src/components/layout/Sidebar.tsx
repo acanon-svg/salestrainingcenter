@@ -52,6 +52,8 @@ const defaultNavItems: NavItem[] = [
   { label: "Home", icon: Home, href: "/dashboard", sectionKey: "dashboard" },
   { label: "Mis Cursos", icon: BookOpen, href: "/courses", sectionKey: "courses" },
   { label: "Material Formativo", icon: FolderOpen, href: "/materials", sectionKey: "training_materials" },
+  // Herramientas debe ser visible para estudiantes; el acceso interno se controla por targeting
+  { label: "Herramientas", icon: Wrench, href: "/tools", sectionKey: "tools" },
   { label: "Ranking", icon: Trophy, href: "/ranking", sectionKey: "ranking" },
   { label: "Insignias", icon: Award, href: "/badges", sectionKey: "badges" },
   { label: "Notificaciones", icon: Bell, href: "/notifications" },
@@ -110,6 +112,8 @@ export const Sidebar: React.FC = () => {
 
   // Check if a nav item is visible based on portal config
   const isNavItemVisible = (item: NavItem): boolean => {
+    // Herramientas siempre debe aparecer (control de acceso a herramientas específicas vive adentro del módulo)
+    if (item.sectionKey === "tools") return true;
     if (!item.sectionKey || !configs || !user?.id) return true;
     const config = configs.find((c) => c.section_key === item.sectionKey);
     if (!config) return true;
