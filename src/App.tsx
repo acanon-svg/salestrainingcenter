@@ -6,8 +6,10 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { PasswordChangeDialog } from "@/components/auth/PasswordChangeDialog";
+import { InactivityWarningDialog } from "@/components/auth/InactivityWarningDialog";
 import { ChatbotBubble } from "@/components/chatbot/ChatbotBubble";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { useInactivityTimeout } from "@/hooks/useInactivityTimeout";
 import Dashboard from "@/pages/Dashboard";
 import Profile from "@/pages/Profile";
 import Courses from "@/pages/Courses";
@@ -31,6 +33,21 @@ import TeamFeedbackView from "@/pages/TeamFeedbackView";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
+
+// Inactivity Monitor Component
+const InactivityMonitor: React.FC = () => {
+  const { signOut } = useAuth();
+  const { showWarning, remainingSeconds, resetTimer } = useInactivityTimeout();
+
+  return (
+    <InactivityWarningDialog
+      open={showWarning}
+      remainingSeconds={remainingSeconds}
+      onContinue={resetTimer}
+      onLogout={signOut}
+    />
+  );
+};
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -309,6 +326,9 @@ const App = () => (
           <ErrorBoundary fallbackTitle="No pudimos cargar la plataforma">
             <AppRoutes />
           </ErrorBoundary>
+
+          {/* Inactivity timeout monitor */}
+          <InactivityMonitor />
 
           {/* The chatbot is optional; if it crashes it should not break the whole app */}
           <ErrorBoundary fallbackTitle="No pudimos cargar el chatbot">
