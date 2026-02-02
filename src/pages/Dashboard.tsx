@@ -28,10 +28,11 @@ import {
   usePendingCourses,
   useUserBadgesForDashboard,
 } from "@/hooks/useDashboardStats";
+import { useRankingCompetitor } from "@/hooks/useRanking";
 import { Link } from "react-router-dom";
 
 const Dashboard: React.FC = () => {
-  const { profile, roles } = useAuth();
+  const { user, profile, roles } = useAuth();
   
   // Auto-publish scheduled courses when dashboard loads
   useAutoPublishScheduledCourses();
@@ -41,6 +42,7 @@ const Dashboard: React.FC = () => {
   const { data: recentCourses, isLoading: recentLoading } = useRecentCourses(5);
   const { data: pendingCourses, isLoading: pendingLoading } = usePendingCourses(5);
   const { data: badges, isLoading: badgesLoading } = useUserBadgesForDashboard();
+  const { data: competitor } = useRankingCompetitor(user?.id);
 
   const roleLabels: Record<string, string> = {
     student: "Estudiante",
@@ -162,6 +164,16 @@ const Dashboard: React.FC = () => {
                   <p className="text-xs text-muted-foreground mt-1">
                     de {stats?.totalUsers || 0} usuarios
                   </p>
+                  {competitor && competitor.pointsAhead > 0 && (
+                    <p className="text-xs text-primary font-medium mt-2 animate-pulse">
+                      🔥 ¡A {competitor.pointsAhead} pts de {competitor.name}!
+                    </p>
+                  )}
+                  {stats?.rankingPosition === 1 && (
+                    <p className="text-xs text-primary font-medium mt-2">
+                      👑 ¡Eres el #1!
+                    </p>
+                  )}
                 </>
               )}
             </CardContent>
