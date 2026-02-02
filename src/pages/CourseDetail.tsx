@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { KeywordsGlossary } from "@/components/glossary/KeywordsGlossary";
 import { GoogleDocEmbed, isGoogleUrl } from "@/components/materials/GoogleDocEmbed";
@@ -163,7 +164,7 @@ const CourseDetail: React.FC = () => {
   const [quizAnswers, setQuizAnswers] = useState<Record<string, string>>({});
   const [quizStartTime, setQuizStartTime] = useState<Date | null>(null);
   const [showQuizResults, setShowQuizResults] = useState(false);
-  const [lastQuizScore, setLastQuizScore] = useState<{ score: number; passed: boolean } | null>(null);
+  const [lastQuizScore, setLastQuizScore] = useState<{ score: number; passed: boolean; coursePoints?: number } | null>(null);
   const [currentMaterialIndex, setCurrentMaterialIndex] = useState<number>(0);
   const [isTimeExpired, setIsTimeExpired] = useState(false);
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
@@ -226,7 +227,9 @@ const CourseDetail: React.FC = () => {
     });
 
     const score = questions.length > 0 ? Math.round((correctAnswers / questions.length) * 100) : 0;
-    const passed = score >= selectedQuiz.passing_score;
+    // Minimum passing score is always 90 points
+    const MINIMUM_PASSING_SCORE = 90;
+    const passed = score >= MINIMUM_PASSING_SCORE;
 
     try {
       await submitQuiz.mutateAsync({
@@ -237,16 +240,21 @@ const CourseDetail: React.FC = () => {
         startedAt: quizStartTime,
       });
 
-      setLastQuizScore({ score, passed });
+      setLastQuizScore({ score, passed, coursePoints: course?.points });
       setShowQuizResults(true);
 
-      toast({
-        title: passed ? "¡Felicitaciones!" : "Quiz completado",
-        description: passed 
-          ? `Aprobaste con ${score}%` 
-          : `Obtuviste ${score}%. Necesitas ${selectedQuiz.passing_score}% para aprobar.`,
-        variant: passed ? "default" : "destructive",
-      });
+      if (passed) {
+        toast({
+          title: "🎉 ¡Felicitaciones! Has aprobado el curso",
+          description: `Obtuviste ${score}% y has ganado ${course?.points || 0} puntos. Podrás verlos reflejados en tu perfil.`,
+        });
+      } else {
+        toast({
+          title: "No alcanzaste la calificación mínima",
+          description: `Obtuviste ${score}%. Necesitas mínimo 90 puntos de 100 para aprobar. ¡Tienes otro intento!`,
+          variant: "destructive",
+        });
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -531,6 +539,10 @@ const CourseDetail: React.FC = () => {
                     <span className="text-muted-foreground">Quizzes</span>
                     <span className="font-medium">{quizzes?.length || 0}</span>
                   </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Calificación mínima</span>
+                    <span className="font-medium text-warning">90%</span>
+                  </div>
 
                   <div className="pt-4 border-t">
                     <Button 
@@ -576,7 +588,7 @@ const CourseDetail: React.FC = () => {
                   <div className="flex gap-4 text-sm text-muted-foreground mt-2">
                     <span className="flex items-center gap-1">
                       <Target className="w-4 h-4" />
-                      Puntaje mínimo: {selectedQuiz.passing_score}%
+                      Puntaje mínimo: 90%
                     </span>
                     {selectedQuiz.max_attempts && (
                       <span>Intentos máximos: {selectedQuiz.max_attempts}</span>
@@ -588,29 +600,54 @@ const CourseDetail: React.FC = () => {
                     // Results view
                     <div className="text-center py-8">
                       <div className={`w-24 h-24 rounded-full mx-auto flex items-center justify-center ${
-                        lastQuizScore.passed ? "bg-success/20" : "bg-destructive/20"
+                        lastQuizScore.passed ? "bg-success/20" : "bg-warning/20"
                       }`}>
                         {lastQuizScore.passed ? (
                           <Award className="w-12 h-12 text-success" />
                         ) : (
-                          <Target className="w-12 h-12 text-destructive" />
+                          <AlertTriangle className="w-12 h-12 text-warning" />
                         )}
                       </div>
                       <h3 className="text-2xl font-bold mt-4">
-                        {lastQuizScore.passed ? "¡Aprobaste!" : "No aprobaste"}
+                        {lastQuizScore.passed ? "🎉 ¡Felicitaciones, aprobaste!" : "No alcanzaste la calificación mínima"}
                       </h3>
                       <p className="text-4xl font-bold text-primary mt-2">
                         {lastQuizScore.score}%
                       </p>
                       <p className="text-muted-foreground mt-2">
-                        Puntaje mínimo: {selectedQuiz.passing_score}%
+                        Puntaje mínimo: 90%
                       </p>
+                      
+                      {lastQuizScore.passed ? (
+                        <div className="mt-4 p-4 bg-success/10 rounded-lg border border-success/30">
+                          <div className="flex items-center justify-center gap-2 text-success">
+                            <Trophy className="w-5 h-5" />
+                            <span className="font-semibold">
+                              ¡Ganaste {lastQuizScore.coursePoints || 0} puntos!
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Los puntos ya se han añadido a tu perfil
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="mt-4 p-4 bg-warning/10 rounded-lg border border-warning/30">
+                          <p className="text-sm text-warning-foreground">
+                            Recuerda: necesitas obtener mínimo <strong>90 puntos de 100</strong> para aprobar el curso y recibir los puntos.
+                          </p>
+                          <p className="text-sm text-muted-foreground mt-2">
+                            ¡No te desanimes! Puedes intentarlo de nuevo.
+                          </p>
+                        </div>
+                      )}
+                      
                       <div className="flex gap-4 justify-center mt-6">
                         <Button variant="outline" onClick={() => setSelectedQuiz(null)}>
                           Volver al curso
                         </Button>
                         {!lastQuizScore.passed && (
-                          <Button onClick={() => handleStartQuiz(selectedQuiz)}>
+                          <Button onClick={() => handleStartQuiz(selectedQuiz)} className="gap-2">
+                            <Target className="w-4 h-4" />
                             Intentar de nuevo
                           </Button>
                         )}
@@ -1059,6 +1096,12 @@ const CourseDetail: React.FC = () => {
               </TabsContent>
 
               <TabsContent value="quizzes" className="mt-4 space-y-2">
+                <Alert className="mb-4 border-warning/50 bg-warning/10">
+                  <Target className="h-4 w-4 text-warning" />
+                  <AlertDescription className="text-sm">
+                    Para aprobar el curso y recibir los <strong>{course.points} puntos</strong>, debes obtener una calificación mínima del <strong>90%</strong> en el quiz.
+                  </AlertDescription>
+                </Alert>
                 {loadingQuizzes ? (
                   <Skeleton className="h-16 w-full" />
                 ) : quizzes && quizzes.length > 0 ? (
@@ -1079,7 +1122,7 @@ const CourseDetail: React.FC = () => {
                         <div className="flex-1 min-w-0">
                           <p className="font-medium truncate">{quiz.title}</p>
                           <p className="text-xs text-muted-foreground">
-                            {quiz.questions?.length || 0} preguntas • Mínimo {quiz.passing_score}%
+                            {quiz.questions?.length || 0} preguntas • Mínimo 90%
                           </p>
                         </div>
                         <ChevronRight className="w-4 h-4 text-muted-foreground" />
