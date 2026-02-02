@@ -166,6 +166,10 @@ export const useSubmitQuizAttempt = () => {
       queryClient.invalidateQueries({ queryKey: ["ranking"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["my-badges"] });
+      queryClient.invalidateQueries({ queryKey: ["badges"] });
+      queryClient.invalidateQueries({ queryKey: ["user-badges-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["ranking-competitor"] });
     },
   });
 };

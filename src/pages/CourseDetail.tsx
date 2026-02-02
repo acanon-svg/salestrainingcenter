@@ -7,6 +7,7 @@ import { useMaterialProgress, useMarkMaterialComplete } from "@/hooks/useMateria
 import { useQuizAttempts, useSubmitQuizAttempt } from "@/hooks/useQuizAttempts";
 import { useCourseFeedback, useSubmitCourseFeedback } from "@/hooks/useFeedback";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBadgeAwarder } from "@/hooks/useBadgeAwarder";
 import { generateDiploma } from "@/lib/generateDiploma";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -124,6 +125,7 @@ const CourseDetail: React.FC = () => {
   const submitQuiz = useSubmitQuizAttempt();
   const submitCourseFeedback = useSubmitCourseFeedback();
   const enrollMutation = useEnrollInCourse();
+  const { checkAndAwardBadges } = useBadgeAwarder();
 
   const handleEnroll = async () => {
     if (!id) return;
@@ -251,6 +253,8 @@ const CourseDetail: React.FC = () => {
           title: "🎉 ¡Felicitaciones! Has aprobado el curso",
           description: `Obtuviste ${score}% y has ganado ${course?.points || 0} puntos. Podrás verlos reflejados en tu perfil.`,
         });
+        // Check and award any earned badges
+        await checkAndAwardBadges();
       } else {
         toast({
           title: "No alcanzaste la calificación mínima",

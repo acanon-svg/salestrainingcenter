@@ -36,7 +36,7 @@ export interface EarnedBadge {
 }
 
 export const useDashboardStats = () => {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
 
   return useQuery({
     queryKey: ["dashboard-stats", user?.id],
@@ -46,11 +46,22 @@ export const useDashboardStats = () => {
           completedCourses: 0,
           inProgressCourses: 0,
           averageScore: 0,
-          totalPoints: profile?.points || 0,
-          badgesCount: profile?.badges_count || 0,
+          totalPoints: 0,
+          badgesCount: 0,
           rankingPosition: 0,
           totalUsers: 0,
         };
+      }
+
+      // Fetch fresh profile data from database
+      const { data: freshProfile, error: profileError } = await supabase
+        .from("profiles")
+        .select("points, badges_count")
+        .eq("user_id", user.id)
+        .single();
+
+      if (profileError) {
+        console.error("Error fetching profile for dashboard:", profileError);
       }
 
       // Fetch user's enrollments
@@ -87,8 +98,8 @@ export const useDashboardStats = () => {
         completedCourses,
         inProgressCourses,
         averageScore,
-        totalPoints: profile?.points || 0,
-        badgesCount: profile?.badges_count || 0,
+        totalPoints: freshProfile?.points || 0,
+        badgesCount: freshProfile?.badges_count || 0,
         rankingPosition: rankingPosition > 0 ? rankingPosition : totalUsers,
         totalUsers,
       };

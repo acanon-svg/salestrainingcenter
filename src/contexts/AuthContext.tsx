@@ -36,6 +36,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   hasRole: (role: AppRole) => boolean;
   markPasswordChanged: () => void;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -140,6 +141,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         password_changed: true,
         password_changed_at: new Date().toISOString(),
       });
+    }
+  };
+
+  const refreshProfile = async () => {
+    if (user?.id) {
+      await fetchUserProfile(user.id);
     }
   };
 
@@ -360,6 +367,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signOut,
         hasRole,
         markPasswordChanged,
+        refreshProfile,
       }}
     >
       {children}
