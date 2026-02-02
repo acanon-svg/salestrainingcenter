@@ -75,6 +75,8 @@ const UserManagement: React.FC = () => {
   const ALL_ROLES = ["student", "lider", "creator", "admin"] as const;
 
   const isAdmin = hasRole("admin");
+  const isCreator = hasRole("creator");
+  const canAccessPage = isAdmin || isCreator;
   const registrationEnabled = getSetting("registration_enabled", false);
 
   const handleToggleRegistration = async () => {
@@ -84,10 +86,10 @@ const UserManagement: React.FC = () => {
   };
 
   useEffect(() => {
-    if (isAdmin) {
+    if (canAccessPage) {
       fetchUsers();
     }
-  }, [isAdmin]);
+  }, [canAccessPage]);
 
   useEffect(() => {
     filterUsers();
@@ -229,7 +231,7 @@ const UserManagement: React.FC = () => {
   const uniqueTeams = [...new Set(users.map((u) => u.team).filter(Boolean))];
   const uniqueRegionals = [...new Set(users.map((u) => u.regional).filter(Boolean))];
 
-  if (!isAdmin) {
+  if (!canAccessPage) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
