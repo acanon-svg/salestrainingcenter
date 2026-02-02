@@ -7,6 +7,7 @@ import { RoleManagementDialog } from "@/components/users/RoleManagementDialog";
 import { AssignPointsDialog } from "@/components/users/AssignPointsDialog";
 import { UserEditDialog } from "@/components/users/UserEditDialog";
 import { DeleteUserDialog } from "@/components/users/DeleteUserDialog";
+import { ResetPasswordDialog } from "@/components/users/ResetPasswordDialog";
 import { PortalSectionManager } from "@/components/admin/PortalSectionManager";
 import { DataResetManager } from "@/components/admin/DataResetManager";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Users, Eye, Shield, Loader2, Mail, Building, MapPin, UserCheck, Calendar, Trophy, Settings, UserPlus, Bot, UserCog, Star, Crown, Pencil, LayoutDashboard, Trash2, Database } from "lucide-react";
+import { Search, Users, Eye, Shield, Loader2, Mail, Building, MapPin, UserCheck, Calendar, Trophy, Settings, UserPlus, Bot, UserCog, Star, Crown, Pencil, LayoutDashboard, Trash2, Database, KeyRound } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
@@ -68,6 +69,7 @@ const UserManagement: React.FC = () => {
   const [isPointsDialogOpen, setIsPointsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
   const [isUpdatingSettings, setIsUpdatingSettings] = useState(false);
 
   const ALL_ROLES = ["student", "lider", "creator", "admin"] as const;
@@ -178,6 +180,11 @@ const UserManagement: React.FC = () => {
   const handleDeleteUser = (user: UserProfile) => {
     setSelectedUser(user);
     setIsDeleteDialogOpen(true);
+  };
+
+  const handleResetPassword = (user: UserProfile) => {
+    setSelectedUser(user);
+    setIsResetPasswordDialogOpen(true);
   };
 
 
@@ -437,6 +444,15 @@ const UserManagement: React.FC = () => {
                             <Button
                               variant="ghost"
                               size="sm"
+                              onClick={() => handleResetPassword(user)}
+                              className="gap-1"
+                              title="Restablecer contraseña"
+                            >
+                              <KeyRound className="h-4 w-4 text-amber-500" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               onClick={() => handleAssignPoints(user)}
                               className="gap-1"
                               title="Asignar puntos"
@@ -635,6 +651,15 @@ const UserManagement: React.FC = () => {
           onOpenChange={setIsDeleteDialogOpen}
           user={selectedUser}
           onUserDeleted={fetchUsers}
+        />
+
+        {/* Reset Password Dialog */}
+        <ResetPasswordDialog
+          open={isResetPasswordDialogOpen}
+          onOpenChange={setIsResetPasswordDialogOpen}
+          userEmail={selectedUser?.email || ""}
+          userName={selectedUser?.full_name || ""}
+          userId={selectedUser?.user_id || ""}
         />
           </TabsContent>
 

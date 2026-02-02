@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LoginForm } from "@/components/auth/LoginForm";
+import { PasswordChangeDialog } from "@/components/auth/PasswordChangeDialog";
 import { ChatbotBubble } from "@/components/chatbot/ChatbotBubble";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Dashboard from "@/pages/Dashboard";
@@ -33,7 +34,7 @@ const queryClient = new QueryClient();
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, requiresPasswordChange, markPasswordChanged } = useAuth();
 
   if (isLoading) {
     return (
@@ -48,6 +49,20 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
   if (!user) {
     return <Navigate to="/" replace />;
+  }
+
+  // Show password change dialog if required
+  if (requiresPasswordChange) {
+    return (
+      <>
+        {children}
+        <PasswordChangeDialog
+          open={true}
+          onPasswordChanged={markPasswordChanged}
+          userId={user.id}
+        />
+      </>
+    );
   }
 
   return <>{children}</>;

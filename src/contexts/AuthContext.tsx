@@ -19,6 +19,8 @@ interface Profile {
   last_login: string | null;
   created_at: string;
   updated_at: string;
+  password_changed: boolean | null;
+  password_changed_at: string | null;
 }
 
 interface AuthContextType {
@@ -27,11 +29,13 @@ interface AuthContextType {
   profile: Profile | null;
   roles: AppRole[];
   isLoading: boolean;
+  requiresPasswordChange: boolean;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string, fullName: string) => Promise<void>;
   signOut: () => Promise<void>;
   hasRole: (role: AppRole) => boolean;
+  markPasswordChanged: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -53,6 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [requiresPasswordChange, setRequiresPasswordChange] = useState(false);
   const { toast } = useToast();
 
   const validateEmailDomain = (email: string): boolean => {
@@ -92,6 +97,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (profileData) {
         setProfile(profileData as Profile);
         
+        // Check if password change is required
+        const passwordChanged = (profileData as Profile).password_changed;
+        setRequiresPasswordChange(passwordChanged !== true);
+        
         // Update last login
         await client
           .from("profiles")
@@ -115,6 +124,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       console.error("Error in fetchUserProfile:", error);
+    }
+  };
+
+  const markPasswordChanged = () => {
+    setRequiresPasswordChange(false);
+    if (profile) {
+      setProfile({
+        ...profile,
+        password_changed: true,
+        password_changed_at: new Date().toISOString(),
+      });
     }
   };
 
@@ -194,6 +214,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else {
           setProfile(null);
           setRoles([]);
+          setRequiresPasswordChange(false);
         }
       }
     );
@@ -311,6 +332,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(null);
       setProfile(null);
       setRoles([]);
+      setRequiresPasswordChange(false);
     }
   };
 
@@ -326,11 +348,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         profile,
         roles,
         isLoading,
+        requiresPasswordChange,
         signInWithGoogle,
         signInWithEmail,
         signUpWithEmail,
         signOut,
         hasRole,
+        markPasswordChanged,
       }}
     >
       {children}

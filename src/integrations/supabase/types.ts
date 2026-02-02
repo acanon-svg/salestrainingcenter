@@ -1137,6 +1137,8 @@ export type Database = {
           full_name: string | null
           id: string
           last_login: string | null
+          password_changed: boolean | null
+          password_changed_at: string | null
           points: number
           regional: string | null
           team: string | null
@@ -1152,6 +1154,8 @@ export type Database = {
           full_name?: string | null
           id?: string
           last_login?: string | null
+          password_changed?: boolean | null
+          password_changed_at?: string | null
           points?: number
           regional?: string | null
           team?: string | null
@@ -1167,6 +1171,8 @@ export type Database = {
           full_name?: string | null
           id?: string
           last_login?: string | null
+          password_changed?: boolean | null
+          password_changed_at?: string | null
           points?: number
           regional?: string | null
           team?: string | null
