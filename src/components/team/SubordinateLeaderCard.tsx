@@ -28,17 +28,23 @@ interface SubordinateLeaderCardProps {
 export const SubordinateLeaderCard: React.FC<SubordinateLeaderCardProps> = ({ leader }) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  // Fetch team members for this subordinate leader's TEAM (not region)
+  // Fetch team members for this subordinate leader's TEAM AND REGIONAL
   const { data: teamMembers, isLoading: membersLoading } = useQuery({
-    queryKey: ["subordinate-team-members-by-team", leader.team],
+    queryKey: ["subordinate-team-members-by-team-regional", leader.team, leader.regional],
     queryFn: async () => {
       if (!leader.team) return [];
       
-      const { data, error } = await supabase
+      let query = supabase
         .from("profiles")
         .select("id, user_id, full_name, email, avatar_url, team, company_role, points, badges_count")
-        .eq("team", leader.team)
-        .order("points", { ascending: false });
+        .eq("team", leader.team);
+      
+      // Filter by regional if the leader has one assigned
+      if (leader.regional) {
+        query = query.eq("regional", leader.regional);
+      }
+      
+      const { data, error } = await query.order("points", { ascending: false });
 
       if (error) throw error;
       return data as TeamMember[];
