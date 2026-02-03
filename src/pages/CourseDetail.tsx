@@ -444,6 +444,29 @@ const CourseDetail: React.FC = () => {
           />
         )}
 
+        {/* Completed course banner - show when course is completed */}
+        {enrollment?.status === "completed" && (
+          <Card className="border-success bg-success/10">
+            <CardContent className="py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Award className="w-8 h-8 text-success" />
+                  <div>
+                    <h3 className="font-semibold text-success">¡Curso Completado!</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Puedes revisar el material en cualquier momento
+                    </p>
+                  </div>
+                </div>
+                <Button size="sm" onClick={handleDownloadDiploma} className="gap-2">
+                  <Download className="w-4 h-4" />
+                  Descargar Diploma
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Time expired overlay message */}
         {isTimeExpired && enrollment?.status !== "completed" && (
           <Card className="border-destructive bg-destructive/10">
@@ -574,8 +597,8 @@ const CourseDetail: React.FC = () => {
           </div>
         )}
 
-        {/* Main content - hidden when time expired or not enrolled */}
-        {!isTimeExpired && enrollment && (
+        {/* Main content - visible when enrolled (always visible for completed courses, hidden only for expired non-completed courses) */}
+        {enrollment && (enrollment.status === "completed" || !isTimeExpired) && (
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Content viewer */}
           <div className="lg:col-span-2 space-y-4">
@@ -709,7 +732,7 @@ const CourseDetail: React.FC = () => {
                         {selectedMaterial.duration_minutes && ` • ${selectedMaterial.duration_minutes} min`}
                       </CardDescription>
                     </div>
-                    {!completedMaterialIds.has(selectedMaterial.id) && (
+                    {!completedMaterialIds.has(selectedMaterial.id) && enrollment?.status !== "completed" && (
                       <Button onClick={() => handleMarkComplete(selectedMaterial)}>
                         <CheckCircle2 className="w-4 h-4 mr-2" />
                         Marcar completado
@@ -1119,38 +1142,65 @@ const CourseDetail: React.FC = () => {
               </TabsContent>
 
               <TabsContent value="quizzes" className="mt-4 space-y-2">
-                <Alert className="mb-4 border-warning/50 bg-warning/10">
-                  <Target className="h-4 w-4 text-warning" />
-                  <AlertDescription className="text-sm">
-                    Para aprobar el curso y recibir los <strong>{course.points} puntos</strong>, debes obtener una calificación mínima del <strong>90%</strong> en el quiz.
-                  </AlertDescription>
-                </Alert>
+                {enrollment?.status === "completed" ? (
+                  <Alert className="mb-4 border-success/50 bg-success/10">
+                    <CheckCircle2 className="h-4 w-4 text-success" />
+                    <AlertDescription className="text-sm">
+                      ¡Felicidades! Ya completaste este curso y ganaste <strong>{course.points} puntos</strong>. Los quizzes ya no están disponibles.
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <Alert className="mb-4 border-warning/50 bg-warning/10">
+                    <Target className="h-4 w-4 text-warning" />
+                    <AlertDescription className="text-sm">
+                      Para aprobar el curso y recibir los <strong>{course.points} puntos</strong>, debes obtener una calificación mínima del <strong>90%</strong> en el quiz.
+                    </AlertDescription>
+                  </Alert>
+                )}
                 {loadingQuizzes ? (
                   <Skeleton className="h-16 w-full" />
                 ) : quizzes && quizzes.length > 0 ? (
                   quizzes.map((quiz) => (
-                    <button
+                    <div
                       key={quiz.id}
-                      onClick={() => handleStartQuiz(quiz as Quiz)}
                       className={`w-full text-left p-3 rounded-lg border transition-all ${
-                        selectedQuiz?.id === quiz.id 
-                          ? "border-primary bg-primary/10" 
-                          : "border-border hover:border-primary/50 hover:bg-muted/50"
+                        enrollment?.status === "completed"
+                          ? "border-success bg-success/5 cursor-default"
+                          : selectedQuiz?.id === quiz.id 
+                            ? "border-primary bg-primary/10 cursor-pointer" 
+                            : "border-border hover:border-primary/50 hover:bg-muted/50 cursor-pointer"
                       }`}
+                      onClick={() => {
+                        if (enrollment?.status !== "completed") {
+                          handleStartQuiz(quiz as Quiz);
+                        }
+                      }}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-addi-orange/20">
-                          <FileQuestion className="w-4 h-4 text-addi-orange" />
+                        <div className={`p-2 rounded-lg ${
+                          enrollment?.status === "completed" ? "bg-success/20" : "bg-addi-orange/20"
+                        }`}>
+                          {enrollment?.status === "completed" ? (
+                            <CheckCircle2 className="w-4 h-4 text-success" />
+                          ) : (
+                            <FileQuestion className="w-4 h-4 text-addi-orange" />
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{quiz.title}</p>
+                          <p className={`font-medium truncate ${enrollment?.status === "completed" ? "text-success" : ""}`}>
+                            {quiz.title}
+                          </p>
                           <p className="text-xs text-muted-foreground">
-                            {quiz.questions?.length || 0} preguntas • Mínimo 90%
+                            {enrollment?.status === "completed" 
+                              ? "✓ Quiz aprobado" 
+                              : `${quiz.questions?.length || 0} preguntas • Mínimo 90%`}
                           </p>
                         </div>
-                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                        {enrollment?.status !== "completed" && (
+                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                        )}
                       </div>
-                    </button>
+                    </div>
                   ))
                 ) : (
                   <p className="text-center text-muted-foreground py-8">
