@@ -181,12 +181,15 @@ const CourseDetail: React.FC = () => {
   const progressPercentage = totalMaterials > 0 ? Math.round((completedMaterials / totalMaterials) * 100) : 0;
 
   // Update enrollment progress when materials are completed
+  // NOTE: We only update progress percentage here, NOT status to "completed"
+  // The course should only be marked as "completed" when the user passes the quiz
+  // This is handled in useSubmitQuizAttempt hook
   useEffect(() => {
-    if (enrollment && progressPercentage !== enrollment.progress_percentage) {
+    if (enrollment && enrollment.status !== "completed" && progressPercentage !== enrollment.progress_percentage) {
       updateProgress.mutate({
         enrollmentId: enrollment.id,
         progress: progressPercentage,
-        status: progressPercentage === 100 ? "completed" : "in_progress",
+        status: "in_progress", // Never auto-complete here, quiz must be passed
       });
     }
   }, [progressPercentage, enrollment]);
