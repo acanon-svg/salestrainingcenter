@@ -130,11 +130,30 @@ export const useUpdateEnrollmentProgress = () => {
       progress: number;
       status?: string;
     }) => {
+      // AUDIT LOG: Track all enrollment progress updates
+      console.log("[Enrollment] Updating progress:", {
+        enrollmentId,
+        progress,
+        requestedStatus: status,
+        timestamp: new Date().toISOString(),
+      });
+
       const updates: any = { progress_percentage: progress };
-      if (status) updates.status = status;
-      if (progress === 100 && !updates.completed_at) {
-        updates.completed_at = new Date().toISOString();
-        updates.status = "completed";
+      
+      // Only update status if explicitly provided
+      // IMPORTANT: Never auto-complete based on progress alone
+      // Course completion should ONLY happen when quiz is passed (handled in useQuizAttempts)
+      if (status) {
+        updates.status = status;
+        
+        // AUDIT LOG: Track status changes
+        if (status === "completed") {
+          console.warn("[Enrollment] WARNING: Attempting to mark as completed via progress update. This should only happen through quiz completion!", {
+            enrollmentId,
+            progress,
+            timestamp: new Date().toISOString(),
+          });
+        }
       }
 
       const { data, error } = await client
@@ -144,7 +163,17 @@ export const useUpdateEnrollmentProgress = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("[Enrollment] Error updating:", error);
+        throw error;
+      }
+
+      console.log("[Enrollment] Updated successfully:", {
+        enrollmentId,
+        newProgress: data.progress_percentage,
+        newStatus: data.status,
+      });
+
       return data;
     },
     onSuccess: () => {
