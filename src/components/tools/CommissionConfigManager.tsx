@@ -32,11 +32,13 @@ import {
   Users, 
   Target,
   DollarSign,
-  Save
+  Save,
+  Calendar
 } from "lucide-react";
 import { toast } from "sonner";
 import { TeamSelector } from "./TeamSelector";
 import { UserSelector } from "./UserSelector";
+import { MonthlyConfigEditor } from "./MonthlyConfigEditor";
 import {
   CommissionCalculatorConfig,
   useCommissionCalculatorConfigs,
@@ -62,6 +64,7 @@ export const CommissionConfigManager: React.FC<CommissionConfigManagerProps> = (
   const [editingConfig, setEditingConfig] = useState<CommissionCalculatorConfig | null>(null);
   const [isNewConfigOpen, setIsNewConfigOpen] = useState(false);
   const [configToDelete, setConfigToDelete] = useState<string | null>(null);
+  const [configForMonthly, setConfigForMonthly] = useState<CommissionCalculatorConfig | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -387,7 +390,7 @@ export const CommissionConfigManager: React.FC<CommissionConfigManagerProps> = (
                 </div>
               )}
 
-              <div className="flex gap-2 pt-2">
+              <div className="flex flex-wrap gap-2 pt-2">
                 <Button
                   size="sm"
                   variant="outline"
@@ -395,6 +398,14 @@ export const CommissionConfigManager: React.FC<CommissionConfigManagerProps> = (
                 >
                   <Settings className="h-4 w-4 mr-1" />
                   Editar
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setConfigForMonthly(config)}
+                >
+                  <Calendar className="h-4 w-4 mr-1" />
+                  Metas Mensuales
                 </Button>
                 <Button
                   size="sm"
@@ -478,6 +489,27 @@ export const CommissionConfigManager: React.FC<CommissionConfigManagerProps> = (
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Monthly Config Dialog */}
+      <Dialog open={!!configForMonthly} onOpenChange={() => setConfigForMonthly(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Configuración Mensual - {configForMonthly?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Define metas específicas para cada mes. Los meses sin configuración usarán las metas base.
+            </DialogDescription>
+          </DialogHeader>
+          {configForMonthly && <MonthlyConfigEditor config={configForMonthly} />}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfigForMonthly(null)}>
+              Cerrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

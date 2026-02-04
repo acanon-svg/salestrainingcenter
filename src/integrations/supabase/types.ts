@@ -394,6 +394,56 @@ export type Database = {
           },
         ]
       }
+      commission_monthly_configs: {
+        Row: {
+          base_comisional: number
+          config_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          meta_firmas: number
+          meta_gmv_usd: number
+          meta_originaciones: number
+          month: number
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          base_comisional?: number
+          config_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          meta_firmas?: number
+          meta_gmv_usd?: number
+          meta_originaciones?: number
+          month: number
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          base_comisional?: number
+          config_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          meta_firmas?: number
+          meta_gmv_usd?: number
+          meta_originaciones?: number
+          month?: number
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_monthly_configs_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "commission_calculator_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       course_enrollments: {
         Row: {
           completed_at: string | null
