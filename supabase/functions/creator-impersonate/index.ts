@@ -121,35 +121,30 @@ Deno.serve(async (req) => {
     });
 
     if (linkError || !linkData) {
+      console.error("Error generating link:", linkError);
       return new Response(
         JSON.stringify({ error: "Error generando acceso" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Extract the token from the link
-    const actionLink = linkData.properties?.action_link;
+    // Get the email_otp from the response - this is the raw token for verifyOtp
+    const emailOtp = linkData.properties?.email_otp;
     
-    if (!actionLink) {
+    if (!emailOtp) {
+      console.error("No email_otp in response:", linkData);
       return new Response(
-        JSON.stringify({ error: "No se pudo generar el enlace de acceso" }),
+        JSON.stringify({ error: "No se pudo generar el código de acceso" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    // Parse the URL to extract the token
-    const url = new URL(actionLink);
-    const accessToken = url.searchParams.get("token") || url.hash?.split("access_token=")[1]?.split("&")[0];
-    
-    // For magic links, we need to use verifyOtp with the token_hash
-    const tokenHash = linkData.properties?.hashed_token;
 
     return new Response(
       JSON.stringify({
         success: true,
         email: targetUser.email,
-        tokenHash,
-        type: "magiclink",
+        token: emailOtp,
+        type: "email",
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
