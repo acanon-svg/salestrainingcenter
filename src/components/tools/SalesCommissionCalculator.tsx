@@ -19,6 +19,8 @@ import {
   Sparkles
 } from "lucide-react";
 import { CommissionCalculatorConfig } from "@/hooks/useCommissionCalculatorConfig";
+import { useMonthlyConfigForMonth, getMonthName } from "@/hooks/useCommissionMonthlyConfig";
+import { MonthSelector } from "./MonthSelector";
 import { cn } from "@/lib/utils";
 
 interface SalesCommissionCalculatorProps {
@@ -30,6 +32,14 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
   config,
   userRole,
 }) => {
+  // Current month/year for default selection
+  const currentMonth = new Date().getMonth() + 1;
+  const currentYear = new Date().getFullYear();
+
+  // Month selector state
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+
   // Input values (editable by student/leader)
   const [firmasReales, setFirmasReales] = useState<number>(0);
   const [originacionesReales, setOriginacionesReales] = useState<number>(0);
@@ -37,29 +47,50 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
 
   const isCreatorOrAdmin = userRole === "admin" || userRole === "creator";
 
+  // Fetch monthly config if available
+  const { data: monthlyConfig } = useMonthlyConfigForMonth(config.id, selectedMonth, selectedYear);
+
+  // Use monthly config if available, otherwise use base config
+  const effectiveConfig = useMemo(() => {
+    if (monthlyConfig) {
+      return {
+        meta_firmas: monthlyConfig.meta_firmas,
+        meta_originaciones: monthlyConfig.meta_originaciones,
+        meta_gmv_usd: monthlyConfig.meta_gmv_usd,
+        base_comisional: monthlyConfig.base_comisional,
+      };
+    }
+    return {
+      meta_firmas: config.meta_firmas,
+      meta_originaciones: config.meta_originaciones,
+      meta_gmv_usd: config.meta_gmv_usd,
+      base_comisional: config.base_comisional,
+    };
+  }, [monthlyConfig, config]);
+
   // Calculate percentages and results
   const calculations = useMemo(() => {
     // Variable 1: Firmas (Candado de apertura)
-    const porcentajeFirmas = config.meta_firmas > 0 
-      ? (firmasReales / config.meta_firmas) * 100 
+    const porcentajeFirmas = effectiveConfig.meta_firmas > 0 
+      ? (firmasReales / effectiveConfig.meta_firmas) * 100 
       : 0;
     const candadoDesbloqueado = porcentajeFirmas >= 85;
 
     // Variable 2: Originaciones (50% participación)
-    const porcentajeOriginaciones = config.meta_originaciones > 0 
-      ? (originacionesReales / config.meta_originaciones) * 100 
+    const porcentajeOriginaciones = effectiveConfig.meta_originaciones > 0 
+      ? (originacionesReales / effectiveConfig.meta_originaciones) * 100 
       : 0;
     const participacionOriginaciones = porcentajeOriginaciones * 0.5;
 
     // Variable 3: GMV (50% participación)
-    const porcentajeGMV = config.meta_gmv_usd > 0 
-      ? (gmvReal / config.meta_gmv_usd) * 100 
+    const porcentajeGMV = effectiveConfig.meta_gmv_usd > 0 
+      ? (gmvReal / effectiveConfig.meta_gmv_usd) * 100 
       : 0;
     const participacionGMV = porcentajeGMV * 0.5;
 
     // Total commission calculation
     const porcentajeTotal = participacionOriginaciones + participacionGMV;
-    const comisionTotal = (porcentajeTotal / 100) * config.base_comisional;
+    const comisionTotal = (porcentajeTotal / 100) * effectiveConfig.base_comisional;
 
     return {
       porcentajeFirmas,
@@ -71,7 +102,7 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
       porcentajeTotal,
       comisionTotal,
     };
-  }, [firmasReales, originacionesReales, gmvReal, config]);
+  }, [firmasReales, originacionesReales, gmvReal, effectiveConfig]);
 
   const getCommissionMessage = () => {
     const { comisionTotal, candadoDesbloqueado } = calculations;
@@ -133,10 +164,20 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
 
   return (
     <div className="space-y-6">
+      {/* Month Selector - Only for students and leaders */}
+      {!isCreatorOrAdmin && (
+        <MonthSelector
+          selectedMonth={selectedMonth}
+          selectedYear={selectedYear}
+          onMonthChange={setSelectedMonth}
+          onYearChange={setSelectedYear}
+        />
+      )}
+
       {/* Configuration Info */}
       <Card className="border-muted">
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Calculator className="h-5 w-5" />
@@ -146,9 +187,21 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
                 <CardDescription>{config.description}</CardDescription>
               )}
             </div>
-            <Badge variant="outline">
-              Base: {formatCurrency(config.base_comisional)}
-            </Badge>
+            <div className="flex items-center gap-2 flex-wrap">
+              {!isCreatorOrAdmin && (
+                <Badge variant="secondary">
+                  {getMonthName(selectedMonth)} {selectedYear}
+                </Badge>
+              )}
+              <Badge variant="outline">
+                Base: {formatCurrency(effectiveConfig.base_comisional)}
+              </Badge>
+              {monthlyConfig && !isCreatorOrAdmin && (
+                <Badge variant="default" className="bg-emerald-500">
+                  Metas del mes
+                </Badge>
+              )}
+            </div>
           </div>
         </CardHeader>
       </Card>
@@ -180,7 +233,7 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
               <Label className="text-muted-foreground">Meta de Firmas</Label>
               <div className="flex items-center gap-2">
                 <Target className="h-4 w-4 text-muted-foreground" />
-                <span className="text-lg font-semibold">{config.meta_firmas}</span>
+                <span className="text-lg font-semibold">{effectiveConfig.meta_firmas}</span>
               </div>
               {isCreatorOrAdmin && (
                 <p className="text-xs text-muted-foreground">
@@ -226,7 +279,7 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
                 ⚠️ <strong>Candado de apertura activo:</strong> No aplicas para bonificación. 
-                Necesitas alcanzar el 85% de firmas ({Math.ceil(config.meta_firmas * 0.85)} firmas).
+                Necesitas alcanzar el 85% de firmas ({Math.ceil(effectiveConfig.meta_firmas * 0.85)} firmas).
               </AlertDescription>
             </Alert>
           )}
@@ -250,7 +303,7 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
               <div className="flex items-center gap-2">
                 <Target className="h-4 w-4 text-muted-foreground" />
                 <span className="text-lg font-semibold">
-                  {config.meta_originaciones.toLocaleString("es-CO")}
+                  {effectiveConfig.meta_originaciones.toLocaleString("es-CO")}
                 </span>
               </div>
             </div>
@@ -314,7 +367,7 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
               <div className="flex items-center gap-2">
                 <Target className="h-4 w-4 text-muted-foreground" />
                 <span className="text-lg font-semibold">
-                  {formatCurrencyUSD(config.meta_gmv_usd)}
+                  {formatCurrencyUSD(effectiveConfig.meta_gmv_usd)}
                 </span>
               </div>
             </div>
@@ -392,7 +445,7 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
             <div className="text-center p-4 rounded-lg bg-background border">
               <p className="text-sm text-muted-foreground mb-1">Base Comisional</p>
               <p className="text-3xl font-bold">
-                {formatCurrency(config.base_comisional)}
+                {formatCurrency(effectiveConfig.base_comisional)}
               </p>
             </div>
 
