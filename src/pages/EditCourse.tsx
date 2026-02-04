@@ -47,6 +47,8 @@ import { useUpdateCourse } from "@/hooks/useCreateCourse";
 import { useAvailableTeams, useAvailableUsers } from "@/hooks/useCourseTargeting";
 import { supabase } from "@/integrations/supabase/client";
 import { CourseShareLink } from "@/components/courses/CourseShareLink";
+import { CourseTagSelector } from "@/components/courses/CourseTagSelector";
+import { useCourseTagAssignments, useAssignTagsToCourse } from "@/hooks/useCourseTags";
 
 const EditCourse: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -61,10 +63,13 @@ const EditCourse: React.FC = () => {
   const { data: quizzes = [] } = useCourseQuizzes(id || "");
   const { data: availableTeams = [], isLoading: teamsLoading } = useAvailableTeams();
   const { data: availableUsers = [], isLoading: usersLoading } = useAvailableUsers();
+  const { data: tagAssignments = [] } = useCourseTagAssignments(id);
+  const assignTags = useAssignTagsToCourse();
   
   const updateCourseMutation = useUpdateCourse();
   const [activeTab, setActiveTab] = useState("basic");
   const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [selectedCourseTags, setSelectedCourseTags] = useState<string[]>([]);
 
   // Form state
   const [courseData, setCourseData] = useState({
@@ -172,6 +177,13 @@ const EditCourse: React.FC = () => {
       })));
     }
   }, [resources]);
+
+  // Load course tag assignments
+  useEffect(() => {
+    if (tagAssignments && tagAssignments.length > 0) {
+      setSelectedCourseTags(tagAssignments.map(a => a.tag_id));
+    }
+  }, [tagAssignments]);
 
   // Filter users by search query
   const filteredUsers = availableUsers.filter(user => {
@@ -464,6 +476,12 @@ const EditCourse: React.FC = () => {
         }
       }
 
+      // 5. Update course tags
+      await assignTags.mutateAsync({
+        courseId: id,
+        tagIds: selectedCourseTags,
+      });
+
       // Invalidate all course-related queries to ensure all users see the updates
       await queryClient.invalidateQueries({ queryKey: ["courses"] });
       await queryClient.invalidateQueries({ queryKey: ["my-courses"] });
@@ -471,6 +489,8 @@ const EditCourse: React.FC = () => {
       await queryClient.invalidateQueries({ queryKey: ["course-materials", id] });
       await queryClient.invalidateQueries({ queryKey: ["course-quizzes", id] });
       await queryClient.invalidateQueries({ queryKey: ["course-resources", id] });
+      await queryClient.invalidateQueries({ queryKey: ["course-tag-assignments", id] });
+      await queryClient.invalidateQueries({ queryKey: ["course-tags-with-assignments"] });
       await queryClient.invalidateQueries({ queryKey: ["enrollments"] });
 
       toast({
@@ -629,6 +649,14 @@ const EditCourse: React.FC = () => {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  {/* Course Tags - Material Type */}
+                  <div className="md:col-span-2">
+                    <CourseTagSelector
+                      selectedTags={selectedCourseTags}
+                      onChange={setSelectedCourseTags}
+                    />
                   </div>
 
                   <div className="space-y-2">
