@@ -78,11 +78,11 @@ export const ImpersonateUserDialog: React.FC<ImpersonateUserDialogProps> = ({
         throw new Error(data.error || "Error desconocido");
       }
 
-      // Use verifyOtp with the token hash to sign in
+      // Use verifyOtp with the email OTP token
       const { error: verifyError } = await supabase.auth.verifyOtp({
         email: data.email,
-        token: data.tokenHash,
-        type: "magiclink",
+        token: data.token,
+        type: "email",
       });
 
       if (verifyError) {
