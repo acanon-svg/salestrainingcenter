@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,7 +30,9 @@ import {
   BookOpen,
   Trophy,
   Award,
-  Check
+  Check,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 
 interface UserProfile {
@@ -44,10 +46,17 @@ interface UserProfile {
   badges_count: number;
 }
 
+interface Course {
+  id: string;
+  title: string;
+  status: string;
+}
+
 interface ResetUserOptions {
   resetEnrollments: boolean;
   resetUserBadges: boolean;
   resetPoints: boolean;
+  selectedCourseIds: string[];
 }
 
 export const UserCourseResetManager: React.FC = () => {
@@ -61,13 +70,54 @@ export const UserCourseResetManager: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [showCourseSelector, setShowCourseSelector] = useState(false);
   const [options, setOptions] = useState<ResetUserOptions>({
     resetEnrollments: true,
     resetUserBadges: false,
     resetPoints: false,
+    selectedCourseIds: [],
   });
 
   const isCreator = hasRole("creator") || hasRole("admin");
+
+  // Fetch all courses for selection
+  const { data: allCourses = [] } = useQuery({
+    queryKey: ["all-courses-for-reset"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("courses")
+        .select("id, title, status")
+        .order("title", { ascending: true });
+      
+      if (error) throw error;
+      return data as Course[];
+    },
+    enabled: isCreator,
+  });
+
+  // Fetch user's enrolled courses when user is selected
+  const { data: userEnrollments = [], isLoading: isLoadingEnrollments } = useQuery({
+    queryKey: ["user-enrollments-for-reset", selectedUser?.user_id],
+    queryFn: async () => {
+      if (!selectedUser) return [];
+      
+      const { data, error } = await supabase
+        .from("course_enrollments")
+        .select(`
+          course_id,
+          courses (
+            id,
+            title,
+            status
+          )
+        `)
+        .eq("user_id", selectedUser.user_id);
+      
+      if (error) throw error;
+      return data?.map(e => e.courses).filter(Boolean) as Course[];
+    },
+    enabled: !!selectedUser && isCreator,
+  });
 
   useEffect(() => {
     if (isCreator) {
@@ -89,6 +139,12 @@ export const UserCourseResetManager: React.FC = () => {
       setFilteredUsers([]);
     }
   }, [searchQuery, users]);
+
+  // Reset selected courses when user changes
+  useEffect(() => {
+    setOptions(prev => ({ ...prev, selectedCourseIds: [] }));
+    setShowCourseSelector(false);
+  }, [selectedUser]);
 
   const fetchUsers = async () => {
     setIsLoading(true);
@@ -116,28 +172,72 @@ export const UserCourseResetManager: React.FC = () => {
       const results: string[] = [];
 
       if (opts.resetEnrollments) {
-        // Delete course enrollments
-        const { error: enrollmentError } = await supabase
-          .from("course_enrollments")
-          .delete()
-          .eq("user_id", userId);
-        if (enrollmentError) throw new Error(`Error al eliminar inscripciones: ${enrollmentError.message}`);
+        const hasSelectedCourses = opts.selectedCourseIds.length > 0;
         
-        // Also delete quiz attempts
-        const { error: quizError } = await supabase
-          .from("quiz_attempts")
-          .delete()
-          .eq("user_id", userId);
-        if (quizError) throw new Error(`Error al eliminar intentos de quiz: ${quizError.message}`);
+        if (hasSelectedCourses) {
+          // Delete only selected course enrollments
+          const { error: enrollmentError } = await supabase
+            .from("course_enrollments")
+            .delete()
+            .eq("user_id", userId)
+            .in("course_id", opts.selectedCourseIds);
+          if (enrollmentError) throw new Error(`Error al eliminar inscripciones: ${enrollmentError.message}`);
+          
+          // Get quiz IDs for selected courses to delete attempts
+          const { data: quizzes } = await supabase
+            .from("quizzes")
+            .select("id")
+            .in("course_id", opts.selectedCourseIds);
+          
+          if (quizzes && quizzes.length > 0) {
+            const quizIds = quizzes.map(q => q.id);
+            const { error: quizError } = await supabase
+              .from("quiz_attempts")
+              .delete()
+              .eq("user_id", userId)
+              .in("quiz_id", quizIds);
+            if (quizError) throw new Error(`Error al eliminar intentos de quiz: ${quizError.message}`);
+          }
 
-        // Delete material progress
-        const { error: progressError } = await supabase
-          .from("material_progress")
-          .delete()
-          .eq("user_id", userId);
-        if (progressError) throw new Error(`Error al eliminar progreso: ${progressError.message}`);
+          // Get material IDs for selected courses to delete progress
+          const { data: materials } = await supabase
+            .from("course_materials")
+            .select("id")
+            .in("course_id", opts.selectedCourseIds);
 
-        results.push("Inscripciones y progreso eliminados");
+          if (materials && materials.length > 0) {
+            const materialIds = materials.map(m => m.id);
+            const { error: progressError } = await supabase
+              .from("material_progress")
+              .delete()
+              .eq("user_id", userId)
+              .in("material_id", materialIds);
+            if (progressError) throw new Error(`Error al eliminar progreso: ${progressError.message}`);
+          }
+
+          results.push(`Progreso eliminado en ${opts.selectedCourseIds.length} curso(s)`);
+        } else {
+          // Delete all enrollments (original behavior)
+          const { error: enrollmentError } = await supabase
+            .from("course_enrollments")
+            .delete()
+            .eq("user_id", userId);
+          if (enrollmentError) throw new Error(`Error al eliminar inscripciones: ${enrollmentError.message}`);
+          
+          const { error: quizError } = await supabase
+            .from("quiz_attempts")
+            .delete()
+            .eq("user_id", userId);
+          if (quizError) throw new Error(`Error al eliminar intentos de quiz: ${quizError.message}`);
+
+          const { error: progressError } = await supabase
+            .from("material_progress")
+            .delete()
+            .eq("user_id", userId);
+          if (progressError) throw new Error(`Error al eliminar progreso: ${progressError.message}`);
+
+          results.push("Todas las inscripciones y progreso eliminados");
+        }
       }
 
       if (opts.resetUserBadges) {
@@ -147,7 +247,6 @@ export const UserCourseResetManager: React.FC = () => {
           .eq("user_id", userId);
         if (error) throw new Error(`Error al eliminar insignias: ${error.message}`);
         
-        // Update badges_count in profile
         await supabase
           .from("profiles")
           .update({ badges_count: 0 })
@@ -176,6 +275,7 @@ export const UserCourseResetManager: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ["ranking"] });
       queryClient.invalidateQueries({ queryKey: ["my-badges"] });
       queryClient.invalidateQueries({ queryKey: ["user-badges-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["user-enrollments-for-reset"] });
 
       toast({
         title: "Datos reiniciados",
@@ -185,7 +285,13 @@ export const UserCourseResetManager: React.FC = () => {
       setIsDialogOpen(false);
       setSelectedUser(null);
       setSearchQuery("");
-      fetchUsers(); // Refresh user list
+      setOptions({
+        resetEnrollments: true,
+        resetUserBadges: false,
+        resetPoints: false,
+        selectedCourseIds: [],
+      });
+      fetchUsers();
     },
     onError: (error: Error) => {
       toast({
@@ -224,9 +330,27 @@ export const UserCourseResetManager: React.FC = () => {
     }
   };
 
+  const handleToggleCourse = (courseId: string) => {
+    setOptions(prev => ({
+      ...prev,
+      selectedCourseIds: prev.selectedCourseIds.includes(courseId)
+        ? prev.selectedCourseIds.filter(id => id !== courseId)
+        : [...prev.selectedCourseIds, courseId]
+    }));
+  };
+
+  const handleSelectAllCourses = () => {
+    const courseIds = userEnrollments.map(c => c.id);
+    setOptions(prev => ({
+      ...prev,
+      selectedCourseIds: prev.selectedCourseIds.length === courseIds.length ? [] : courseIds
+    }));
+  };
+
   if (!isCreator) return null;
 
-  const anySelected = Object.values(options).some(Boolean);
+  const anySelected = options.resetEnrollments || options.resetUserBadges || options.resetPoints;
+  const selectedCoursesCount = options.selectedCourseIds.length;
 
   return (
     <Card className="border-amber-500/50">
@@ -236,7 +360,7 @@ export const UserCourseResetManager: React.FC = () => {
           Reiniciar Cursos por Usuario
         </CardTitle>
         <CardDescription>
-          Reinicia el progreso de cursos, insignias y puntos de un usuario específico.
+          Reinicia el progreso de cursos específicos, insignias y puntos de un usuario.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -330,23 +454,114 @@ export const UserCourseResetManager: React.FC = () => {
           <div className="space-y-3 pt-2">
             <Label className="text-sm font-medium">Opciones de reinicio</Label>
             
-            <div className="flex items-start gap-3">
-              <Checkbox
-                id="userResetEnrollments"
-                checked={options.resetEnrollments}
-                onCheckedChange={(checked) =>
-                  setOptions((prev) => ({ ...prev, resetEnrollments: checked as boolean }))
-                }
-              />
-              <div>
-                <Label htmlFor="userResetEnrollments" className="font-medium cursor-pointer flex items-center gap-2">
-                  <BookOpen className="h-4 w-4 text-primary" />
-                  Reiniciar cursos y progreso
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Elimina inscripciones, intentos de quiz y progreso de materiales
-                </p>
+            {/* Enrollments Option */}
+            <div className="space-y-2">
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="userResetEnrollments"
+                  checked={options.resetEnrollments}
+                  onCheckedChange={(checked) =>
+                    setOptions((prev) => ({ 
+                      ...prev, 
+                      resetEnrollments: checked as boolean,
+                      selectedCourseIds: checked ? prev.selectedCourseIds : []
+                    }))
+                  }
+                />
+                <div className="flex-1">
+                  <Label htmlFor="userResetEnrollments" className="font-medium cursor-pointer flex items-center gap-2">
+                    <BookOpen className="h-4 w-4 text-primary" />
+                    Reiniciar cursos y progreso
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Elimina inscripciones, intentos de quiz y progreso de materiales
+                  </p>
+                </div>
               </div>
+
+              {/* Course Selector - Only show when resetEnrollments is checked */}
+              {options.resetEnrollments && (
+                <div className="ml-6 mt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowCourseSelector(!showCourseSelector)}
+                    className="w-full justify-between"
+                  >
+                    <span className="flex items-center gap-2">
+                      <BookOpen className="h-4 w-4" />
+                      {selectedCoursesCount > 0 
+                        ? `${selectedCoursesCount} curso(s) seleccionado(s)`
+                        : "Seleccionar cursos específicos (opcional)"}
+                    </span>
+                    {showCourseSelector ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </Button>
+
+                  {showCourseSelector && (
+                    <div className="mt-2 border rounded-md p-2 bg-background">
+                      {isLoadingEnrollments ? (
+                        <div className="flex items-center justify-center py-4">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span className="ml-2 text-sm text-muted-foreground">Cargando cursos...</span>
+                        </div>
+                      ) : userEnrollments.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          Este usuario no tiene cursos activos
+                        </p>
+                      ) : (
+                        <>
+                          <div className="flex items-center justify-between mb-2 pb-2 border-b">
+                            <span className="text-xs text-muted-foreground">
+                              {userEnrollments.length} curso(s) inscritos
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleSelectAllCourses}
+                              className="text-xs h-7"
+                            >
+                              {selectedCoursesCount === userEnrollments.length 
+                                ? "Deseleccionar todos" 
+                                : "Seleccionar todos"}
+                            </Button>
+                          </div>
+                          <ScrollArea className="h-40">
+                            <div className="space-y-1">
+                              {userEnrollments.map((course) => (
+                                <label
+                                  key={course.id}
+                                  className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
+                                >
+                                  <Checkbox
+                                    checked={options.selectedCourseIds.includes(course.id)}
+                                    onCheckedChange={() => handleToggleCourse(course.id)}
+                                  />
+                                  <span className="text-sm flex-1 truncate">{course.title}</span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {course.status === "published" ? "Publicado" : course.status}
+                                  </Badge>
+                                </label>
+                              ))}
+                            </div>
+                          </ScrollArea>
+                        </>
+                      )}
+                      
+                      <p className="text-xs text-muted-foreground mt-2 pt-2 border-t">
+                        {selectedCoursesCount === 0 
+                          ? "⚠️ Sin selección: se reiniciará TODO el progreso del usuario"
+                          : `Se reiniciará solo el progreso de los ${selectedCoursesCount} curso(s) seleccionado(s)`}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex items-start gap-3">
@@ -415,7 +630,11 @@ export const UserCourseResetManager: React.FC = () => {
                 </p>
                 <ul className="list-disc list-inside text-sm space-y-1">
                   {options.resetEnrollments && (
-                    <li>Inscripciones, progreso de cursos e intentos de quiz</li>
+                    <li>
+                      {options.selectedCourseIds.length > 0 
+                        ? `Progreso de ${options.selectedCourseIds.length} curso(s) seleccionado(s)`
+                        : "TODAS las inscripciones, progreso de cursos e intentos de quiz"}
+                    </li>
                   )}
                   {options.resetUserBadges && <li>Insignias ganadas</li>}
                   {options.resetPoints && <li>Puntos acumulados (se pondrán en 0)</li>}
