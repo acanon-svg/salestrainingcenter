@@ -29,19 +29,45 @@ interface TeamDataProcessed {
   source_type: "json" | "google_sheet";
 }
 
-interface Course {
+interface CourseMaterial {
+  title: string;
+  type: string;
+}
+
+interface QuizQuestion {
+  question: string;
+}
+
+interface Quiz {
+  title: string;
+  passing_score: number;
+  questions: QuizQuestion[] | null;
+}
+
+interface CourseWithDetails {
   title: string;
   description: string | null;
   dimension: string;
   difficulty: string;
   points: number;
+  estimated_duration_minutes: number | null;
+  objectives: string[] | null;
+  tags: string[] | null;
+  materials: CourseMaterial[] | null;
+  quizzes: Quiz[] | null;
 }
 
-interface TrainingMaterial {
+interface MaterialCategory {
+  name: string;
+}
+
+interface TrainingMaterialWithCategory {
   title: string;
   description: string | null;
   type: string;
   keywords: string[] | null;
+  content_text: string | null;
+  category: MaterialCategory | null;
 }
 
 interface Announcement {
@@ -250,10 +276,11 @@ async function processTeamData(rawData: TeamDataRaw[]): Promise<TeamDataProcesse
   return processed;
 }
 
-function formatCoursesForContext(courses: Course[]): string {
+function formatCoursesForContext(courses: CourseWithDetails[]): string {
   if (!courses || courses.length === 0) return "";
 
   let context = "\n\n---\nCURSOS DISPONIBLES EN LA PLATAFORMA:\n";
+  context += `Total de cursos: ${courses.length}\n`;
   
   for (const course of courses) {
     context += `\n### ${course.title}`;
@@ -261,28 +288,73 @@ function formatCoursesForContext(courses: Course[]): string {
       context += `\n${course.description}`;
     }
     context += `\n- Dimensión: ${course.dimension}, Dificultad: ${course.difficulty}, Puntos: ${course.points}`;
+    if (course.estimated_duration_minutes) {
+      context += `, Duración: ${course.estimated_duration_minutes} minutos`;
+    }
+    if (course.objectives && course.objectives.length > 0) {
+      context += `\n- Objetivos: ${course.objectives.join(", ")}`;
+    }
+    if (course.tags && course.tags.length > 0) {
+      context += `\n- Etiquetas: ${course.tags.join(", ")}`;
+    }
+    if (course.materials && course.materials.length > 0) {
+      context += `\n- Contenidos (${course.materials.length}):`;
+      for (const mat of course.materials) {
+        context += `\n  * ${mat.title} (${mat.type})`;
+      }
+    }
+    if (course.quizzes && course.quizzes.length > 0) {
+      context += `\n- Evaluaciones (${course.quizzes.length}):`;
+      for (const quiz of course.quizzes) {
+        context += `\n  * ${quiz.title} - Puntaje mínimo: ${quiz.passing_score}%`;
+        if (quiz.questions && quiz.questions.length > 0) {
+          context += ` (${quiz.questions.length} preguntas)`;
+        }
+      }
+    }
   }
   
   context += "\n---\n";
+  context += "Usa esta información para responder preguntas sobre cursos, contenidos, evaluaciones y requisitos de capacitación.\n";
   return context;
 }
 
-function formatMaterialsForContext(materials: TrainingMaterial[]): string {
+function formatMaterialsForContext(materials: TrainingMaterialWithCategory[]): string {
   if (!materials || materials.length === 0) return "";
 
   let context = "\n\n---\nMATERIALES DE FORMACIÓN:\n";
+  context += `Total de materiales: ${materials.length}\n`;
   
+  // Group by category for better organization
+  const byCategory = new Map<string, TrainingMaterialWithCategory[]>();
   for (const material of materials) {
-    context += `\n### ${material.title} (${material.type})`;
-    if (material.description) {
-      context += `\n${material.description}`;
+    const categoryName = material.category?.name || "Sin categoría";
+    if (!byCategory.has(categoryName)) {
+      byCategory.set(categoryName, []);
     }
-    if (material.keywords && material.keywords.length > 0) {
-      context += `\n- Palabras clave: ${material.keywords.join(", ")}`;
+    byCategory.get(categoryName)!.push(material);
+  }
+  
+  for (const [categoryName, categoryMaterials] of byCategory) {
+    context += `\n## ${categoryName} (${categoryMaterials.length} materiales)`;
+    for (const material of categoryMaterials) {
+      context += `\n### ${material.title} (${material.type})`;
+      if (material.description) {
+        context += `\n${material.description}`;
+      }
+      if (material.keywords && material.keywords.length > 0) {
+        context += `\n- Palabras clave: ${material.keywords.join(", ")}`;
+      }
+      if (material.content_text) {
+        // Include a summary of the content if available (limit to avoid too much text)
+        const contentPreview = material.content_text.slice(0, 500);
+        context += `\n- Contenido: ${contentPreview}${material.content_text.length > 500 ? "..." : ""}`;
+      }
     }
   }
   
   context += "\n---\n";
+  context += "Usa estos materiales para responder preguntas sobre documentación, guías, videos y recursos de capacitación.\n";
   return context;
 }
 
@@ -394,14 +466,21 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Fetch all context data in parallel
+    // Fetch all context data in parallel - no limits to include ALL content
     const [configResult, teamDataResult, coursesResult, materialsResult, announcementsResult, glossaryResult] = await Promise.all([
       supabase.from("chatbot_config").select("system_prompt").single(),
       supabase.from("chatbot_team_data").select("data_name, data_content, description").order("created_at", { ascending: false }),
-      supabase.from("courses").select("title, description, dimension, difficulty, points").eq("status", "published").limit(50),
-      supabase.from("training_materials").select("title, description, type, keywords").eq("is_published", true).limit(50),
-      supabase.from("announcements").select("title, content, type").order("created_at", { ascending: false }).limit(10),
-      supabase.from("glossary_terms").select("term, definition, example").limit(100),
+      supabase.from("courses").select(`
+        title, description, dimension, difficulty, points, estimated_duration_minutes, objectives, tags,
+        course_materials:course_materials(title, type),
+        quizzes:quizzes(title, passing_score, questions:quiz_questions(question))
+      `).eq("status", "published"),
+      supabase.from("training_materials").select(`
+        title, description, type, keywords, content_text,
+        category:material_categories(name)
+      `).eq("is_published", true),
+      supabase.from("announcements").select("title, content, type").order("created_at", { ascending: false }).limit(20),
+      supabase.from("glossary_terms").select("term, definition, example"),
     ]);
 
     let systemPrompt = configResult.data?.system_prompt || 
@@ -419,13 +498,35 @@ serve(async (req) => {
       }
     }
 
-    const courses = coursesResult.data as Course[] | null;
-    if (courses && courses.length > 0) {
+    // Process courses with nested data
+    const coursesRaw = coursesResult.data;
+    if (coursesRaw && coursesRaw.length > 0) {
+      const courses: CourseWithDetails[] = coursesRaw.map((c: Record<string, unknown>) => ({
+        title: c.title as string,
+        description: c.description as string | null,
+        dimension: c.dimension as string,
+        difficulty: c.difficulty as string,
+        points: c.points as number,
+        estimated_duration_minutes: c.estimated_duration_minutes as number | null,
+        objectives: c.objectives as string[] | null,
+        tags: c.tags as string[] | null,
+        materials: c.course_materials as CourseMaterial[] | null,
+        quizzes: c.quizzes as Quiz[] | null,
+      }));
       systemPrompt += formatCoursesForContext(courses);
     }
 
-    const materials = materialsResult.data as TrainingMaterial[] | null;
-    if (materials && materials.length > 0) {
+    // Process materials with category
+    const materialsRaw = materialsResult.data;
+    if (materialsRaw && materialsRaw.length > 0) {
+      const materials: TrainingMaterialWithCategory[] = materialsRaw.map((m: Record<string, unknown>) => ({
+        title: m.title as string,
+        description: m.description as string | null,
+        type: m.type as string,
+        keywords: m.keywords as string[] | null,
+        content_text: m.content_text as string | null,
+        category: m.category as MaterialCategory | null,
+      }));
       systemPrompt += formatMaterialsForContext(materials);
     }
 
