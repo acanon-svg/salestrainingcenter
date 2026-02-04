@@ -2,100 +2,31 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { BookOpen, Plus, Users, BarChart, CheckCircle, Timer } from "lucide-react";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import {
-  BookOpen,
-  Plus,
-  Eye,
-  Edit,
-  Trash2,
-  Users,
-  BarChart,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  Timer,
-  Loader2,
-  Award,
-  GripVertical,
-  ArrowUp,
-  ArrowDown,
-  Send,
-  Archive,
-} from "lucide-react";
-import { statusLabels, dimensionLabels } from "@/lib/types";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import { useCreatorCourses, useDeleteCourse, useUpdateCourseOrder, usePublishCourse, useArchiveCourse, CreatorCourse } from "@/hooks/useCreatorCourses";
-import { MyDiplomasSection } from "@/components/courses/MyDiplomasSection";
+  useCreatorCourses,
+  useDeleteCourse,
+  useBulkUpdateCourseOrder,
+  usePublishCourse,
+  useArchiveCourse,
+  CreatorCourse,
+} from "@/hooks/useCreatorCourses";
+import { DraggableCourseList } from "@/components/courses/DraggableCourseList";
 
 const MyCourses: React.FC = () => {
-  const { profile, hasRole } = useAuth();
+  const { profile } = useAuth();
   const { data: myCourses = [], isLoading } = useCreatorCourses();
   const deleteCourse = useDeleteCourse();
-  const updateCourseOrder = useUpdateCourseOrder();
+  const bulkUpdateOrder = useBulkUpdateCourseOrder();
   const publishCourse = usePublishCourse();
   const archiveCourse = useArchiveCourse();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [publishingId, setPublishingId] = useState<string | null>(null);
   const [archivingId, setArchivingId] = useState<string | null>(null);
-  const [isReordering, setIsReordering] = useState(false);
-
-  const getStatusBadge = (status: string, scheduled_at?: string | null) => {
-    // Check if it's a scheduled course
-    if (status === "draft" && scheduled_at) {
-      const scheduledDate = new Date(scheduled_at);
-      if (scheduledDate > new Date()) {
-        return (
-          <Badge className="bg-addi-cyan text-secondary gap-1">
-            <Timer className="w-3 h-3" />
-            Programado
-          </Badge>
-        );
-      }
-    }
-
-    switch (status) {
-      case "published":
-        return (
-          <Badge className="bg-success text-success-foreground gap-1">
-            <CheckCircle className="w-3 h-3" />
-            {statusLabels[status as keyof typeof statusLabels]}
-          </Badge>
-        );
-      case "draft":
-        return (
-          <Badge variant="outline" className="gap-1 text-warning border-warning">
-            <Clock className="w-3 h-3" />
-            {statusLabels[status as keyof typeof statusLabels]}
-          </Badge>
-        );
-      case "archived":
-        return (
-          <Badge variant="secondary" className="gap-1">
-            <AlertCircle className="w-3 h-3" />
-            {statusLabels[status as keyof typeof statusLabels]}
-          </Badge>
-        );
-      default:
-        return null;
-    }
-  };
 
   const handleDelete = async (courseId: string) => {
     setDeletingId(courseId);
@@ -124,24 +55,16 @@ const MyCourses: React.FC = () => {
     }
   };
 
-  const handleMoveUp = async (course: CreatorCourse, courses: CreatorCourse[]) => {
-    const currentIndex = courses.findIndex(c => c.id === course.id);
-    if (currentIndex <= 0) return;
-    
-    const prevCourse = courses[currentIndex - 1];
-    const newOrder = prevCourse.order_index + 1;
-    await updateCourseOrder.mutateAsync({ courseId: course.id, newOrder });
+  const handleReorder = async (reorderedCourses: CreatorCourse[]) => {
+    // Assign new order indices based on position (reverse because highest = first)
+    const updates = reorderedCourses.map((course, index) => ({
+      id: course.id,
+      order_index: reorderedCourses.length - index, // First item gets highest index
+    }));
+    await bulkUpdateOrder.mutateAsync(updates);
   };
 
-  const handleMoveDown = async (course: CreatorCourse, courses: CreatorCourse[]) => {
-    const currentIndex = courses.findIndex(c => c.id === course.id);
-    if (currentIndex >= courses.length - 1) return;
-    
-    const nextCourse = courses[currentIndex + 1];
-    const newOrder = Math.max(0, nextCourse.order_index - 1);
-    await updateCourseOrder.mutateAsync({ courseId: course.id, newOrder });
-  };
-
+  // Filter courses by status
   const publishedCourses = myCourses.filter((c) => c.status === "published");
   const draftCourses = myCourses.filter((c) => c.status === "draft" && !c.scheduled_at);
   const scheduledCourses = myCourses.filter(
@@ -149,228 +72,13 @@ const MyCourses: React.FC = () => {
   );
   const archivedCourses = myCourses.filter((c) => c.status === "archived");
 
+  // Stats
   const totalEnrolled = myCourses.reduce((sum, c) => sum + c.enrolled_count, 0);
   const coursesWithScore = myCourses.filter((c) => c.avg_score !== null);
   const avgScore =
     coursesWithScore.length > 0
       ? coursesWithScore.reduce((sum, c) => sum + (c.avg_score || 0), 0) / coursesWithScore.length
       : 0;
-
-  const renderCourseList = (courses: CreatorCourse[]) => {
-    if (isLoading) {
-      return (
-        <div className="divide-y divide-border">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="p-4">
-              <Skeleton className="h-16 w-full" />
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    if (courses.length === 0) {
-      return (
-        <div className="text-center py-8 text-muted-foreground">
-          <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
-          <p>No hay cursos en esta categoría.</p>
-        </div>
-      );
-    }
-
-    // Sort courses by order_index (highest first) for display
-    const sortedCourses = [...courses].sort((a, b) => b.order_index - a.order_index);
-    return (
-      <div className="divide-y divide-border">
-        {sortedCourses.map((course, index) => (
-          <div
-            key={course.id}
-            className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors"
-          >
-            {/* Order controls */}
-            <div className="flex flex-col gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                disabled={index === 0 || updateCourseOrder.isPending}
-                onClick={() => handleMoveUp(course, sortedCourses)}
-              >
-                <ArrowUp className="w-3 h-3" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                disabled={index === sortedCourses.length - 1 || updateCourseOrder.isPending}
-                onClick={() => handleMoveDown(course, sortedCourses)}
-              >
-                <ArrowDown className="w-3 h-3" />
-              </Button>
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-3 mb-1 flex-wrap">
-                <h3 className="font-medium truncate">{course.title}</h3>
-                {getStatusBadge(course.status, course.scheduled_at)}
-                <Badge variant="outline" className="text-xs">
-                  {dimensionLabels[course.dimension as keyof typeof dimensionLabels] || course.dimension}
-                </Badge>
-              </div>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-                <span>
-                  Creado: {format(new Date(course.created_at), "d MMM yyyy", { locale: es })}
-                </span>
-                {course.scheduled_at && new Date(course.scheduled_at) > new Date() && (
-                  <span className="flex items-center gap-1 text-addi-cyan">
-                    <Timer className="w-3 h-3" />
-                    Publica: {format(new Date(course.scheduled_at), "d MMM yyyy, HH:mm", { locale: es })}
-                  </span>
-                )}
-                {course.enrolled_count > 0 && (
-                  <span className="flex items-center gap-1">
-                    <Users className="w-3 h-3" />
-                    {course.enrolled_count} inscritos
-                  </span>
-                )}
-                {course.avg_score !== null && (
-                  <span className="flex items-center gap-1">
-                    <BarChart className="w-3 h-3" />
-                    {course.avg_score}% promedio
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {/* Publish button for drafts */}
-              {course.status === "draft" && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-success hover:text-success"
-                      disabled={publishingId === course.id}
-                      title="Publicar curso"
-                    >
-                      {publishingId === course.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Send className="w-4 h-4" />
-                      )}
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>¿Publicar este curso?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        El curso será visible para todos los estudiantes asignados. Asegúrate de que el contenido esté completo.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => handlePublish(course.id)}
-                        className="bg-success text-success-foreground hover:bg-success/90"
-                      >
-                        Publicar
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
-              
-              {/* Archive button for published courses */}
-              {course.status === "published" && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-muted-foreground hover:text-muted-foreground"
-                      disabled={archivingId === course.id}
-                      title="Archivar curso"
-                    >
-                      {archivingId === course.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Archive className="w-4 h-4" />
-                      )}
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>¿Archivar este curso?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        El curso dejará de estar visible para nuevos estudiantes. Los estudiantes ya inscritos podrán seguir accediendo.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => handleArchive(course.id)}>
-                        Archivar
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
-
-              <Link to={`/courses/${course.id}`}>
-                <Button variant="ghost" size="icon" title="Ver curso">
-                  <Eye className="w-4 h-4" />
-                </Button>
-              </Link>
-              <Link to={`/courses/${course.id}/edit`}>
-                <Button variant="ghost" size="icon" title="Editar curso">
-                  <Edit className="w-4 h-4" />
-                </Button>
-              </Link>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-destructive hover:text-destructive"
-                    disabled={deletingId === course.id}
-                    title="Eliminar curso"
-                  >
-                    {deletingId === course.id ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="w-4 h-4" />
-                    )}
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>¿Eliminar este curso?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Esta acción no se puede deshacer. Se eliminarán todos los materiales, quizzes e inscripciones
-                      asociadas a este curso.
-                      {course.enrolled_count > 0 && (
-                        <span className="block mt-2 text-destructive font-medium">
-                          ⚠️ Este curso tiene {course.enrolled_count} estudiantes inscritos.
-                        </span>
-                      )}
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => handleDelete(course.id)}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      Eliminar
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  };
 
   return (
     <DashboardLayout>
@@ -382,7 +90,9 @@ const MyCourses: React.FC = () => {
               <BookOpen className="w-8 h-8 text-primary" />
               Mis Creaciones
             </h1>
-            <p className="text-muted-foreground">Gestiona los cursos que has creado</p>
+            <p className="text-muted-foreground">
+              Gestiona los cursos que has creado • Arrastra para reordenar
+            </p>
           </div>
 
           <Link to="/courses/create">
@@ -479,33 +189,73 @@ const MyCourses: React.FC = () => {
           </TabsList>
 
           <TabsContent value="all" className="mt-6">
-            <Card className="border-border/50">
-              <CardContent className="p-0">{renderCourseList(myCourses)}</CardContent>
-            </Card>
+            <DraggableCourseList
+              courses={myCourses}
+              isLoading={isLoading}
+              onReorder={handleReorder}
+              onDelete={handleDelete}
+              onPublish={handlePublish}
+              onArchive={handleArchive}
+              deletingId={deletingId}
+              publishingId={publishingId}
+              archivingId={archivingId}
+            />
           </TabsContent>
 
           <TabsContent value="published" className="mt-6">
-            <Card className="border-border/50">
-              <CardContent className="p-0">{renderCourseList(publishedCourses)}</CardContent>
-            </Card>
+            <DraggableCourseList
+              courses={publishedCourses}
+              isLoading={isLoading}
+              onReorder={handleReorder}
+              onDelete={handleDelete}
+              onPublish={handlePublish}
+              onArchive={handleArchive}
+              deletingId={deletingId}
+              publishingId={publishingId}
+              archivingId={archivingId}
+            />
           </TabsContent>
 
           <TabsContent value="scheduled" className="mt-6">
-            <Card className="border-border/50">
-              <CardContent className="p-0">{renderCourseList(scheduledCourses)}</CardContent>
-            </Card>
+            <DraggableCourseList
+              courses={scheduledCourses}
+              isLoading={isLoading}
+              onReorder={handleReorder}
+              onDelete={handleDelete}
+              onPublish={handlePublish}
+              onArchive={handleArchive}
+              deletingId={deletingId}
+              publishingId={publishingId}
+              archivingId={archivingId}
+            />
           </TabsContent>
 
           <TabsContent value="draft" className="mt-6">
-            <Card className="border-border/50">
-              <CardContent className="p-0">{renderCourseList(draftCourses)}</CardContent>
-            </Card>
+            <DraggableCourseList
+              courses={draftCourses}
+              isLoading={isLoading}
+              onReorder={handleReorder}
+              onDelete={handleDelete}
+              onPublish={handlePublish}
+              onArchive={handleArchive}
+              deletingId={deletingId}
+              publishingId={publishingId}
+              archivingId={archivingId}
+            />
           </TabsContent>
 
           <TabsContent value="archived" className="mt-6">
-            <Card className="border-border/50">
-              <CardContent className="p-0">{renderCourseList(archivedCourses)}</CardContent>
-            </Card>
+            <DraggableCourseList
+              courses={archivedCourses}
+              isLoading={isLoading}
+              onReorder={handleReorder}
+              onDelete={handleDelete}
+              onPublish={handlePublish}
+              onArchive={handleArchive}
+              deletingId={deletingId}
+              publishingId={publishingId}
+              archivingId={archivingId}
+            />
           </TabsContent>
         </Tabs>
       </div>
