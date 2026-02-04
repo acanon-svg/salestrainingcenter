@@ -35,11 +35,13 @@ import {
   GripVertical,
   ArrowUp,
   ArrowDown,
+  Send,
+  Archive,
 } from "lucide-react";
 import { statusLabels, dimensionLabels } from "@/lib/types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { useCreatorCourses, useDeleteCourse, useUpdateCourseOrder, CreatorCourse } from "@/hooks/useCreatorCourses";
+import { useCreatorCourses, useDeleteCourse, useUpdateCourseOrder, usePublishCourse, useArchiveCourse, CreatorCourse } from "@/hooks/useCreatorCourses";
 import { MyDiplomasSection } from "@/components/courses/MyDiplomasSection";
 
 const MyCourses: React.FC = () => {
@@ -47,7 +49,11 @@ const MyCourses: React.FC = () => {
   const { data: myCourses = [], isLoading } = useCreatorCourses();
   const deleteCourse = useDeleteCourse();
   const updateCourseOrder = useUpdateCourseOrder();
+  const publishCourse = usePublishCourse();
+  const archiveCourse = useArchiveCourse();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [publishingId, setPublishingId] = useState<string | null>(null);
+  const [archivingId, setArchivingId] = useState<string | null>(null);
   const [isReordering, setIsReordering] = useState(false);
 
   const getStatusBadge = (status: string, scheduled_at?: string | null) => {
@@ -97,6 +103,24 @@ const MyCourses: React.FC = () => {
       await deleteCourse.mutateAsync(courseId);
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handlePublish = async (courseId: string) => {
+    setPublishingId(courseId);
+    try {
+      await publishCourse.mutateAsync(courseId);
+    } finally {
+      setPublishingId(null);
+    }
+  };
+
+  const handleArchive = async (courseId: string) => {
+    setArchivingId(courseId);
+    try {
+      await archiveCourse.mutateAsync(courseId);
+    } finally {
+      setArchivingId(null);
     }
   };
 
@@ -218,13 +242,86 @@ const MyCourses: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2">
+              {/* Publish button for drafts */}
+              {course.status === "draft" && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-success hover:text-success"
+                      disabled={publishingId === course.id}
+                      title="Publicar curso"
+                    >
+                      {publishingId === course.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Send className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>¿Publicar este curso?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        El curso será visible para todos los estudiantes asignados. Asegúrate de que el contenido esté completo.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => handlePublish(course.id)}
+                        className="bg-success text-success-foreground hover:bg-success/90"
+                      >
+                        Publicar
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+              
+              {/* Archive button for published courses */}
+              {course.status === "published" && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-muted-foreground"
+                      disabled={archivingId === course.id}
+                      title="Archivar curso"
+                    >
+                      {archivingId === course.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Archive className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>¿Archivar este curso?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        El curso dejará de estar visible para nuevos estudiantes. Los estudiantes ya inscritos podrán seguir accediendo.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => handleArchive(course.id)}>
+                        Archivar
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+
               <Link to={`/courses/${course.id}`}>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" title="Ver curso">
                   <Eye className="w-4 h-4" />
                 </Button>
               </Link>
               <Link to={`/courses/${course.id}/edit`}>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" title="Editar curso">
                   <Edit className="w-4 h-4" />
                 </Button>
               </Link>
@@ -235,6 +332,7 @@ const MyCourses: React.FC = () => {
                     size="icon"
                     className="text-destructive hover:text-destructive"
                     disabled={deletingId === course.id}
+                    title="Eliminar curso"
                   >
                     {deletingId === course.id ? (
                       <Loader2 className="w-4 h-4 animate-spin" />

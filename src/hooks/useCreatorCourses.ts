@@ -124,6 +124,72 @@ export const useBulkUpdateCourseOrder = () => {
   });
 };
 
+export const usePublishCourse = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (courseId: string) => {
+      const { error } = await supabase
+        .from("courses")
+        .update({ 
+          status: "published",
+          published_at: new Date().toISOString(),
+          scheduled_at: null
+        })
+        .eq("id", courseId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["creator-courses"] });
+      queryClient.invalidateQueries({ queryKey: ["courses"] });
+      toast({
+        title: "Curso publicado",
+        description: "El curso está ahora visible para los estudiantes.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo publicar el curso",
+        variant: "destructive",
+      });
+    },
+  });
+};
+
+export const useArchiveCourse = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (courseId: string) => {
+      const { error } = await supabase
+        .from("courses")
+        .update({ status: "archived" })
+        .eq("id", courseId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["creator-courses"] });
+      queryClient.invalidateQueries({ queryKey: ["courses"] });
+      toast({
+        title: "Curso archivado",
+        description: "El curso ha sido archivado correctamente.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo archivar el curso",
+        variant: "destructive",
+      });
+    },
+  });
+};
+
 export const useDeleteCourse = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();

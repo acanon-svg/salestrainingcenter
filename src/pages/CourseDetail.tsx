@@ -256,8 +256,10 @@ const CourseDetail: React.FC = () => {
           title: "🎉 ¡Felicitaciones! Has aprobado el curso",
           description: `Obtuviste ${score}% y has ganado ${course?.points || 0} puntos. Podrás verlos reflejados en tu perfil.`,
         });
-        // Check and award any earned badges
-        await checkAndAwardBadges();
+        // Small delay to ensure database has updated enrollment status before checking badges
+        setTimeout(async () => {
+          await checkAndAwardBadges();
+        }, 500);
       } else {
         toast({
           title: "No alcanzaste la calificación mínima",
