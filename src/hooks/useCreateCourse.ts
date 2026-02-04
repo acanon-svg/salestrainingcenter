@@ -23,6 +23,7 @@ interface CourseData {
   scheduled_at: string;
   target_teams: string[];
   target_users: string[];
+  course_tags?: string[];
 }
 
 interface Material {
@@ -181,7 +182,24 @@ export const useCreateCourse = () => {
             .from("course_resources")
             .insert(resourcesToInsert);
 
-          if (resourcesError) throw resourcesError;
+        if (resourcesError) throw resourcesError;
+        }
+      }
+
+      // 5. Assign course tags if any
+      if (courseData.course_tags && courseData.course_tags.length > 0) {
+        const tagAssignments = courseData.course_tags.map((tagId) => ({
+          course_id: course.id,
+          tag_id: tagId,
+        }));
+
+        const { error: tagError } = await (supabase as any)
+          .from("course_tag_assignments")
+          .insert(tagAssignments);
+
+        if (tagError) {
+          console.warn("Error assigning course tags:", tagError);
+          // Don't throw - tags are optional
         }
       }
 

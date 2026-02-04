@@ -8,10 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, BookOpen, Clock, CheckCircle2, AlertCircle, Filter } from "lucide-react";
+import { Search, BookOpen, Clock, CheckCircle2, AlertCircle, Filter, Award } from "lucide-react";
 import { dimensionLabels, TrainingDimension } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { isPast, differenceInDays } from "date-fns";
+import { MyDiplomasSection } from "@/components/courses/MyDiplomasSection";
 
 const Courses: React.FC = () => {
   const [search, setSearch] = useState("");
@@ -143,7 +144,7 @@ const Courses: React.FC = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="in-progress" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
+          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
             <TabsTrigger value="in-progress" className="gap-2">
               <Clock className="w-4 h-4" />
               En Progreso
@@ -155,6 +156,10 @@ const Courses: React.FC = () => {
             <TabsTrigger value="completed" className="gap-2">
               <CheckCircle2 className="w-4 h-4" />
               Completados
+            </TabsTrigger>
+            <TabsTrigger value="diplomas" className="gap-2">
+              <Award className="w-4 h-4" />
+              Mis Diplomas
             </TabsTrigger>
             <TabsTrigger value="expired" className="gap-2">
               <AlertCircle className="w-4 h-4" />
@@ -233,6 +238,10 @@ const Courses: React.FC = () => {
                 description="Completa cursos para verlos aquí"
               />
             )}
+          </TabsContent>
+
+          <TabsContent value="diplomas" className="mt-6">
+            <MyDiplomasSection />
           </TabsContent>
 
           <TabsContent value="expired" className="mt-6">
