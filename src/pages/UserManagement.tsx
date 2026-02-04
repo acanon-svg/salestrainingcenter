@@ -10,6 +10,7 @@ import { DeleteUserDialog } from "@/components/users/DeleteUserDialog";
 import { ResetPasswordDialog } from "@/components/users/ResetPasswordDialog";
 import { PortalSectionManager } from "@/components/admin/PortalSectionManager";
 import { DataResetManager } from "@/components/admin/DataResetManager";
+import { ImpersonateUserDialog } from "@/components/admin/ImpersonateUserDialog";
 import { UserCourseResetManager } from "@/components/admin/UserCourseResetManager";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -307,7 +308,7 @@ const UserManagement: React.FC = () => {
               Ajustes globales que afectan a todos los usuarios
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <UserPlus className="h-5 w-5 text-muted-foreground" />
@@ -329,6 +330,22 @@ const UserManagement: React.FC = () => {
                 />
               </div>
             </div>
+
+            {/* Support Access - Only for creators/admins */}
+            {(isCreator || isAdmin) && (
+              <div className="flex items-center justify-between pt-4 border-t">
+                <div className="flex items-center gap-3">
+                  <UserCog className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">Acceso de Soporte</p>
+                    <p className="text-sm text-muted-foreground">
+                      Ingresa al perfil de un usuario para revisar su experiencia sin afectar sus datos
+                    </p>
+                  </div>
+                </div>
+                <ImpersonateUserDialog />
+              </div>
+            )}
           </CardContent>
         </Card>
 
