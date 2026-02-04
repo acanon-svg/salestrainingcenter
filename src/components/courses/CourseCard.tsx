@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Clock, Users, Star, BookOpen, Trophy, Calendar, Timer, UserPlus } from "lucide-react";
 import { format, isPast, isFuture } from "date-fns";
 import { es } from "date-fns/locale";
+import { useCourseTagsWithAssignments, CourseTag } from "@/hooks/useCourseTags";
 
 interface CourseCardProps {
   course: Course;
@@ -25,8 +26,19 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   showEnrollButton = false,
   onEnroll,
 }) => {
+  const { data: tagData } = useCourseTagsWithAssignments();
+  
   const isExpired = course.expires_at && isPast(new Date(course.expires_at));
   const isScheduled = course.scheduled_at && isFuture(new Date(course.scheduled_at)) && course.status === "draft";
+
+  // Get course tags for this course
+  const courseTags = React.useMemo(() => {
+    if (!tagData) return [];
+    const assignedTagIds = tagData.assignments
+      .filter(a => a.course_id === course.id)
+      .map(a => a.tag_id);
+    return tagData.tags.filter(t => assignedTagIds.includes(t.id));
+  }, [tagData, course.id]);
 
   const getDimensionColor = (dimension: string) => {
     switch (dimension) {
@@ -85,6 +97,21 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             {difficultyLabels[course.difficulty]}
           </Badge>
         </div>
+
+        {/* Course Type Tags */}
+        {courseTags.length > 0 && (
+          <div className="absolute bottom-3 left-3 flex flex-wrap gap-1">
+            {courseTags.map((tag) => (
+              <Badge
+                key={tag.id}
+                style={{ backgroundColor: tag.color }}
+                className="text-white text-xs"
+              >
+                {tag.name}
+              </Badge>
+            ))}
+          </div>
+        )}
 
         {/* Points badge */}
         <div className="absolute top-3 right-3">

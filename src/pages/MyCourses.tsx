@@ -31,17 +31,24 @@ import {
   AlertCircle,
   Timer,
   Loader2,
+  Award,
+  GripVertical,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { statusLabels, dimensionLabels } from "@/lib/types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { useCreatorCourses, useDeleteCourse, CreatorCourse } from "@/hooks/useCreatorCourses";
+import { useCreatorCourses, useDeleteCourse, useUpdateCourseOrder, CreatorCourse } from "@/hooks/useCreatorCourses";
+import { MyDiplomasSection } from "@/components/courses/MyDiplomasSection";
 
 const MyCourses: React.FC = () => {
-  const { profile } = useAuth();
+  const { profile, hasRole } = useAuth();
   const { data: myCourses = [], isLoading } = useCreatorCourses();
   const deleteCourse = useDeleteCourse();
+  const updateCourseOrder = useUpdateCourseOrder();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isReordering, setIsReordering] = useState(false);
 
   const getStatusBadge = (status: string, scheduled_at?: string | null) => {
     // Check if it's a scheduled course
@@ -93,6 +100,24 @@ const MyCourses: React.FC = () => {
     }
   };
 
+  const handleMoveUp = async (course: CreatorCourse, courses: CreatorCourse[]) => {
+    const currentIndex = courses.findIndex(c => c.id === course.id);
+    if (currentIndex <= 0) return;
+    
+    const prevCourse = courses[currentIndex - 1];
+    const newOrder = prevCourse.order_index + 1;
+    await updateCourseOrder.mutateAsync({ courseId: course.id, newOrder });
+  };
+
+  const handleMoveDown = async (course: CreatorCourse, courses: CreatorCourse[]) => {
+    const currentIndex = courses.findIndex(c => c.id === course.id);
+    if (currentIndex >= courses.length - 1) return;
+    
+    const nextCourse = courses[currentIndex + 1];
+    const newOrder = Math.max(0, nextCourse.order_index - 1);
+    await updateCourseOrder.mutateAsync({ courseId: course.id, newOrder });
+  };
+
   const publishedCourses = myCourses.filter((c) => c.status === "published");
   const draftCourses = myCourses.filter((c) => c.status === "draft" && !c.scheduled_at);
   const scheduledCourses = myCourses.filter(
@@ -129,13 +154,36 @@ const MyCourses: React.FC = () => {
       );
     }
 
+    // Sort courses by order_index (highest first) for display
+    const sortedCourses = [...courses].sort((a, b) => b.order_index - a.order_index);
     return (
       <div className="divide-y divide-border">
-        {courses.map((course) => (
+        {sortedCourses.map((course, index) => (
           <div
             key={course.id}
             className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors"
           >
+            {/* Order controls */}
+            <div className="flex flex-col gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                disabled={index === 0 || updateCourseOrder.isPending}
+                onClick={() => handleMoveUp(course, sortedCourses)}
+              >
+                <ArrowUp className="w-3 h-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                disabled={index === sortedCourses.length - 1 || updateCourseOrder.isPending}
+                onClick={() => handleMoveDown(course, sortedCourses)}
+              >
+                <ArrowDown className="w-3 h-3" />
+              </Button>
+            </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 mb-1 flex-wrap">
                 <h3 className="font-medium truncate">{course.title}</h3>

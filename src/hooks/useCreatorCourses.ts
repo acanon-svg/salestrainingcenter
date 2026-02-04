@@ -13,6 +13,7 @@ export interface CreatorCourse {
   scheduled_at: string | null;
   enrolled_count: number;
   avg_score: number | null;
+  order_index: number;
 }
 
 export const useCreatorCourses = () => {
@@ -24,8 +25,9 @@ export const useCreatorCourses = () => {
       // Get courses created by this user
       const { data: courses, error } = await supabase
         .from("courses")
-        .select("id, title, status, dimension, created_at, published_at, scheduled_at")
+        .select("id, title, status, dimension, created_at, published_at, scheduled_at, order_index")
         .eq("created_by", user?.id)
+        .order("order_index", { ascending: false })
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -49,6 +51,7 @@ export const useCreatorCourses = () => {
 
           return {
             ...course,
+            order_index: course.order_index || 0,
             enrolled_count: courseEnrollments.length,
             avg_score: scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null,
           };
@@ -57,6 +60,67 @@ export const useCreatorCourses = () => {
       return coursesWithStats;
     },
     enabled: !!user?.id,
+  });
+};
+
+export const useUpdateCourseOrder = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ courseId, newOrder }: { courseId: string; newOrder: number }) => {
+      const { error } = await supabase
+        .from("courses")
+        .update({ order_index: newOrder })
+        .eq("id", courseId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["creator-courses"] });
+      queryClient.invalidateQueries({ queryKey: ["courses"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo actualizar el orden",
+        variant: "destructive",
+      });
+    },
+  });
+};
+
+export const useBulkUpdateCourseOrder = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (updates: { id: string; order_index: number }[]) => {
+      // Update each course's order
+      for (const update of updates) {
+        const { error } = await supabase
+          .from("courses")
+          .update({ order_index: update.order_index })
+          .eq("id", update.id);
+
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["creator-courses"] });
+      queryClient.invalidateQueries({ queryKey: ["courses"] });
+      toast({
+        title: "Orden actualizado",
+        description: "El orden de los cursos se ha guardado correctamente.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo actualizar el orden",
+        variant: "destructive",
+      });
+    },
   });
 };
 

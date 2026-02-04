@@ -41,6 +41,7 @@ import { dimensionLabels, difficultyLabels, TrainingDimension, DifficultyLevel }
 import { useToast } from "@/hooks/use-toast";
 import { useAvailableTeams, useAvailableUsers } from "@/hooks/useCourseTargeting";
 import { useCreateCourse } from "@/hooks/useCreateCourse";
+import { CourseTagSelector } from "@/components/courses/CourseTagSelector";
 
 const CreateCourse: React.FC = () => {
   const { user } = useAuth();
@@ -72,6 +73,7 @@ const CreateCourse: React.FC = () => {
     scheduled_at: "",
     target_teams: [] as string[],
     target_users: [] as string[],
+    course_tags: [] as string[],
   });
 
   const [materials, setMaterials] = useState<
@@ -505,10 +507,26 @@ const CreateCourse: React.FC = () => {
               </CardContent>
             </Card>
 
+            {/* Course Type Tags */}
+            <Card className="border-border/50">
+              <CardHeader>
+                <CardTitle>Tipo de Material</CardTitle>
+                <CardDescription>
+                  Selecciona el tipo de material del curso (auto-aprendizaje, asistido, etc.)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <CourseTagSelector
+                  selectedTags={courseData.course_tags}
+                  onChange={(tags) => setCourseData({ ...courseData, course_tags: tags })}
+                />
+              </CardContent>
+            </Card>
+
             {/* Tags */}
             <Card className="border-border/50">
               <CardHeader>
-                <CardTitle>Etiquetas</CardTitle>
+                <CardTitle>Etiquetas de Búsqueda</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex gap-2">

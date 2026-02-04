@@ -526,6 +526,69 @@ export type Database = {
           },
         ]
       }
+      course_tag_assignments: {
+        Row: {
+          course_id: string
+          created_at: string
+          id: string
+          tag_id: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          id?: string
+          tag_id: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_tag_assignments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_tag_assignments_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "course_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_tags: {
+        Row: {
+          color: string
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          priority: number
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          priority?: number
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          priority?: number
+        }
+        Relationships: []
+      }
       courses: {
         Row: {
           cover_image_url: string | null
@@ -539,6 +602,7 @@ export type Database = {
           id: string
           language: string
           objectives: string[] | null
+          order_index: number | null
           points: number
           process_id: string | null
           published_at: string | null
@@ -565,6 +629,7 @@ export type Database = {
           id?: string
           language?: string
           objectives?: string[] | null
+          order_index?: number | null
           points?: number
           process_id?: string | null
           published_at?: string | null
@@ -591,6 +656,7 @@ export type Database = {
           id?: string
           language?: string
           objectives?: string[] | null
+          order_index?: number | null
           points?: number
           process_id?: string | null
           published_at?: string | null

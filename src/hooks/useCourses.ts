@@ -13,6 +13,7 @@ export const useCourses = (filters?: { status?: string; dimension?: string }) =>
       let query = client
         .from("courses")
         .select("*, process:processes(*)")
+        .order("order_index", { ascending: false })
         .order("created_at", { ascending: false });
 
       if (filters?.status) {
