@@ -10,8 +10,8 @@ import { MaterialForm } from "@/components/materials/MaterialForm";
 import { CategoryManager } from "@/components/materials/CategoryManager";
 import { TagManager } from "@/components/materials/TagManager";
 import { GlossaryManager } from "@/components/glossary/GlossaryManager";
+import { EnhancedSearch } from "@/components/materials/EnhancedSearch";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, Video, FileText, Link as LinkIcon, FolderOpen, Loader2, Folder, ChevronRight, ChevronDown, Settings, Tag, X, List, BookOpen } from "lucide-react";
+import { Plus, Video, FileText, Link as LinkIcon, FolderOpen, Loader2, Folder, ChevronRight, ChevronDown, Settings, Tag, X, List, BookOpen } from "lucide-react";
 
 const TrainingMaterials: React.FC = () => {
   const { hasRole } = useAuth();
@@ -244,15 +244,13 @@ const TrainingMaterials: React.FC = () => {
         {/* Enhanced Search and Filters */}
         <div className="flex flex-col gap-4">
           <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por palabras clave en título, descripción o contenido..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
+            <EnhancedSearch
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              materials={materials}
+              onViewMaterial={handleView}
+              placeholder="Buscar materiales, glosario y preguntas frecuentes..."
+            />
             <Select value={typeFilter} onValueChange={setTypeFilter}>
               <SelectTrigger className="w-full md:w-40">
                 <SelectValue placeholder="Tipo" />

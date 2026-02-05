@@ -1000,6 +1000,47 @@ export type Database = {
           },
         ]
       }
+      material_faqs: {
+        Row: {
+          answer: string
+          created_at: string
+          created_by: string | null
+          id: string
+          material_id: string
+          order_index: number | null
+          question: string
+          updated_at: string
+        }
+        Insert: {
+          answer: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          material_id: string
+          order_index?: number | null
+          question: string
+          updated_at?: string
+        }
+        Update: {
+          answer?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          material_id?: string
+          order_index?: number | null
+          question?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "material_faqs_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "training_materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       material_feedback: {
         Row: {
           created_at: string
