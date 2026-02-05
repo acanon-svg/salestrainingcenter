@@ -3,6 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTrainingMaterials, useDeleteTrainingMaterial, TrainingMaterial } from "@/hooks/useTrainingMaterials";
 import { useMaterialCategories, MaterialCategory } from "@/hooks/useMaterialCategories";
+import { useCategorySections, CategorySection } from "@/hooks/useCategorySections";
 import { useMaterialTags } from "@/hooks/useMaterialTags";
 import { MaterialListItem } from "@/components/materials/MaterialListItem";
 import { MaterialViewer } from "@/components/materials/MaterialViewer";
@@ -32,7 +33,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Video, FileText, Link as LinkIcon, FolderOpen, Loader2, Folder, ChevronRight, ChevronDown, Settings, Tag, X, List, BookOpen } from "lucide-react";
+import { Plus, Video, FileText, Link as LinkIcon, FolderOpen, Loader2, Folder, ChevronRight, ChevronDown, Settings, Tag, X, List, BookOpen, Layers } from "lucide-react";
 
 const TrainingMaterials: React.FC = () => {
   const { hasRole } = useAuth();
@@ -41,6 +42,7 @@ const TrainingMaterials: React.FC = () => {
   // For students, only show published materials
   const { data: materials, isLoading } = useTrainingMaterials({ onlyPublished: !isCreator });
   const { data: categories } = useMaterialCategories();
+  const { data: sections } = useCategorySections();
   const { data: tags } = useMaterialTags();
   const deleteMutation = useDeleteTrainingMaterial();
 
@@ -56,6 +58,7 @@ const TrainingMaterials: React.FC = () => {
   const [isTagManagerOpen, setIsTagManagerOpen] = useState(false);
   const [isGlossaryOpen, setIsGlossaryOpen] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
   // Search by keywords in title, description, content, and keywords array
   const filteredMaterials = useMemo(() => {
@@ -109,6 +112,50 @@ const TrainingMaterials: React.FC = () => {
       }
       return next;
     });
+  };
+
+  const toggleSection = (sectionId: string) => {
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(sectionId)) {
+        next.delete(sectionId);
+      } else {
+        next.add(sectionId);
+      }
+      return next;
+    });
+  };
+
+  // Group categories by section
+  const categoriesBySection = useMemo(() => {
+    const grouped: Record<string, MaterialCategory[]> = { uncategorized: [] };
+    
+    sections?.forEach((section) => {
+      grouped[section.id] = [];
+    });
+
+    categories?.flat.filter(cat => !cat.parent_id).forEach((cat) => {
+      if (cat.section_id && grouped[cat.section_id]) {
+        grouped[cat.section_id].push(cat);
+      } else {
+        grouped.uncategorized.push(cat);
+      }
+    });
+
+    return grouped;
+  }, [categories, sections]);
+
+  // Count materials in a section (across all its categories)
+  const getMaterialsCountForSection = (sectionId: string): number => {
+    const sectionCategories = categoriesBySection[sectionId] || [];
+    let count = 0;
+    sectionCategories.forEach(cat => {
+      count += (materialsByCategory[cat.id]?.length || 0);
+      cat.children?.forEach(child => {
+        count += (materialsByCategory[child.id]?.length || 0);
+      });
+    });
+    return count;
   };
 
   const handleView = (material: TrainingMaterial) => {
@@ -425,13 +472,108 @@ const TrainingMaterials: React.FC = () => {
             </TabsContent>
 
             <TabsContent value="by-category">
-              <div className="space-y-2">
-                {/* Render category tree */}
-                {categories?.tree.map((category) => renderCategorySection(category))}
+              <div className="space-y-4">
+                {/* Render sections with their categories */}
+                {sections?.map((section) => {
+                  const sectionMaterialsCount = getMaterialsCountForSection(section.id);
+                  const sectionCategories = categoriesBySection[section.id] || [];
+                  const isSectionExpanded = expandedSections.has(section.id);
+                  
+                  // Skip empty sections for students
+                  if (sectionMaterialsCount === 0 && sectionCategories.length === 0) return null;
+
+                  return (
+                    <div key={section.id} className="border rounded-lg overflow-hidden">
+                      <Collapsible open={isSectionExpanded} onOpenChange={() => toggleSection(section.id)}>
+                        <CollapsibleTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            className="w-full justify-start gap-3 p-4 h-auto hover:bg-accent rounded-none"
+                            style={{ 
+                              backgroundColor: `${section.color}10`,
+                              borderLeft: `4px solid ${section.color}`
+                            }}
+                          >
+                            {isSectionExpanded ? (
+                              <ChevronDown className="h-5 w-5" style={{ color: section.color }} />
+                            ) : (
+                              <ChevronRight className="h-5 w-5" style={{ color: section.color }} />
+                            )}
+                            <Layers className="h-5 w-5" style={{ color: section.color }} />
+                            <div className="flex flex-col items-start">
+                              <span className="font-semibold text-lg" style={{ color: section.color }}>
+                                {section.name}
+                              </span>
+                              {section.description && (
+                                <span className="text-sm text-muted-foreground font-normal">
+                                  {section.description}
+                                </span>
+                              )}
+                            </div>
+                            <span className="ml-auto text-muted-foreground text-sm">
+                              {sectionCategories.length} {sectionCategories.length === 1 ? 'categoría' : 'categorías'} · {sectionMaterialsCount} {sectionMaterialsCount === 1 ? 'material' : 'materiales'}
+                            </span>
+                          </Button>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="p-4 pt-2 space-y-2 bg-background">
+                          {sectionCategories.length > 0 ? (
+                            sectionCategories.map((category) => renderCategorySection(category))
+                          ) : (
+                            <p className="text-sm text-muted-foreground py-2">
+                              No hay categorías en esta sección
+                            </p>
+                          )}
+                        </CollapsibleContent>
+                      </Collapsible>
+                    </div>
+                  );
+                })}
+                
+                {/* Categories without section */}
+                {categoriesBySection.uncategorized.length > 0 && (
+                  <div className="border rounded-lg overflow-hidden">
+                    <Collapsible 
+                      open={expandedSections.has("no-section")} 
+                      onOpenChange={() => toggleSection("no-section")}
+                    >
+                      <CollapsibleTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          className="w-full justify-start gap-3 p-4 h-auto hover:bg-accent rounded-none"
+                          style={{ 
+                            backgroundColor: "#6b728010",
+                            borderLeft: "4px solid #6b7280"
+                          }}
+                        >
+                          {expandedSections.has("no-section") ? (
+                            <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                          ) : (
+                            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                          )}
+                          <Layers className="h-5 w-5 text-muted-foreground" />
+                          <div className="flex flex-col items-start">
+                            <span className="font-semibold text-lg text-muted-foreground">
+                              Sin Sección
+                            </span>
+                            <span className="text-sm text-muted-foreground font-normal">
+                              Categorías sin sección asignada
+                            </span>
+                          </div>
+                          <span className="ml-auto text-muted-foreground text-sm">
+                            {categoriesBySection.uncategorized.length} {categoriesBySection.uncategorized.length === 1 ? 'categoría' : 'categorías'}
+                          </span>
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="p-4 pt-2 space-y-2 bg-background">
+                        {categoriesBySection.uncategorized.map((category) => renderCategorySection(category))}
+                      </CollapsibleContent>
+                    </Collapsible>
+                  </div>
+                )}
                 
                 {/* Uncategorized materials */}
                 {materialsByCategory.uncategorized.length > 0 && (
-                  <div>
+                  <div className="border rounded-lg overflow-hidden">
                     <Collapsible 
                       open={expandedCategories.has("uncategorized")} 
                       onOpenChange={() => toggleCategory("uncategorized")}
@@ -439,35 +581,33 @@ const TrainingMaterials: React.FC = () => {
                       <CollapsibleTrigger asChild>
                         <Button
                           variant="ghost"
-                          className="w-full justify-start gap-2 mb-2 hover:bg-accent"
+                          className="w-full justify-start gap-3 p-4 h-auto hover:bg-accent rounded-none"
                           style={{ borderLeft: "4px solid #6b7280" }}
                         >
                           {expandedCategories.has("uncategorized") ? (
-                            <ChevronDown className="h-4 w-4" />
+                            <ChevronDown className="h-5 w-5 text-muted-foreground" />
                           ) : (
-                            <ChevronRight className="h-4 w-4" />
+                            <ChevronRight className="h-5 w-5 text-muted-foreground" />
                           )}
-                          <FolderOpen className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">Sin categoría</span>
-                          <span className="text-muted-foreground text-sm">
+                          <FolderOpen className="h-5 w-5 text-muted-foreground" />
+                          <span className="font-semibold text-lg text-muted-foreground">Sin categoría</span>
+                          <span className="ml-auto text-muted-foreground text-sm">
                             ({materialsByCategory.uncategorized.length})
                           </span>
                         </Button>
                       </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <div className="space-y-2">
-                          {materialsByCategory.uncategorized.map((material) => (
-                            <MaterialListItem
-                              key={material.id}
-                              material={material}
-                              isCreator={isCreator}
-                              tags={tags || []}
-                              onView={handleView}
-                              onEdit={handleEdit}
-                              onDelete={handleDelete}
-                            />
-                          ))}
-                        </div>
+                      <CollapsibleContent className="p-4 pt-2 space-y-2 bg-background">
+                        {materialsByCategory.uncategorized.map((material) => (
+                          <MaterialListItem
+                            key={material.id}
+                            material={material}
+                            isCreator={isCreator}
+                            tags={tags || []}
+                            onView={handleView}
+                            onEdit={handleEdit}
+                            onDelete={handleDelete}
+                          />
+                        ))}
                       </CollapsibleContent>
                     </Collapsible>
                   </div>
