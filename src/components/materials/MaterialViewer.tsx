@@ -13,6 +13,7 @@ import { TrainingMaterial, useMaterialFeedback } from "@/hooks/useTrainingMateri
 import { useMaterialTags } from "@/hooks/useMaterialTags";
 import { GoogleDocEmbed, isGoogleUrl } from "./GoogleDocEmbed";
 import { KeywordsGlossary } from "@/components/glossary/KeywordsGlossary";
+import { parseRichText } from "./RichTextEditor";
 import { cn } from "@/lib/utils";
 
 interface MaterialViewerProps {
@@ -26,34 +27,6 @@ const typeLabels = {
   video: "Video",
   documento: "Documento",
   link: "Enlace",
-};
-
-// Parse rich text formatting to HTML
-const parseRichText = (text: string): string => {
-  let parsed = text;
-  
-  // Bold: **text** -> <strong>text</strong>
-  parsed = parsed.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-  
-  // Italic: _text_ -> <em>text</em>
-  parsed = parsed.replace(/_([^_]+)_/g, "<em>$1</em>");
-  
-  // Color: [color=#hex]text[/color] -> <span style="color:#hex">text</span>
-  parsed = parsed.replace(/\[color=(#[a-fA-F0-9]{6})\](.*?)\[\/color\]/g, '<span style="color:$1">$2</span>');
-  
-  // Horizontal line: --- -> <hr>
-  parsed = parsed.replace(/\n---\n/g, "<hr class='my-4 border-border'>");
-  
-  // Bullet points: • at start of line
-  parsed = parsed.replace(/^• (.+)$/gm, "<li class='ml-4'>$1</li>");
-  
-  // Numbered lists: 1. at start of line
-  parsed = parsed.replace(/^\d+\. (.+)$/gm, "<li class='ml-4 list-decimal'>$1</li>");
-  
-  // Line breaks
-  parsed = parsed.replace(/\n/g, "<br>");
-  
-  return parsed;
 };
 
 export const MaterialViewer: React.FC<MaterialViewerProps> = ({
