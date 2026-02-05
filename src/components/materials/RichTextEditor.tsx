@@ -125,8 +125,8 @@ export const parseRichText = (text: string): string => {
   // Links: [text](url)
   parsed = parsed.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary underline hover:text-primary/80">$1</a>');
   
-  // Images: ![alt](url)
-  parsed = parsed.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="max-w-full h-auto rounded-lg my-4 mx-auto" />');
+  // Images: ![alt](url) - use crossorigin anonymous for external images
+  parsed = parsed.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" crossorigin="anonymous" referrerpolicy="no-referrer" class="max-w-full h-auto rounded-lg my-4 mx-auto" loading="lazy" onerror="this.style.display=\'none\'" />');
   
   // Horizontal line: --- -> <hr>
   parsed = parsed.replace(/\n---\n/g, "<hr class='my-4 border-border'>");
