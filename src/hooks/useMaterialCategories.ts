@@ -8,6 +8,7 @@ export interface MaterialCategory {
   name: string;
   description: string | null;
   parent_id: string | null;
+  section_id: string | null;
   order_index: number;
   color: string;
   created_by: string | null;
@@ -31,7 +32,10 @@ export function useMaterialCategories() {
       if (error) throw error;
 
       // Build tree structure
-      const categories = data as MaterialCategory[];
+      const categories = (data as any[]).map(cat => ({
+        ...cat,
+        section_id: cat.section_id || null,
+      })) as MaterialCategory[];
       const rootCategories: MaterialCategory[] = [];
       const categoryMap = new Map<string, MaterialCategory>();
 
@@ -66,14 +70,25 @@ export function useCreateMaterialCategory() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async (category: { name: string; description?: string; parent_id?: string; color?: string }) => {
+    mutationFn: async (category: { name: string; description?: string; parent_id?: string; color?: string; section_id?: string }) => {
+      // Get max order_index for proper ordering
+      const { data: existing } = await supabase
+        .from("material_categories")
+        .select("order_index")
+        .order("order_index", { ascending: false })
+        .limit(1);
+
+      const nextOrder = (existing?.[0]?.order_index ?? -1) + 1;
+
       const { data, error } = await supabase
         .from("material_categories")
         .insert({
           name: category.name,
           description: category.description || null,
           parent_id: category.parent_id || null,
+          section_id: category.section_id || null,
           color: category.color || "#6366f1",
+          order_index: nextOrder,
           created_by: user?.id,
         })
         .select()
@@ -105,7 +120,7 @@ export function useUpdateMaterialCategory() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; name?: string; description?: string; parent_id?: string | null; color?: string }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; name?: string; description?: string; parent_id?: string | null; color?: string; section_id?: string | null; order_index?: number }) => {
       const { data, error } = await supabase
         .from("material_categories")
         .update(updates)
