@@ -8,7 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { MaterialContentSearch } from "./MaterialContentSearch";
-import { parseTableData, TableData } from "./TableEditor";
+import { parseTableData, TableData, DEFAULT_STYLES } from "./TableEditor";
 import { cn } from "@/lib/utils";
 
 interface TableViewerProps {
@@ -20,6 +20,7 @@ export const TableViewer: React.FC<TableViewerProps> = ({ data, className }) => 
   const [searchQuery, setSearchQuery] = useState("");
   
   const tableData = useMemo(() => parseTableData(data), [data]);
+  const styles = tableData.styles || DEFAULT_STYLES;
   
   const filteredRows = useMemo(() => {
     if (!searchQuery.trim()) return tableData.rows;
@@ -71,7 +72,15 @@ export const TableViewer: React.FC<TableViewerProps> = ({ data, className }) => 
           <TableHeader>
             <TableRow>
               {tableData.headers.map((header, index) => (
-                <TableHead key={index} className="font-semibold">
+                <TableHead 
+                  key={index} 
+                  style={{
+                    backgroundColor: styles.headerBgColor,
+                    color: styles.headerTextColor,
+                    fontSize: `${styles.headerFontSize}px`,
+                    fontWeight: styles.headerFontWeight,
+                  }}
+                >
                   {highlightText(header)}
                 </TableHead>
               ))}
@@ -82,7 +91,13 @@ export const TableViewer: React.FC<TableViewerProps> = ({ data, className }) => 
               filteredRows.map((row, rowIndex) => (
                 <TableRow key={rowIndex}>
                   {row.map((cell, cellIndex) => (
-                    <TableCell key={cellIndex}>
+                    <TableCell 
+                      key={cellIndex}
+                      style={{
+                        fontSize: `${styles.cellFontSize}px`,
+                        color: styles.cellTextColor,
+                      }}
+                    >
                       {highlightText(cell)}
                     </TableCell>
                   ))}
