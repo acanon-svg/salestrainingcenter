@@ -7,7 +7,7 @@ export interface TrainingMaterial {
   id: string;
   title: string;
   description: string | null;
-  type: "video" | "documento" | "link" | "tabla";
+  type: "video" | "documento" | "link" | "tabla" | "faq";
   content_url: string | null;
   content_text: string | null;
   target_teams: string[];

@@ -127,12 +127,25 @@ const MaterialPreview: React.FC<{
       );
     }
 
+    // For FAQ type, show a placeholder message
+    if (type === "faq") {
+      return (
+        <div className="flex flex-col items-center justify-center py-8 gap-3 bg-muted/30 rounded-lg">
+          <HelpCircle className="h-12 w-12 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground text-center">
+            Las FAQs se gestionan después de guardar el material
+          </p>
+        </div>
+      );
+    }
+
     // Placeholder when no content
     const icons = {
       video: Video,
       documento: FileText,
       link: LinkIcon,
       tabla: TableIcon,
+      faq: HelpCircle,
     };
     const Icon = icons[type as keyof typeof icons] || FileText;
 
@@ -197,7 +210,7 @@ export const MaterialForm: React.FC<MaterialFormProps> = ({
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [type, setType] = useState<"video" | "documento" | "link" | "tabla">("video");
+  const [type, setType] = useState<"video" | "documento" | "link" | "tabla" | "faq">("video");
   const [contentUrl, setContentUrl] = useState("");
   const [contentText, setContentText] = useState("");
   const [tableData, setTableData] = useState<TableData>({ headers: [], rows: [] });
@@ -214,7 +227,7 @@ export const MaterialForm: React.FC<MaterialFormProps> = ({
     if (material) {
       setTitle(material.title);
       setDescription(material.description || "");
-      setType(material.type as "video" | "documento" | "link" | "tabla");
+      setType(material.type as "video" | "documento" | "link" | "tabla" | "faq");
       setContentUrl(material.content_url || "");
       setContentText(material.content_text || "");
       setTableData(material.type === "tabla" ? parseTableData(material.content_text) : { headers: [], rows: [] });
@@ -419,9 +432,27 @@ export const MaterialForm: React.FC<MaterialFormProps> = ({
                       <SelectItem value="documento">Documento</SelectItem>
                       <SelectItem value="link">Enlace</SelectItem>
                       <SelectItem value="tabla">Tabla</SelectItem>
+                      <SelectItem value="faq">FAQ (Preguntas Frecuentes)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+
+                {type === "faq" && !isEditing && (
+                  <div className="border rounded-lg p-4 bg-muted/30">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <HelpCircle className="h-5 w-5" />
+                      <p className="text-sm">
+                        Después de guardar el material, podrás agregar las preguntas frecuentes desde la pestaña "FAQs".
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {type === "faq" && isEditing && material && (
+                  <div className="border rounded-lg p-4">
+                    <FaqManager materialId={material.id} />
+                  </div>
+                )}
 
                 {type === "tabla" && (
                   <div className="space-y-2">
