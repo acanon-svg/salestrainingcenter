@@ -383,15 +383,11 @@ const TrainingMaterials: React.FC = () => {
             )}
           </div>
         ) : (
-          <Tabs defaultValue="all" className="space-y-6">
+          <Tabs defaultValue="by-category" className="space-y-6">
             <TabsList className="flex-wrap h-auto">
-              <TabsTrigger value="all" className="gap-2">
-                <List className="h-4 w-4" />
-                Todos ({filteredMaterials?.length || 0})
-              </TabsTrigger>
               <TabsTrigger value="by-category" className="gap-2">
                 <Folder className="h-4 w-4" />
-                Por Categoría
+                Categorías
               </TabsTrigger>
               <TabsTrigger value="videos" className="gap-2">
                 <Video className="h-4 w-4" />
@@ -404,6 +400,10 @@ const TrainingMaterials: React.FC = () => {
               <TabsTrigger value="links" className="gap-2">
                 <LinkIcon className="h-4 w-4" />
                 Enlaces ({linkMaterials.length})
+              </TabsTrigger>
+              <TabsTrigger value="all" className="gap-2">
+                <List className="h-4 w-4" />
+                Todos ({filteredMaterials?.length || 0})
               </TabsTrigger>
             </TabsList>
 

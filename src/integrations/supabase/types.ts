@@ -269,6 +269,39 @@ export type Database = {
           },
         ]
       }
+      category_sections: {
+        Row: {
+          color: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          order_index: number | null
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          order_index?: number | null
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          order_index?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       chatbot_config: {
         Row: {
           avatar_url: string | null
@@ -966,6 +999,7 @@ export type Database = {
           name: string
           order_index: number | null
           parent_id: string | null
+          section_id: string | null
           updated_at: string
         }
         Insert: {
@@ -977,6 +1011,7 @@ export type Database = {
           name: string
           order_index?: number | null
           parent_id?: string | null
+          section_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -988,6 +1023,7 @@ export type Database = {
           name?: string
           order_index?: number | null
           parent_id?: string | null
+          section_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -996,6 +1032,13 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "material_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_categories_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "category_sections"
             referencedColumns: ["id"]
           },
         ]

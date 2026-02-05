@@ -256,7 +256,7 @@ export function useMaterialFeedback() {
             .delete()
             .eq("id", existing.id);
           if (error) throw error;
-          return null;
+          return { deleted: true, wasUseful: existing.is_useful };
         }
         
         // Update existing feedback
@@ -267,7 +267,7 @@ export function useMaterialFeedback() {
           .select()
           .single();
         if (error) throw error;
-        return data;
+        return { data, wasUseful: existing.is_useful, isNew: false };
       }
 
       // Create new feedback
@@ -282,14 +282,41 @@ export function useMaterialFeedback() {
         .single();
 
       if (error) throw error;
-      return data;
+
+      // Award 1 point for marking content as useful (thumbs up)
+      if (isUseful && user?.id) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("points")
+          .eq("user_id", user.id)
+          .single();
+
+        if (profile) {
+          await supabase
+            .from("profiles")
+            .update({ points: (profile.points || 0) + 1 })
+            .eq("user_id", user.id);
+        }
+      }
+
+      return { data, isNew: true, isUseful };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["training-materials"] });
-      toast({
-        title: "Gracias por tu feedback",
-        description: "Tu opinión nos ayuda a mejorar el contenido.",
-      });
+      
+      if (result && 'isNew' in result && result.isNew && result.isUseful) {
+        toast({
+          title: "¡Gracias por tu feedback! +1 punto",
+          description: "Has ganado 1 punto por marcar el contenido como útil.",
+        });
+        queryClient.invalidateQueries({ queryKey: ["profile"] });
+        queryClient.invalidateQueries({ queryKey: ["ranking"] });
+      } else {
+        toast({
+          title: "Gracias por tu feedback",
+          description: "Tu opinión nos ayuda a mejorar el contenido.",
+        });
+      }
     },
     onError: (error) => {
       toast({
