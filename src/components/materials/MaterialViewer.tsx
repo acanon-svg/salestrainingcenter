@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ThumbsUp, ThumbsDown, ExternalLink, Video, FileText, Link as LinkIcon, TableIcon } from "lucide-react";
+import { ThumbsUp, ThumbsDown, ExternalLink, Video, FileText, Link as LinkIcon, TableIcon, HelpCircle } from "lucide-react";
 import { TrainingMaterial, useMaterialFeedback } from "@/hooks/useTrainingMaterials";
 import { useMaterialTags } from "@/hooks/useMaterialTags";
 import { GoogleDocEmbed, isGoogleUrl } from "./GoogleDocEmbed";
@@ -31,6 +31,7 @@ const typeLabels: Record<string, string> = {
   documento: "Documento",
   link: "Enlace",
   tabla: "Tabla",
+  faq: "FAQ",
 };
 
 export const MaterialViewer: React.FC<MaterialViewerProps> = ({
@@ -60,6 +61,17 @@ export const MaterialViewer: React.FC<MaterialViewerProps> = ({
 
   const renderContent = () => {
     switch (material.type) {
+      case "faq":
+        // For FAQ type, we just show the FaqDisplay component (rendered below)
+        return (
+          <div className="flex flex-col items-center justify-center py-8 gap-3 bg-muted/30 rounded-lg">
+            <HelpCircle className="h-12 w-12 text-primary" />
+            <p className="text-sm text-muted-foreground text-center">
+              Consulta las preguntas frecuentes a continuación
+            </p>
+          </div>
+        );
+
       case "tabla":
         return <TableViewer data={material.content_text} />;
 
