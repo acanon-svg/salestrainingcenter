@@ -334,26 +334,38 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
   };
 
   const handleMoveCategoryUp = (category: MaterialCategory) => {
-    const siblings = categories?.tree.filter(c => c.parent_id === category.parent_id) || [];
+    // Get siblings (categories with same parent_id)
+    const siblings = categories?.flat
+      .filter(c => c.parent_id === category.parent_id)
+      .sort((a, b) => a.order_index - b.order_index) || [];
+    
     const idx = siblings.findIndex(c => c.id === category.id);
     if (idx <= 0) return;
     
-    const updates = siblings.map((c, i) => ({
-      id: c.id,
-      order_index: i === idx ? siblings[idx - 1].order_index : i === idx - 1 ? category.order_index : c.order_index,
-    }));
+    // Swap order_index with the previous sibling
+    const prevSibling = siblings[idx - 1];
+    const updates = [
+      { id: category.id, order_index: prevSibling.order_index },
+      { id: prevSibling.id, order_index: category.order_index },
+    ];
     reorderCategoriesMutation.mutate(updates);
   };
 
   const handleMoveCategoryDown = (category: MaterialCategory) => {
-    const siblings = categories?.tree.filter(c => c.parent_id === category.parent_id) || [];
-    const idx = siblings.findIndex(c => c.id === category.id);
-    if (idx >= siblings.length - 1) return;
+    // Get siblings (categories with same parent_id)
+    const siblings = categories?.flat
+      .filter(c => c.parent_id === category.parent_id)
+      .sort((a, b) => a.order_index - b.order_index) || [];
     
-    const updates = siblings.map((c, i) => ({
-      id: c.id,
-      order_index: i === idx ? siblings[idx + 1].order_index : i === idx + 1 ? category.order_index : c.order_index,
-    }));
+    const idx = siblings.findIndex(c => c.id === category.id);
+    if (idx < 0 || idx >= siblings.length - 1) return;
+    
+    // Swap order_index with the next sibling
+    const nextSibling = siblings[idx + 1];
+    const updates = [
+      { id: category.id, order_index: nextSibling.order_index },
+      { id: nextSibling.id, order_index: category.order_index },
+    ];
     reorderCategoriesMutation.mutate(updates);
   };
 
