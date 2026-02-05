@@ -2,7 +2,7 @@ import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ThumbsUp, ThumbsDown, Video, FileText, Link as LinkIcon, Eye, Edit, Trash2 } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Video, FileText, Link as LinkIcon, Eye, Edit, Trash2, TableIcon } from "lucide-react";
 import { TrainingMaterial, useMaterialFeedback } from "@/hooks/useTrainingMaterials";
 import { cn } from "@/lib/utils";
 
@@ -14,22 +14,25 @@ interface MaterialCardProps {
   onDelete?: (material: TrainingMaterial) => void;
 }
 
-const typeIcons = {
+const typeIcons: Record<string, React.ElementType> = {
   video: Video,
   documento: FileText,
   link: LinkIcon,
+  tabla: TableIcon,
 };
 
-const typeLabels = {
+const typeLabels: Record<string, string> = {
   video: "Video",
   documento: "Documento",
   link: "Enlace",
+  tabla: "Tabla",
 };
 
-const typeColors = {
-  video: "bg-red-500/10 text-red-600 border-red-500/20",
-  documento: "bg-blue-500/10 text-blue-600 border-blue-500/20",
-  link: "bg-green-500/10 text-green-600 border-green-500/20",
+const typeColors: Record<string, string> = {
+  video: "bg-destructive/10 text-destructive border-destructive/20",
+  documento: "bg-primary/10 text-primary border-primary/20",
+  link: "bg-secondary/80 text-secondary-foreground border-secondary",
+  tabla: "bg-accent text-accent-foreground border-accent",
 };
 
 export const MaterialCard: React.FC<MaterialCardProps> = ({
@@ -40,7 +43,7 @@ export const MaterialCard: React.FC<MaterialCardProps> = ({
   onDelete,
 }) => {
   const feedbackMutation = useMaterialFeedback();
-  const Icon = typeIcons[material.type];
+  const Icon = typeIcons[material.type] || FileText;
 
   const handleFeedback = (isUseful: boolean) => {
     feedbackMutation.mutate({ materialId: material.id, isUseful });
@@ -51,14 +54,14 @@ export const MaterialCard: React.FC<MaterialCardProps> = ({
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className={cn("p-2 rounded-lg", typeColors[material.type])}>
+            <div className={cn("p-2 rounded-lg", typeColors[material.type] || typeColors.documento)}>
               <Icon className="h-5 w-5" />
             </div>
             <div>
               <CardTitle className="text-lg line-clamp-1">{material.title}</CardTitle>
               <div className="flex items-center gap-2 mt-1">
-                <Badge variant="outline" className={typeColors[material.type]}>
-                  {typeLabels[material.type]}
+                <Badge variant="outline" className={typeColors[material.type] || typeColors.documento}>
+                  {typeLabels[material.type] || material.type}
                 </Badge>
                 {!material.is_published && (
                   <Badge variant="secondary">Borrador</Badge>
@@ -114,7 +117,7 @@ export const MaterialCard: React.FC<MaterialCardProps> = ({
                 size="icon"
                 className={cn(
                   "h-8 w-8",
-                  material.user_feedback === true && "text-green-600 bg-green-50"
+                  material.user_feedback === true && "text-primary bg-primary/10"
                 )}
                 onClick={() => handleFeedback(true)}
                 disabled={feedbackMutation.isPending}
@@ -126,7 +129,7 @@ export const MaterialCard: React.FC<MaterialCardProps> = ({
                 size="icon"
                 className={cn(
                   "h-8 w-8",
-                  material.user_feedback === false && "text-red-600 bg-red-50"
+                  material.user_feedback === false && "text-destructive bg-destructive/10"
                 )}
                 onClick={() => handleFeedback(false)}
                 disabled={feedbackMutation.isPending}
@@ -139,11 +142,11 @@ export const MaterialCard: React.FC<MaterialCardProps> = ({
           {isCreator && (
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
-                <ThumbsUp className="h-3 w-3 text-green-600" />
+                <ThumbsUp className="h-3 w-3 text-primary" />
                 {material.useful_count || 0}
               </span>
               <span className="flex items-center gap-1">
-                <ThumbsDown className="h-3 w-3 text-red-600" />
+                <ThumbsDown className="h-3 w-3 text-destructive" />
                 {material.not_useful_count || 0}
               </span>
             </div>
