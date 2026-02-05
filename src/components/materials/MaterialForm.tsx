@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { X, Upload, Loader2, Folder, Plus, Eye, FileText, Video, Link as LinkIcon } from "lucide-react";
+import { X, Upload, Loader2, Folder, Plus, Eye, FileText, Video, Link as LinkIcon, HelpCircle } from "lucide-react";
 import { TrainingMaterial, useCreateTrainingMaterial, useUpdateTrainingMaterial } from "@/hooks/useTrainingMaterials";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -32,6 +32,7 @@ import { KeywordsInput } from "./KeywordsInput";
 import { TagSelector } from "./TagSelector";
 import { CategoryManager } from "./CategoryManager";
 import { isGoogleUrl, GoogleDocEmbed } from "./GoogleDocEmbed";
+import { FaqManager } from "./FaqManager";
 
 interface MaterialFormProps {
   material?: TrainingMaterial | null;
@@ -355,7 +356,7 @@ export const MaterialForm: React.FC<MaterialFormProps> = ({
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className={`grid w-full ${isEditing ? "grid-cols-3" : "grid-cols-2"}`}>
               <TabsTrigger value="edit">
                 <FileText className="h-4 w-4 mr-2" />
                 Editar
@@ -364,6 +365,12 @@ export const MaterialForm: React.FC<MaterialFormProps> = ({
                 <Eye className="h-4 w-4 mr-2" />
                 Vista Previa
               </TabsTrigger>
+              {isEditing && (
+                <TabsTrigger value="faqs">
+                  <HelpCircle className="h-4 w-4 mr-2" />
+                  FAQs
+                </TabsTrigger>
+              )}
             </TabsList>
 
             <TabsContent value="edit" className="flex-1 overflow-y-auto mt-4">
@@ -606,6 +613,18 @@ export const MaterialForm: React.FC<MaterialFormProps> = ({
                 />
               </div>
             </TabsContent>
+
+            {isEditing && material && (
+              <TabsContent value="faqs" className="flex-1 overflow-y-auto mt-4">
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Añade preguntas frecuentes para ayudar a los estudiantes a entender mejor el contenido. 
+                    Las FAQs también aparecerán en los resultados de búsqueda.
+                  </p>
+                  <FaqManager materialId={material.id} />
+                </div>
+              </TabsContent>
+            )}
           </Tabs>
 
           <DialogFooter className="mt-4">

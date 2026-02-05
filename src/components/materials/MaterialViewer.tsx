@@ -13,6 +13,7 @@ import { TrainingMaterial, useMaterialFeedback } from "@/hooks/useTrainingMateri
 import { useMaterialTags } from "@/hooks/useMaterialTags";
 import { GoogleDocEmbed, isGoogleUrl } from "./GoogleDocEmbed";
 import { KeywordsGlossary } from "@/components/glossary/KeywordsGlossary";
+import { FaqDisplay } from "./FaqDisplay";
 import { parseRichText } from "./RichTextEditor";
 import { cn } from "@/lib/utils";
 
@@ -221,6 +222,9 @@ export const MaterialViewer: React.FC<MaterialViewerProps> = ({
 
         {/* Glossary Section */}
         <KeywordsGlossary keywords={material.keywords} className="mt-4" />
+
+        {/* FAQ Section */}
+        <FaqDisplay materialId={material.id} className="mt-4" />
 
         {showFeedback && (
           <div className="flex items-center justify-center gap-4 mt-6 pt-6 border-t">
