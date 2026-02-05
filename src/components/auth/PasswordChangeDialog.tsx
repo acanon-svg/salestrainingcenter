@@ -40,8 +40,8 @@ export const PasswordChangeDialog: React.FC<PasswordChangeDialogProps> = ({
     if (password.length > 8) {
       return "La contraseña debe tener máximo 8 caracteres";
     }
-    if (password.length < 4) {
-      return "La contraseña debe tener mínimo 4 caracteres";
+    if (password.length < 6) {
+      return "La contraseña debe tener mínimo 6 caracteres";
     }
     if (!/^[a-zA-Z0-9]+$/.test(password)) {
       return "La contraseña solo puede contener letras y números";
@@ -109,7 +109,7 @@ export const PasswordChangeDialog: React.FC<PasswordChangeDialogProps> = ({
           </DialogTitle>
           <DialogDescription>
             Por seguridad, es necesario que cambies tu contraseña antes de continuar.
-            La nueva contraseña debe ser alfanumérica y tener máximo 8 caracteres.
+            La nueva contraseña debe ser alfanumérica y tener entre 6 y 8 caracteres.
           </DialogDescription>
         </DialogHeader>
 
@@ -129,7 +129,7 @@ export const PasswordChangeDialog: React.FC<PasswordChangeDialogProps> = ({
                 type={showPassword ? "text" : "password"}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Máximo 8 caracteres alfanuméricos"
+                placeholder="Entre 6 y 8 caracteres alfanuméricos"
                 maxLength={8}
                 className="pr-10"
                 autoComplete="new-password"

@@ -77,10 +77,10 @@ serve(async (req) => {
       );
     }
 
-    // Validate password
-    if (newPassword.length > 8 || newPassword.length < 4) {
+    // Validate password (Supabase requires minimum 6 characters)
+    if (newPassword.length > 8 || newPassword.length < 6) {
       return new Response(
-        JSON.stringify({ error: "La contraseña debe tener entre 4 y 8 caracteres" }),
+        JSON.stringify({ error: "La contraseña debe tener entre 6 y 8 caracteres" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
