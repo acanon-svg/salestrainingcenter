@@ -1,1 +1,4 @@
 project_id = "skgdyggrxjtcphctkdat"
+
+[functions.creator-impersonate]
+verify_jwt = false

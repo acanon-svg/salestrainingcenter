@@ -38,10 +38,12 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
+    // CRITICAL: Must pass token explicitly when verify_jwt=false (Lovable Cloud uses ES256)
     const token = authHeader.replace("Bearer ", "");
     const { data: claimsData, error: claimsError } = await userClient.auth.getUser(token);
 
     if (claimsError || !claimsData?.user) {
+      console.error("Auth error:", claimsError);
       return new Response(
         JSON.stringify({ error: "Token inválido" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
