@@ -58,7 +58,9 @@ export function useMaterialCategories() {
         }
       });
 
-      return { tree: rootCategories, flat: categories };
+      // Return flat list with children populated from the map
+      const flatWithChildren = Array.from(categoryMap.values());
+      return { tree: rootCategories, flat: flatWithChildren };
     },
     enabled: !!user,
   });
