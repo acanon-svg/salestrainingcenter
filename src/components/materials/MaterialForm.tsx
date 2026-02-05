@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { X, Upload, Loader2, Folder, Plus, Eye, FileText, Video, Link as LinkIcon, HelpCircle } from "lucide-react";
+import { X, Upload, Loader2, Folder, Plus, Eye, FileText, Video, Link as LinkIcon, HelpCircle, TableIcon } from "lucide-react";
 import { TrainingMaterial, useCreateTrainingMaterial, useUpdateTrainingMaterial } from "@/hooks/useTrainingMaterials";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -33,6 +33,8 @@ import { TagSelector } from "./TagSelector";
 import { CategoryManager } from "./CategoryManager";
 import { isGoogleUrl, GoogleDocEmbed } from "./GoogleDocEmbed";
 import { FaqManager } from "./FaqManager";
+import { TableEditor, TableData, parseTableData, stringifyTableData } from "./TableEditor";
+import { TableViewer } from "./TableViewer";
 
 interface MaterialFormProps {
   material?: TrainingMaterial | null;
@@ -47,10 +49,15 @@ const MaterialPreview: React.FC<{
   type: string;
   contentUrl: string;
   contentText: string;
+  tableData: TableData;
   tags: string[];
   keywords: string[];
-}> = ({ title, description, type, contentUrl, contentText, tags, keywords }) => {
+}> = ({ title, description, type, contentUrl, contentText, tableData, tags, keywords }) => {
   const renderContent = () => {
+    if (type === "tabla" && (tableData.headers.length > 0 || tableData.rows.length > 0)) {
+      return <TableViewer data={stringifyTableData(tableData)} className="max-h-64 overflow-y-auto" />;
+    }
+
     if (type === "documento" && contentText) {
       return (
         <div 
@@ -125,6 +132,7 @@ const MaterialPreview: React.FC<{
       video: Video,
       documento: FileText,
       link: LinkIcon,
+      tabla: TableIcon,
     };
     const Icon = icons[type as keyof typeof icons] || FileText;
 
@@ -189,9 +197,10 @@ export const MaterialForm: React.FC<MaterialFormProps> = ({
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [type, setType] = useState<"video" | "documento" | "link">("video");
+  const [type, setType] = useState<"video" | "documento" | "link" | "tabla">("video");
   const [contentUrl, setContentUrl] = useState("");
   const [contentText, setContentText] = useState("");
+  const [tableData, setTableData] = useState<TableData>({ headers: [], rows: [] });
   const [targetTeams, setTargetTeams] = useState<string[]>([]);
   const [categoryId, setCategoryId] = useState<string>("");
   const [isPublished, setIsPublished] = useState(false);
@@ -205,9 +214,10 @@ export const MaterialForm: React.FC<MaterialFormProps> = ({
     if (material) {
       setTitle(material.title);
       setDescription(material.description || "");
-      setType(material.type);
+      setType(material.type as "video" | "documento" | "link" | "tabla");
       setContentUrl(material.content_url || "");
       setContentText(material.content_text || "");
+      setTableData(material.type === "tabla" ? parseTableData(material.content_text) : { headers: [], rows: [] });
       setTargetTeams(material.target_teams || []);
       setCategoryId(material.category_id || "");
       setIsPublished(material.is_published);
@@ -230,6 +240,7 @@ export const MaterialForm: React.FC<MaterialFormProps> = ({
     setType("video");
     setContentUrl("");
     setContentText("");
+    setTableData({ headers: [], rows: [] });
     setTargetTeams([]);
     setCategoryId("");
     setIsPublished(false);
@@ -303,7 +314,7 @@ export const MaterialForm: React.FC<MaterialFormProps> = ({
       description: description || null,
       type,
       content_url: contentUrl || null,
-      content_text: contentText || null,
+      content_text: type === "tabla" ? stringifyTableData(tableData) : (contentText || null),
       target_teams: targetTeams,
       category_id: categoryId || null,
       is_published: isPublished,
@@ -407,9 +418,17 @@ export const MaterialForm: React.FC<MaterialFormProps> = ({
                       <SelectItem value="video">Video</SelectItem>
                       <SelectItem value="documento">Documento</SelectItem>
                       <SelectItem value="link">Enlace</SelectItem>
+                      <SelectItem value="tabla">Tabla</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+
+                {type === "tabla" && (
+                  <div className="space-y-2">
+                    <Label>Editor de Tabla</Label>
+                    <TableEditor value={tableData} onChange={setTableData} />
+                  </div>
+                )}
 
                 {type === "video" && (
                   <div className="space-y-4">
@@ -608,6 +627,7 @@ export const MaterialForm: React.FC<MaterialFormProps> = ({
                   type={type}
                   contentUrl={contentUrl}
                   contentText={contentText}
+                  tableData={tableData}
                   tags={selectedTags}
                   keywords={keywords}
                 />

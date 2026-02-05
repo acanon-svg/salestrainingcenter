@@ -1,7 +1,7 @@
 import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ThumbsUp, ThumbsDown, Video, FileText, Link as LinkIcon, Eye, Edit, Trash2, Calendar, Users } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Video, FileText, Link as LinkIcon, Eye, Edit, Trash2, Calendar, Users, TableIcon } from "lucide-react";
 import { TrainingMaterial, useMaterialFeedback } from "@/hooks/useTrainingMaterials";
 import { MaterialCategory } from "@/hooks/useMaterialCategories";
 import { cn } from "@/lib/utils";
@@ -25,16 +25,18 @@ interface MaterialListItemProps {
   onDelete?: (material: TrainingMaterial) => void;
 }
 
-const typeIcons = {
+const typeIcons: Record<string, React.ElementType> = {
   video: Video,
   documento: FileText,
   link: LinkIcon,
+  tabla: TableIcon,
 };
 
-const typeLabels = {
+const typeLabels: Record<string, string> = {
   video: "Video",
   documento: "Documento",
   link: "Enlace",
+  tabla: "Tabla",
 };
 
 export const MaterialListItem: React.FC<MaterialListItemProps> = ({
@@ -47,7 +49,7 @@ export const MaterialListItem: React.FC<MaterialListItemProps> = ({
   onDelete,
 }) => {
   const feedbackMutation = useMaterialFeedback();
-  const Icon = typeIcons[material.type];
+  const Icon = typeIcons[material.type] || FileText;
 
   const handleFeedback = (isUseful: boolean) => {
     feedbackMutation.mutate({ materialId: material.id, isUseful });
@@ -102,7 +104,7 @@ export const MaterialListItem: React.FC<MaterialListItemProps> = ({
               backgroundColor: `${categoryColor}10`
             }}
           >
-            {typeLabels[material.type]}
+            {typeLabels[material.type] || material.type}
           </Badge>
 
           {/* Category */}
@@ -172,11 +174,11 @@ export const MaterialListItem: React.FC<MaterialListItemProps> = ({
             </Button>
             <div className="flex items-center gap-2 text-sm text-muted-foreground border-l pl-2 ml-2">
               <span className="flex items-center gap-1">
-                <ThumbsUp className="h-3 w-3 text-green-600" />
+                <ThumbsUp className="h-3 w-3 text-primary" />
                 {material.useful_count || 0}
               </span>
               <span className="flex items-center gap-1">
-                <ThumbsDown className="h-3 w-3 text-red-600" />
+                <ThumbsDown className="h-3 w-3 text-destructive" />
                 {material.not_useful_count || 0}
               </span>
             </div>
@@ -188,7 +190,7 @@ export const MaterialListItem: React.FC<MaterialListItemProps> = ({
               size="icon"
               className={cn(
                 "h-8 w-8",
-                material.user_feedback === true && "text-green-600 bg-green-50"
+                material.user_feedback === true && "text-primary bg-primary/10"
               )}
               onClick={() => handleFeedback(true)}
               disabled={feedbackMutation.isPending}
@@ -200,7 +202,7 @@ export const MaterialListItem: React.FC<MaterialListItemProps> = ({
               size="icon"
               className={cn(
                 "h-8 w-8",
-                material.user_feedback === false && "text-red-600 bg-red-50"
+                material.user_feedback === false && "text-destructive bg-destructive/10"
               )}
               onClick={() => handleFeedback(false)}
               disabled={feedbackMutation.isPending}

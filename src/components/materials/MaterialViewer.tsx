@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ThumbsUp, ThumbsDown, ExternalLink, Video, FileText, Link as LinkIcon } from "lucide-react";
+import { ThumbsUp, ThumbsDown, ExternalLink, Video, FileText, Link as LinkIcon, TableIcon } from "lucide-react";
 import { TrainingMaterial, useMaterialFeedback } from "@/hooks/useTrainingMaterials";
 import { useMaterialTags } from "@/hooks/useMaterialTags";
 import { GoogleDocEmbed, isGoogleUrl } from "./GoogleDocEmbed";
@@ -16,6 +16,8 @@ import { KeywordsGlossary } from "@/components/glossary/KeywordsGlossary";
 import { FaqDisplay } from "./FaqDisplay";
 import { parseRichText } from "./RichTextEditor";
 import { cn } from "@/lib/utils";
+import { MaterialContentSearch } from "./MaterialContentSearch";
+import { TableViewer } from "./TableViewer";
 
 interface MaterialViewerProps {
   material: TrainingMaterial | null;
@@ -24,10 +26,11 @@ interface MaterialViewerProps {
   showFeedback?: boolean;
 }
 
-const typeLabels = {
+const typeLabels: Record<string, string> = {
   video: "Video",
   documento: "Documento",
   link: "Enlace",
+  tabla: "Tabla",
 };
 
 export const MaterialViewer: React.FC<MaterialViewerProps> = ({
@@ -38,6 +41,7 @@ export const MaterialViewer: React.FC<MaterialViewerProps> = ({
 }) => {
   const feedbackMutation = useMaterialFeedback();
   const { data: allTags } = useMaterialTags();
+  const [contentSearch, setContentSearch] = useState("");
 
   if (!material) return null;
 
@@ -47,8 +51,18 @@ export const MaterialViewer: React.FC<MaterialViewerProps> = ({
 
   const materialTags = allTags?.filter((t) => material.tag_ids?.includes(t.id)) || [];
 
+  // Highlight matching text in document content
+  const highlightContent = (html: string, query: string) => {
+    if (!query.trim()) return html;
+    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    return html.replace(regex, '<mark class="bg-accent text-accent-foreground px-0.5 rounded">$1</mark>');
+  };
+
   const renderContent = () => {
     switch (material.type) {
+      case "tabla":
+        return <TableViewer data={material.content_text} />;
+
       case "video":
         if (!material.content_url) {
           return (
@@ -92,12 +106,24 @@ export const MaterialViewer: React.FC<MaterialViewerProps> = ({
 
       case "documento":
         if (material.content_text) {
+          const parsedContent = parseRichText(material.content_text);
+          const highlightedContent = highlightContent(parsedContent, contentSearch);
+          const searchMatches = contentSearch ? (parsedContent.toLowerCase().match(new RegExp(contentSearch.toLowerCase(), 'g')) || []).length : 0;
+          
           return (
-            <div className="prose prose-sm max-w-none dark:prose-invert">
-              <div 
-                className="whitespace-pre-wrap bg-muted/50 p-4 rounded-lg max-h-96 overflow-y-auto"
-                dangerouslySetInnerHTML={{ __html: parseRichText(material.content_text) }}
+            <div className="space-y-3">
+              <MaterialContentSearch
+                value={contentSearch}
+                onChange={setContentSearch}
+                placeholder="Buscar en el documento..."
+                resultsCount={contentSearch ? searchMatches : undefined}
               />
+              <div className="prose prose-sm max-w-none dark:prose-invert">
+                <div 
+                  className="whitespace-pre-wrap bg-muted/50 p-4 rounded-lg max-h-96 overflow-y-auto"
+                  dangerouslySetInnerHTML={{ __html: highlightedContent }}
+                />
+              </div>
             </div>
           );
         }
@@ -234,7 +260,7 @@ export const MaterialViewer: React.FC<MaterialViewerProps> = ({
                 variant="outline"
                 size="sm"
                 className={cn(
-                  material.user_feedback === true && "bg-green-50 border-green-500 text-green-600"
+                  material.user_feedback === true && "bg-primary/10 border-primary text-primary"
                 )}
                 onClick={() => handleFeedback(true)}
                 disabled={feedbackMutation.isPending}
@@ -246,7 +272,7 @@ export const MaterialViewer: React.FC<MaterialViewerProps> = ({
                 variant="outline"
                 size="sm"
                 className={cn(
-                  material.user_feedback === false && "bg-red-50 border-red-500 text-red-600"
+                  material.user_feedback === false && "bg-destructive/10 border-destructive text-destructive"
                 )}
                 onClick={() => handleFeedback(false)}
                 disabled={feedbackMutation.isPending}
