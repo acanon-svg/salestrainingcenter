@@ -617,12 +617,15 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
             </div>
             <div className="space-y-2">
               <Label>Sección</Label>
-              <Select value={formSectionId} onValueChange={setFormSectionId}>
+              <Select 
+                value={formSectionId || "none"} 
+                onValueChange={(val) => setFormSectionId(val === "none" ? "" : val)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Sin sección" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sin sección</SelectItem>
+                  <SelectItem value="none">Sin sección</SelectItem>
                   {sections?.map((section) => (
                     <SelectItem key={section.id} value={section.id}>
                       <div className="flex items-center gap-2">
