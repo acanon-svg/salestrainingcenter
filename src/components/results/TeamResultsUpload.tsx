@@ -230,8 +230,9 @@ export const TeamResultsUpload: React.FC = () => {
       }
 
       // Use edge function proxy to avoid CORS issues
+      // Always target the "Resultados" sheet by name, and use gviz endpoint for formulated values
       const { data, error } = await supabase.functions.invoke("fetch-google-sheet", {
-        body: { url: sheetUrl.trim() },
+        body: { url: sheetUrl.trim(), sheetName: "Resultados" },
       });
 
       if (error) {
@@ -378,7 +379,7 @@ export const TeamResultsUpload: React.FC = () => {
 
             <TabsContent value="sheet" className="mt-4">
               <div className="space-y-3">
-                <Label>URL del Google Sheet (debe ser público)</Label>
+                <Label>URL del Google Sheet (compartido con "Cualquiera con el enlace")</Label>
                 <div className="flex gap-2">
                   <Input
                     placeholder="https://docs.google.com/spreadsheets/d/..."
