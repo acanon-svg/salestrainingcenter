@@ -17,6 +17,7 @@ import {
   Users,
   Wrench,
   ClipboardList,
+  TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -54,6 +55,7 @@ const defaultNavItems: NavItem[] = [
   { label: "Material Formativo", icon: FolderOpen, href: "/materials", sectionKey: "training_materials" },
   // Herramientas debe ser visible para estudiantes; el acceso interno se controla por targeting
   { label: "Herramientas", icon: Wrench, href: "/tools", sectionKey: "tools" },
+  { label: "Resultados", icon: TrendingUp, href: "/results", sectionKey: "results" },
   { label: "Ranking", icon: Trophy, href: "/ranking", sectionKey: "ranking" },
   { label: "Insignias", icon: Award, href: "/badges", sectionKey: "badges" },
   { label: "Notificaciones", icon: Bell, href: "/notifications" },
@@ -63,6 +65,7 @@ const defaultNavItems: NavItem[] = [
 const creatorItems: NavItem[] = [
   { label: "Crear Curso", icon: PlusCircle, href: "/courses/create", roles: ["creator", "admin"] },
   { label: "Mis Creaciones", icon: BookOpen, href: "/my-courses", roles: ["creator", "admin"] },
+  { label: "Resultados del Equipo", icon: TrendingUp, href: "/results", roles: ["creator", "admin"] },
   { label: "Anuncios", icon: Bell, href: "/announcements", sectionKey: "announcements", roles: ["creator", "admin"] },
   { label: "Herramientas", icon: Wrench, href: "/tools", sectionKey: "tools", roles: ["creator", "admin"] },
   { label: "Feedbacks al Equipo", icon: ClipboardList, href: "/team-feedback-forms", sectionKey: "team_feedback", roles: ["creator", "admin"] },
