@@ -11,6 +11,17 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Upload, Link2, FileSpreadsheet, Trash2, Loader2, AlertCircle, CheckCircle, Info, ChevronDown, Download } from "lucide-react";
 import { useUploadTeamResults, useTeamResultsBatches, useDeleteTeamResultsBatch, type TeamResultInsert } from "@/hooks/useTeamResults";
 import { toast } from "sonner";
@@ -498,15 +509,47 @@ export const TeamResultsUpload: React.FC = () => {
                       ))}
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => deleteBatchMutation.mutate(batch.batch_id)}
-                    disabled={deleteBatchMutation.isPending}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-2"
+                        disabled={deleteBatchMutation.isPending}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="hidden sm:inline">Eliminar</span>
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>¿Eliminar este lote de resultados?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Se eliminarán <strong>{batch.count} registros</strong> cargados el{" "}
+                          {new Date(batch.created_at).toLocaleDateString("es-CO", { dateStyle: "long" })}.
+                          {batch.regionals.length > 0 && (
+                            <> Regionales: {batch.regionals.join(", ")}.</>
+                          )}
+                          <br /><br />
+                          Esta acción no se puede deshacer. Podrás volver a cargar los resultados corregidos después.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => deleteBatchMutation.mutate(batch.batch_id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          {deleteBatchMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          ) : (
+                            <Trash2 className="h-4 w-4 mr-2" />
+                          )}
+                          Sí, eliminar lote
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               ))}
             </div>
