@@ -20,14 +20,15 @@ const REQUIRED_COLUMNS = [
   { name: "correo", description: "Correo electrónico del ejecutivo", example: "ejecutivo@addi.com" },
   { name: "mes", description: "Número de mes (1-12)", example: "2" },
   { name: "año", description: "Año (4 dígitos)", example: "2026" },
+  { name: "semanas", description: "Número de semanas del mes (para dividir metas semanales)", example: "4" },
   { name: "regional", description: "Regional del ejecutivo", example: "Bogotá" },
   { name: "equipo", description: "Equipo al que pertenece", example: "Field Sales" },
   { name: "firmas_real", description: "Firmas reales del período", example: "45" },
-  { name: "firmas_meta", description: "Meta de firmas del período", example: "50" },
+  { name: "firmas_meta", description: "Meta mensual de firmas", example: "50" },
   { name: "originaciones_real", description: "Originaciones reales (COP)", example: "150000000" },
-  { name: "originaciones_meta", description: "Meta de originaciones (COP)", example: "200000000" },
+  { name: "originaciones_meta", description: "Meta mensual de originaciones (COP)", example: "200000000" },
   { name: "gmv_real", description: "GMV real (USD)", example: "85000" },
-  { name: "gmv_meta", description: "Meta GMV (USD)", example: "100000" },
+  { name: "gmv_meta", description: "Meta mensual GMV (USD)", example: "100000" },
 ];
 
 const normalizeHeader = (h: string): string => {
@@ -94,6 +95,13 @@ const parseRows = (rows: Record<string, any>[]): { data: TeamResultInsert[]; err
       }
     }
 
+    const weeksRaw = normalized.semanas || normalized.weeks || normalized.weeks_in_month;
+    const weeksInMonth = weeksRaw ? Number(weeksRaw) : 4;
+    if (weeksInMonth < 1 || weeksInMonth > 6 || isNaN(weeksInMonth)) {
+      errors.push(`Fila ${idx + 2}: Semanas inválido "${weeksRaw}" (debe ser 1-6)`);
+      return;
+    }
+
     data.push({
       user_email: String(email).trim().toLowerCase(),
       regional: normalized.regional || undefined,
@@ -105,6 +113,7 @@ const parseRows = (rows: Record<string, any>[]): { data: TeamResultInsert[]; err
       gmv_real: Number(normalized.gmv_real) || 0,
       gmv_meta: Number(normalized.gmv_meta) || 0,
       period_date: periodDate,
+      weeks_in_month: weeksInMonth,
     });
   });
 
@@ -117,6 +126,7 @@ const handleDownloadTemplate = () => {
       correo: "ejecutivo1@addi.com",
       mes: 1,
       año: 2026,
+      semanas: 4,
       regional: "Bogotá",
       equipo: "Field Sales",
       firmas_real: 45,
@@ -130,6 +140,7 @@ const handleDownloadTemplate = () => {
       correo: "ejecutivo2@addi.com",
       mes: 1,
       año: 2026,
+      semanas: 4,
       regional: "Medellín",
       equipo: "Field Sales",
       firmas_real: 38,
@@ -143,6 +154,7 @@ const handleDownloadTemplate = () => {
       correo: "ejecutivo1@addi.com",
       mes: 2,
       año: 2026,
+      semanas: 4,
       regional: "Bogotá",
       equipo: "Field Sales",
       firmas_real: 52,
@@ -306,7 +318,8 @@ export const TeamResultsUpload: React.FC = () => {
                 <AlertCircle className="h-4 w-4 text-primary mt-0.5 shrink-0" />
                 <div className="text-xs text-muted-foreground space-y-1">
                   <p><strong>Histórico:</strong> Puedes tener múltiples meses en el mismo archivo. Cada fila debe indicar a qué mes y año corresponde.</p>
-                  <p><strong>Alternativa:</strong> En lugar de <code className="px-1 py-0.5 bg-muted rounded text-foreground">mes</code> y <code className="px-1 py-0.5 bg-muted rounded text-foreground">año</code>, puedes usar una columna <code className="px-1 py-0.5 bg-muted rounded text-foreground">fecha</code> con formato YYYY-MM-DD (ej: 2026-02-01).</p>
+                  <p><strong>Semanas:</strong> La columna <code className="px-1 py-0.5 bg-muted rounded text-foreground">semanas</code> permite dividir la meta mensual por semanas. Ejemplo: si la meta de firmas es 50 y el mes tiene 4 semanas, la meta semanal es 12.5. Si se omite, se asume 4 semanas.</p>
+                  <p><strong>Alternativa fecha:</strong> En lugar de <code className="px-1 py-0.5 bg-muted rounded text-foreground">mes</code> y <code className="px-1 py-0.5 bg-muted rounded text-foreground">año</code>, puedes usar una columna <code className="px-1 py-0.5 bg-muted rounded text-foreground">fecha</code> con formato YYYY-MM-DD (ej: 2026-02-01).</p>
                   <p><strong>Google Sheets:</strong> El Sheet debe ser público o estar compartido con "Cualquiera con el enlace".</p>
                 </div>
               </div>
@@ -413,6 +426,7 @@ export const TeamResultsUpload: React.FC = () => {
                     <TableRow>
                       <TableHead className="text-xs">Correo</TableHead>
                       <TableHead className="text-xs">Período</TableHead>
+                      <TableHead className="text-xs text-center">Sem.</TableHead>
                       <TableHead className="text-xs">Regional</TableHead>
                       <TableHead className="text-xs">Equipo</TableHead>
                       <TableHead className="text-xs text-right">Firmas R</TableHead>
@@ -428,6 +442,7 @@ export const TeamResultsUpload: React.FC = () => {
                       <TableRow key={i}>
                         <TableCell className="text-xs">{row.user_email}</TableCell>
                         <TableCell className="text-xs">{row.period_date}</TableCell>
+                        <TableCell className="text-xs text-center">{row.weeks_in_month}</TableCell>
                         <TableCell className="text-xs">{row.regional || "—"}</TableCell>
                         <TableCell className="text-xs">{row.team || "—"}</TableCell>
                         <TableCell className="text-xs text-right">{row.firmas_real}</TableCell>
