@@ -14,6 +14,7 @@ import {
 import { Upload, Link2, FileSpreadsheet, Trash2, Loader2, AlertCircle, CheckCircle, Info, ChevronDown, Download } from "lucide-react";
 import { useUploadTeamResults, useTeamResultsBatches, useDeleteTeamResultsBatch, type TeamResultInsert } from "@/hooks/useTeamResults";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import * as XLSX from "xlsx";
 
 const REQUIRED_COLUMNS = [
@@ -228,16 +229,22 @@ export const TeamResultsUpload: React.FC = () => {
         return;
       }
 
-      const sheetId = match[1];
-      const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
+      // Use edge function proxy to avoid CORS issues
+      const { data, error } = await supabase.functions.invoke("fetch-google-sheet", {
+        body: { url: sheetUrl.trim() },
+      });
 
-      const response = await fetch(csvUrl);
-      if (!response.ok) {
-        toast.error("No se pudo acceder al Sheet. Asegúrate de que sea público o esté compartido con 'Cualquiera con el enlace'.");
+      if (error) {
+        toast.error(`No se pudo acceder al Sheet. Asegúrate de que sea público o esté compartido con "Cualquiera con el enlace".`);
         return;
       }
 
-      const csvText = await response.text();
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      const csvText = data.csv;
       const workbook = XLSX.read(csvText, { type: "string" });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(sheet) as Record<string, any>[];
