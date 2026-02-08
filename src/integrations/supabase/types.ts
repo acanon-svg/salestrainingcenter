@@ -1579,6 +1579,60 @@ export type Database = {
         }
         Relationships: []
       }
+      team_results: {
+        Row: {
+          batch_id: string | null
+          created_at: string
+          firmas_meta: number
+          firmas_real: number
+          gmv_meta: number
+          gmv_real: number
+          id: string
+          originaciones_meta: number
+          originaciones_real: number
+          period_date: string
+          regional: string | null
+          team: string | null
+          updated_at: string
+          uploaded_by: string | null
+          user_email: string
+        }
+        Insert: {
+          batch_id?: string | null
+          created_at?: string
+          firmas_meta?: number
+          firmas_real?: number
+          gmv_meta?: number
+          gmv_real?: number
+          id?: string
+          originaciones_meta?: number
+          originaciones_real?: number
+          period_date: string
+          regional?: string | null
+          team?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+          user_email: string
+        }
+        Update: {
+          batch_id?: string | null
+          created_at?: string
+          firmas_meta?: number
+          firmas_real?: number
+          gmv_meta?: number
+          gmv_real?: number
+          id?: string
+          originaciones_meta?: number
+          originaciones_real?: number
+          period_date?: string
+          regional?: string | null
+          team?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+          user_email?: string
+        }
+        Relationships: []
+      }
       tools: {
         Row: {
           created_at: string
