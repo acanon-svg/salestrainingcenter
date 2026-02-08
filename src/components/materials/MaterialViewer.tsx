@@ -18,6 +18,7 @@ import { parseRichText } from "./RichTextEditor";
 import { cn } from "@/lib/utils";
 import { MaterialContentSearch } from "./MaterialContentSearch";
 import { TableViewer } from "./TableViewer";
+import DOMPurify from "dompurify";
 
 interface MaterialViewerProps {
   material: TrainingMaterial | null;
@@ -133,7 +134,7 @@ export const MaterialViewer: React.FC<MaterialViewerProps> = ({
               <div className="prose prose-sm max-w-none dark:prose-invert">
                 <div 
                   className="whitespace-pre-wrap bg-muted/50 p-4 rounded-lg max-h-96 overflow-y-auto"
-                  dangerouslySetInnerHTML={{ __html: highlightedContent }}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(highlightedContent) }}
                 />
               </div>
             </div>
@@ -240,7 +241,7 @@ export const MaterialViewer: React.FC<MaterialViewerProps> = ({
           <DialogTitle className="text-xl">{material.title}</DialogTitle>
           {material.description && (
             <DialogDescription 
-              dangerouslySetInnerHTML={{ __html: parseRichText(material.description) }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(parseRichText(material.description)) }}
             />
           )}
           {material.keywords && material.keywords.length > 0 && (
