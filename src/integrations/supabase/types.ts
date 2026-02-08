@@ -1689,6 +1689,7 @@ export type Database = {
           updated_at: string
           uploaded_by: string | null
           user_email: string
+          weeks_in_month: number
         }
         Insert: {
           batch_id?: string | null
@@ -1706,6 +1707,7 @@ export type Database = {
           updated_at?: string
           uploaded_by?: string | null
           user_email: string
+          weeks_in_month?: number
         }
         Update: {
           batch_id?: string | null
@@ -1723,6 +1725,7 @@ export type Database = {
           updated_at?: string
           uploaded_by?: string | null
           user_email?: string
+          weeks_in_month?: number
         }
         Relationships: []
       }
