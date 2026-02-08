@@ -6,6 +6,8 @@ import type { TeamResult } from "@/hooks/useTeamResults";
 interface Props {
   data: TeamResult[];
   indicator: "firmas" | "originaciones" | "gmv";
+  selectedMonth?: number;
+  selectedYear?: number;
 }
 
 const INDICATOR_LABELS: Record<string, string> = {
@@ -21,7 +23,7 @@ const getHeatmapColor = (ratio: number): string => {
   return "bg-red-500/20 text-red-700 dark:text-red-300";
 };
 
-export const ResultsHeatmapTable: React.FC<Props> = ({ data, indicator }) => {
+export const ResultsHeatmapTable: React.FC<Props> = ({ data, indicator, selectedMonth, selectedYear }) => {
   const tableData = useMemo(() => {
     const userMap = new Map<string, { real: number; meta: number; expected: number; email: string }>();
 
@@ -32,11 +34,16 @@ export const ResultsHeatmapTable: React.FC<Props> = ({ data, indicator }) => {
       grouped.set(r.user_email, list);
     });
 
-    grouped.forEach((records, email) => {
-      const now = new Date();
-      const currentYear = now.getFullYear();
-      const currentMonth = now.getMonth();
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1; // 1-indexed
 
+    const viewYear = selectedYear ?? currentYear;
+    const viewMonth = selectedMonth ?? currentMonth;
+    const isPast = viewYear < currentYear || (viewYear === currentYear && viewMonth < currentMonth);
+    const isCurrent = viewYear === currentYear && viewMonth === currentMonth;
+
+    grouped.forEach((records, email) => {
       let totalReal = 0;
       let totalExpected = 0;
       let maxMeta = 0;
@@ -60,16 +67,14 @@ export const ResultsHeatmapTable: React.FC<Props> = ({ data, indicator }) => {
         totalReal += real;
         if (recordMeta > maxMeta) maxMeta = recordMeta;
 
-        const periodDate = new Date(r.period_date + "T00:00:00");
-        const recordYear = periodDate.getFullYear();
-        const recordMonth = periodDate.getMonth();
-
-        if (recordYear < currentYear || (recordYear === currentYear && recordMonth < currentMonth)) {
+        if (isPast) {
           totalExpected += recordMeta;
-        } else if (recordYear === currentYear && recordMonth === currentMonth) {
+        } else if (isCurrent) {
           const dayOfMonth = now.getDate();
-          const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-          totalExpected += Math.round((recordMeta / daysInMonth) * dayOfMonth);
+          const currentWeek = Math.ceil(dayOfMonth / 7);
+          const weeksInMonth = Number(r.weeks_in_month) || 4;
+          const weekFraction = Math.min(currentWeek, weeksInMonth) / weeksInMonth;
+          totalExpected += Math.round(recordMeta * weekFraction);
         }
       });
 

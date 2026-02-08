@@ -17,6 +17,8 @@ import type { TeamResult } from "@/hooks/useTeamResults";
 interface Props {
   data: TeamResult[];
   indicator: "firmas" | "originaciones" | "gmv";
+  selectedMonth?: number;
+  selectedYear?: number;
 }
 
 const INDICATOR_LABELS: Record<string, string> = {
@@ -25,12 +27,10 @@ const INDICATOR_LABELS: Record<string, string> = {
   gmv: "GMV (USD)",
 };
 
-export const ResultsBarLineChart: React.FC<Props> = ({ data, indicator }) => {
+export const ResultsBarLineChart: React.FC<Props> = ({ data, indicator, selectedMonth, selectedYear }) => {
   const chartData = useMemo(() => {
-    // Aggregate by user: use latest record per user
     const userMap = new Map<string, { real: number; meta: number; expected: number; email: string }>();
 
-    // Group all records by user_email
     const grouped = new Map<string, TeamResult[]>();
     data.forEach((r) => {
       const list = grouped.get(r.user_email) || [];
@@ -38,12 +38,17 @@ export const ResultsBarLineChart: React.FC<Props> = ({ data, indicator }) => {
       grouped.set(r.user_email, list);
     });
 
-    grouped.forEach((records, email) => {
-      const now = new Date();
-      const currentYear = now.getFullYear();
-      const currentMonth = now.getMonth(); // 0-indexed
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1; // 1-indexed
 
-      // Sum all real values and calculate expected per-record based on whether month is past or current
+    // Determine if the viewed period is past, current, or future
+    const viewYear = selectedYear ?? currentYear;
+    const viewMonth = selectedMonth ?? currentMonth;
+    const isPast = viewYear < currentYear || (viewYear === currentYear && viewMonth < currentMonth);
+    const isCurrent = viewYear === currentYear && viewMonth === currentMonth;
+
+    grouped.forEach((records, email) => {
       let totalReal = 0;
       let totalExpected = 0;
       let maxMeta = 0;
@@ -67,16 +72,9 @@ export const ResultsBarLineChart: React.FC<Props> = ({ data, indicator }) => {
         totalReal += real;
         if (recordMeta > maxMeta) maxMeta = recordMeta;
 
-        // Determine if this record's period is past, current, or future
-        const periodDate = new Date(r.period_date + "T00:00:00");
-        const recordYear = periodDate.getFullYear();
-        const recordMonth = periodDate.getMonth();
-
-        if (recordYear < currentYear || (recordYear === currentYear && recordMonth < currentMonth)) {
-          // Past month — should be 100% complete
+        if (isPast) {
           totalExpected += recordMeta;
-        } else if (recordYear === currentYear && recordMonth === currentMonth) {
-          // Current month — use week-based fraction
+        } else if (isCurrent) {
           const dayOfMonth = now.getDate();
           const currentWeek = Math.ceil(dayOfMonth / 7);
           const weeksInMonth = Number(r.weeks_in_month) || 4;
@@ -86,11 +84,8 @@ export const ResultsBarLineChart: React.FC<Props> = ({ data, indicator }) => {
         // Future months: expected = 0
       });
 
-      const meta = maxMeta;
-      const expected = totalExpected;
-
       const name = email.split("@")[0].replace(/\./g, " ");
-      userMap.set(email, { real: totalReal, meta, expected, email: name });
+      userMap.set(email, { real: totalReal, meta: maxMeta, expected: totalExpected, email: name });
     });
 
     return Array.from(userMap.values())
