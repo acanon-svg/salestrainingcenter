@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { url } = await req.json();
+    const { url, sheetName } = await req.json();
 
     if (!url || typeof url !== 'string') {
       return new Response(
@@ -31,29 +31,69 @@ serve(async (req) => {
 
     const sheetId = idMatch[1];
 
-    // Extract gid if present
+    // Extract gid if present in URL
     const gidMatch = url.match(/[?&#]gid=(\d+)/);
-    const gid = gidMatch ? gidMatch[1] : '0';
+    const gid = gidMatch ? gidMatch[1] : null;
 
-    const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+    // Build the gviz/tq URL - this endpoint works for "Anyone with the link" sheets
+    // and returns calculated/formulated values (not raw formulas)
+    let csvUrl: string;
+    
+    if (sheetName) {
+      // Use sheet name to target specific tab
+      csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+    } else if (gid) {
+      // Use gid from URL
+      csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${gid}`;
+    } else {
+      // Default: first sheet
+      csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv`;
+    }
 
-    console.log(`Fetching Google Sheet: ${csvUrl}`);
+    console.log(`Fetching Google Sheet via gviz: ${csvUrl}`);
 
     const response = await fetch(csvUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0',
+        'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)',
       },
       redirect: 'follow',
     });
 
     if (!response.ok) {
       const statusText = response.statusText || 'Unknown error';
-      console.error(`Google Sheets responded with ${response.status}: ${statusText}`);
+      const bodyText = await response.text();
+      console.error(`Google Sheets responded with ${response.status}: ${statusText}`, bodyText.substring(0, 500));
+      
+      // If gviz fails, try the pub endpoint as fallback
+      const pubUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/pub?output=csv${gid ? `&gid=${gid}` : ''}${sheetName ? `&sheet=${encodeURIComponent(sheetName)}` : ''}`;
+      console.log(`Trying pub fallback: ${pubUrl}`);
+      
+      const pubResponse = await fetch(pubUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)' },
+        redirect: 'follow',
+      });
+      
+      if (!pubResponse.ok) {
+        console.error(`Pub fallback also failed with ${pubResponse.status}`);
+        return new Response(
+          JSON.stringify({ 
+            error: `No se pudo acceder al Sheet (${response.status}). Verifica que el Sheet esté compartido con "Cualquiera con el enlace" como Lector.` 
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      const pubCsv = await pubResponse.text();
+      if (pubCsv.startsWith('<!DOCTYPE') || pubCsv.startsWith('<html')) {
+        return new Response(
+          JSON.stringify({ error: 'El Sheet no es accesible. Asegúrate de compartirlo con "Cualquiera con el enlace" como Lector.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       return new Response(
-        JSON.stringify({ 
-          error: `No se pudo acceder al Sheet (${response.status}). Asegúrate de que sea público o esté compartido con "Cualquiera con el enlace".` 
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ csv: pubCsv }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -63,7 +103,7 @@ serve(async (req) => {
     if (csvText.startsWith('<!DOCTYPE') || csvText.startsWith('<html')) {
       return new Response(
         JSON.stringify({ 
-          error: 'El Sheet no es accesible. Asegúrate de que sea público o compartido con "Cualquiera con el enlace".' 
+          error: 'El Sheet no es accesible. Asegúrate de compartirlo con "Cualquiera con el enlace" como Lector.' 
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
