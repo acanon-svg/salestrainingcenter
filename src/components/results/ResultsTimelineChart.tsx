@@ -24,6 +24,11 @@ const INDICATOR_LABELS: Record<string, string> = {
   gmv: "GMV (USD)",
 };
 
+const MONTH_NAMES = [
+  "Ene", "Feb", "Mar", "Abr", "May", "Jun",
+  "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
+];
+
 const COLORS = [
   "hsl(var(--primary))",
   "hsl(217, 91%, 60%)",
@@ -38,7 +43,7 @@ const COLORS = [
 ];
 
 export const ResultsTimelineChart: React.FC<Props> = ({ data, indicator, showOnlyUser }) => {
-  const { chartData, users, meta } = useMemo(() => {
+  const { chartData, users } = useMemo(() => {
     let filtered = data;
     if (showOnlyUser) {
       filtered = data.filter((r) => r.user_email === showOnlyUser);
@@ -47,48 +52,49 @@ export const ResultsTimelineChart: React.FC<Props> = ({ data, indicator, showOnl
     // Get unique users
     const uniqueUsers = [...new Set(filtered.map((r) => r.user_email))];
 
-    // Get unique dates sorted
-    const uniqueDates = [...new Set(filtered.map((r) => r.period_date))].sort();
+    // Group data by year-month and user, summing values
+    const monthlyMap = new Map<string, Map<string, number>>();
 
-    // Calculate meta (average across all records for the indicator)
-    let avgMeta = 0;
-    if (filtered.length > 0) {
-      const metas = filtered.map((r) => {
+    filtered.forEach((r) => {
+      const d = new Date(r.period_date + "T00:00:00");
+      const year = d.getFullYear();
+      const month = d.getMonth(); // 0-indexed
+      const key = `${year}-${String(month).padStart(2, "0")}`;
+
+      if (!monthlyMap.has(key)) {
+        monthlyMap.set(key, new Map());
+      }
+      const userMap = monthlyMap.get(key)!;
+
+      const val = (() => {
         switch (indicator) {
-          case "firmas": return Number(r.firmas_meta);
-          case "originaciones": return Number(r.originaciones_meta);
-          case "gmv": return Number(r.gmv_meta);
+          case "firmas": return Number(r.firmas_real);
+          case "originaciones": return Number(r.originaciones_real);
+          case "gmv": return Number(r.gmv_real);
         }
-      });
-      avgMeta = Math.max(...metas);
-    }
+      })();
 
-    // Build chart data: each date as a point, with cumulative values per user
-    const userCumulatives = new Map<string, number>();
-    uniqueUsers.forEach((u) => userCumulatives.set(u, 0));
+      const userName = r.user_email.split("@")[0].replace(/\./g, " ");
+      userMap.set(userName, (userMap.get(userName) || 0) + val);
+    });
 
-    const points = uniqueDates.map((date) => {
-      const point: Record<string, any> = {
-        date: new Date(date).toLocaleDateString("es-CO", { day: "2-digit", month: "short" }),
-        rawDate: date,
-        meta: avgMeta,
-      };
+    // Sort months chronologically
+    const sortedMonths = [...monthlyMap.keys()].sort();
 
-      // Accumulate values for each user on this date
-      uniqueUsers.forEach((email) => {
-        const record = filtered.find((r) => r.user_email === email && r.period_date === date);
-        if (record) {
-          const val = (() => {
-            switch (indicator) {
-              case "firmas": return Number(record.firmas_real);
-              case "originaciones": return Number(record.originaciones_real);
-              case "gmv": return Number(record.gmv_real);
-            }
-          })();
-          userCumulatives.set(email, (userCumulatives.get(email) || 0) + val);
-        }
-        const name = email.split("@")[0].replace(/\./g, " ");
-        point[name] = userCumulatives.get(email) || 0;
+    // Build chart data points
+    const points = sortedMonths.map((monthKey) => {
+      const [yearStr, monthStr] = monthKey.split("-");
+      const year = parseInt(yearStr);
+      const month = parseInt(monthStr);
+      const label = `${MONTH_NAMES[month]} ${year}`;
+
+      const point: Record<string, any> = { date: label, sortKey: monthKey };
+
+      const userMap = monthlyMap.get(monthKey)!;
+      const userNames = uniqueUsers.map((u) => u.split("@")[0].replace(/\./g, " "));
+
+      userNames.forEach((name) => {
+        point[name] = userMap.get(name) || 0;
       });
 
       return point;
@@ -97,14 +103,11 @@ export const ResultsTimelineChart: React.FC<Props> = ({ data, indicator, showOnl
     return {
       chartData: points,
       users: uniqueUsers.map((u) => u.split("@")[0].replace(/\./g, " ")),
-      meta: avgMeta,
     };
   }, [data, indicator, showOnlyUser]);
 
   const chartConfig = useMemo(() => {
-    const config: Record<string, { label: string; color: string }> = {
-      meta: { label: "Meta del Equipo", color: "hsl(var(--destructive))" },
-    };
+    const config: Record<string, { label: string; color: string }> = {};
     users.forEach((u, i) => {
       config[u] = { label: u, color: COLORS[i % COLORS.length] };
     });
@@ -125,11 +128,11 @@ export const ResultsTimelineChart: React.FC<Props> = ({ data, indicator, showOnl
     <Card className="border-border/50">
       <CardHeader>
         <CardTitle className="text-lg">
-          {INDICATOR_LABELS[indicator]} — Evolución en el Tiempo
+          {INDICATOR_LABELS[indicator]} — Comparativa en el Tiempo
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig} className="h-[350px] w-full">
+        <ChartContainer config={chartConfig} className="h-[400px] w-full">
           <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
             <XAxis dataKey="date" tick={{ fontSize: 11 }} className="fill-muted-foreground" />
@@ -144,17 +147,6 @@ export const ResultsTimelineChart: React.FC<Props> = ({ data, indicator, showOnl
               formatter={(value: number) => value.toLocaleString("es-CO")}
             />
             <Legend wrapperStyle={{ fontSize: "12px" }} />
-
-            {/* Meta line - dashed */}
-            <Line
-              type="monotone"
-              dataKey="meta"
-              name="Meta del Equipo"
-              stroke="hsl(var(--destructive))"
-              strokeDasharray="5 5"
-              strokeWidth={2}
-              dot={false}
-            />
 
             {/* User lines */}
             {users.map((user, i) => (
