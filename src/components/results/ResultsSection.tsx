@@ -2,16 +2,17 @@ import React, { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BarChart3, Table2, AlertCircle } from "lucide-react";
+import { BarChart3, Table2, AlertCircle, Calendar } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useTeamResults } from "@/hooks/useTeamResults";
 import { ResultsBarLineChart } from "./ResultsBarLineChart";
 import { ResultsHeatmapTable } from "./ResultsHeatmapTable";
 import { ResultsTimelineChart } from "./ResultsTimelineChart";
+import { getMonthName } from "@/hooks/useCommissionMonthlyConfig";
 
 type Indicator = "firmas" | "originaciones" | "gmv";
 type ChartType = "combined" | "table";
-type TimePeriod = "90" | "180" | "365";
+const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 interface Props {
   /** If provided, shows only this user's data (student view) */
@@ -30,23 +31,25 @@ export const ResultsSection: React.FC<Props> = ({
   showTimePeriodFilter = false,
   regional,
 }) => {
+  const now = new Date();
   const [indicator, setIndicator] = useState<Indicator>("firmas");
   const [chartType, setChartType] = useState<ChartType>("combined");
-  const [timePeriod, setTimePeriod] = useState<TimePeriod>("90");
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
 
   const { data: results, isLoading } = useTeamResults({
     regional,
     email: userEmail,
   });
 
-  // Filter by time period
+  // Filter by selected month and year
   const filteredByTime = React.useMemo(() => {
     if (!results) return [];
-    const days = parseInt(timePeriod);
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - days);
-    return results.filter((r) => new Date(r.period_date) >= cutoff);
-  }, [results, timePeriod]);
+    return results.filter((r) => {
+      const d = new Date(r.period_date + "T00:00:00");
+      return d.getFullYear() === selectedYear && d.getMonth() + 1 === selectedMonth;
+    });
+  }, [results, selectedMonth, selectedYear]);
 
   if (isLoading) {
     return (
@@ -116,19 +119,34 @@ export const ResultsSection: React.FC<Props> = ({
         )}
 
         {showTimePeriodFilter && (
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">Período</Label>
-            <Select value={timePeriod} onValueChange={(v) => setTimePeriod(v as TimePeriod)}>
-              <SelectTrigger className="w-44">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="90">Último trimestre</SelectItem>
-                <SelectItem value="180">Último semestre</SelectItem>
-                <SelectItem value="365">Último año</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <>
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Mes</Label>
+              <Select value={selectedMonth.toString()} onValueChange={(v) => setSelectedMonth(parseInt(v))}>
+                <SelectTrigger className="w-44">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MONTHS.map((m) => (
+                    <SelectItem key={m} value={m.toString()}>{getMonthName(m)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Año</Label>
+              <Select value={selectedYear.toString()} onValueChange={(v) => setSelectedYear(parseInt(v))}>
+                <SelectTrigger className="w-28">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].map((y) => (
+                    <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </>
         )}
       </div>
 
