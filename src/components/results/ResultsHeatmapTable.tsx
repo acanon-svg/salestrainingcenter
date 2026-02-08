@@ -33,29 +33,48 @@ export const ResultsHeatmapTable: React.FC<Props> = ({ data, indicator }) => {
     });
 
     grouped.forEach((records, email) => {
-      const totalReal = records.reduce((sum, r) => {
-        switch (indicator) {
-          case "firmas": return sum + Number(r.firmas_real);
-          case "originaciones": return sum + Number(r.originaciones_real);
-          case "gmv": return sum + Number(r.gmv_real);
-        }
-      }, 0);
-
-      const meta = Math.max(...records.map((r) => {
-        switch (indicator) {
-          case "firmas": return Number(r.firmas_meta);
-          case "originaciones": return Number(r.originaciones_meta);
-          case "gmv": return Number(r.gmv_meta);
-        }
-      }));
-
       const now = new Date();
-      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-      const dayOfMonth = now.getDate();
-      const expected = Math.round((meta / daysInMonth) * dayOfMonth);
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth();
+
+      let totalReal = 0;
+      let totalExpected = 0;
+      let maxMeta = 0;
+
+      records.forEach((r) => {
+        const real = (() => {
+          switch (indicator) {
+            case "firmas": return Number(r.firmas_real);
+            case "originaciones": return Number(r.originaciones_real);
+            case "gmv": return Number(r.gmv_real);
+          }
+        })();
+        const recordMeta = (() => {
+          switch (indicator) {
+            case "firmas": return Number(r.firmas_meta);
+            case "originaciones": return Number(r.originaciones_meta);
+            case "gmv": return Number(r.gmv_meta);
+          }
+        })();
+
+        totalReal += real;
+        if (recordMeta > maxMeta) maxMeta = recordMeta;
+
+        const periodDate = new Date(r.period_date + "T00:00:00");
+        const recordYear = periodDate.getFullYear();
+        const recordMonth = periodDate.getMonth();
+
+        if (recordYear < currentYear || (recordYear === currentYear && recordMonth < currentMonth)) {
+          totalExpected += recordMeta;
+        } else if (recordYear === currentYear && recordMonth === currentMonth) {
+          const dayOfMonth = now.getDate();
+          const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+          totalExpected += Math.round((recordMeta / daysInMonth) * dayOfMonth);
+        }
+      });
 
       const name = email.split("@")[0].replace(/\./g, " ");
-      userMap.set(email, { real: totalReal, meta, expected, email: name });
+      userMap.set(email, { real: totalReal, meta: maxMeta, expected: totalExpected, email: name });
     });
 
     return Array.from(userMap.values()).sort((a, b) => b.real - a.real);
