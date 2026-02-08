@@ -27,6 +27,7 @@ import { useUploadTeamResults, useTeamResultsBatches, useDeleteTeamResultsBatch,
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import * as XLSX from "xlsx";
+import { ResultsSyncManager } from "./ResultsSyncManager";
 
 const REQUIRED_COLUMNS = [
   { name: "correo", description: "Correo electrónico del ejecutivo", example: "ejecutivo@addi.com" },
@@ -289,6 +290,8 @@ export const TeamResultsUpload: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Auto-Sync Manager */}
+      <ResultsSyncManager />
       {/* Format Guide */}
       <Card className="border-primary/30 bg-primary/5">
         <Collapsible open={showFormat} onOpenChange={setShowFormat}>
