@@ -260,9 +260,13 @@ export const useRejectCommission = () => {
     mutationFn: async ({
       id,
       rejection_reason,
+      user_name,
+      user_email,
     }: {
       id: string;
       rejection_reason: string;
+      user_name?: string;
+      user_email?: string;
     }) => {
       const { error } = await db()
         .from("commission_reviews")
@@ -283,10 +287,11 @@ export const useRejectCommission = () => {
           .eq("role", "creator");
 
         if (creators && creators.length > 0) {
+          const executiveName = user_name || user_email || "un ejecutivo";
           const notifications = creators.map((c: any) => ({
             user_id: c.user_id,
-            title: "Comisión rechazada - Requiere revisión",
-            message: `Una comisión ha sido rechazada. Motivo: ${rejection_reason}`,
+            title: "⚠️ Comisión rechazada - Requiere revisión",
+            message: `La comisión de ${executiveName} ha sido rechazada. Motivo: ${rejection_reason}`,
             type: "commission_rejected",
           }));
           await supabase.from("notifications").insert(notifications);
@@ -297,6 +302,7 @@ export const useRejectCommission = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["commission-reviews"] });
+      queryClient.invalidateQueries({ queryKey: ["rejected-commission-count"] });
       toast.success("Comisión rechazada");
     },
     onError: (error: any) => {
@@ -321,5 +327,26 @@ export const useApprovedCommissions = (month?: number, year?: number) => {
       if (error) throw error;
       return (data || []) as CommissionReview[];
     },
+  });
+};
+
+/** Count rejected commissions for creator badge (similar to useUnreadCourseFeedbackCount). */
+export const useRejectedCommissionCount = () => {
+  const { user, hasRole } = useAuth();
+  const isCreatorOrAdmin = hasRole("creator") || hasRole("admin");
+
+  return useQuery({
+    queryKey: ["rejected-commission-count", user?.id],
+    queryFn: async () => {
+      const { count, error } = await db()
+        .from("commission_reviews")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "rejected");
+
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!user?.id && isCreatorOrAdmin,
+    refetchInterval: 30000,
   });
 };

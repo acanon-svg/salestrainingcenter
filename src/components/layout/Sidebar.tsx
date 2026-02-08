@@ -18,6 +18,7 @@ import {
   Wrench,
   ClipboardList,
   TrendingUp,
+  DollarSign,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -27,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import addiTrainingLogo from "@/assets/addi-training-logo.svg";
 import { usePortalSectionConfigs } from "@/hooks/usePortalSectionConfigs";
 import { useUnreadCourseFeedbackCount } from "@/hooks/useFeedback";
+import { useRejectedCommissionCount } from "@/hooks/useCommissionReviews";
 
 interface NavItem {
   label: string;
@@ -70,6 +72,7 @@ const creatorItems: NavItem[] = [
   { label: "Herramientas", icon: Wrench, href: "/tools", sectionKey: "tools", roles: ["creator", "admin"] },
   { label: "Feedbacks al Equipo", icon: ClipboardList, href: "/team-feedback-forms", sectionKey: "team_feedback", roles: ["creator", "admin"] },
   { label: "Feedback de Cursos", icon: MessageSquare, href: "/feedback", roles: ["creator", "admin"], showBadge: true },
+  { label: "Comisiones Rechazadas", icon: DollarSign, href: "/tools", roles: ["creator", "admin"], showBadge: true },
 ];
 
 const leaderItems: NavItem[] = [
@@ -93,7 +96,7 @@ export const Sidebar: React.FC = () => {
   const location = useLocation();
   const { configs, isSectionVisibleForUser } = usePortalSectionConfigs();
   const { data: unreadFeedbackCount = 0 } = useUnreadCourseFeedbackCount();
-
+  const { data: rejectedCommissionCount = 0 } = useRejectedCommissionCount();
   const isActive = (href: string) => location.pathname === href;
 
   const getInitials = (name: string | null) => {
@@ -194,7 +197,12 @@ export const Sidebar: React.FC = () => {
                 </p>
                 {visibleCreatorItems.map((item) => {
                   const Icon = item.icon;
-                  const showBadgeCount = item.showBadge && unreadFeedbackCount > 0;
+                  const badgeCount = item.showBadge
+                    ? item.label === "Comisiones Rechazadas"
+                      ? rejectedCommissionCount
+                      : unreadFeedbackCount
+                    : 0;
+                  const showBadgeCount = badgeCount > 0;
                   return (
                     <Link
                       key={item.href + item.label}
@@ -212,7 +220,7 @@ export const Sidebar: React.FC = () => {
                           <Badge 
                             className="absolute -top-2 -right-2 h-4 w-4 p-0 flex items-center justify-center text-[10px] bg-destructive text-destructive-foreground"
                           >
-                            {unreadFeedbackCount > 9 ? "9+" : unreadFeedbackCount}
+                            {badgeCount > 9 ? "9+" : badgeCount}
                           </Badge>
                         )}
                       </div>

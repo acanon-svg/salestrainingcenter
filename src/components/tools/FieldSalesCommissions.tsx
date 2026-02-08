@@ -199,6 +199,8 @@ export const FieldSalesCommissions: React.FC = () => {
         await rejectCommission.mutateAsync({
           id: result.id,
           rejection_reason: rejectionReason,
+          user_name: exec.name,
+          user_email: exec.user_email,
         });
       }
       setRejectDialogOpen(false);
