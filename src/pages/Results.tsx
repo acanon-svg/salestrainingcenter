@@ -5,12 +5,15 @@ import { ResultsSection } from "@/components/results/ResultsSection";
 import { TeamResultsUpload } from "@/components/results/TeamResultsUpload";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { BarChart3, Upload, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { BarChart3, Upload, AlertCircle, RefreshCw, Loader2 } from "lucide-react";
+import { useTriggerSync } from "@/hooks/useResultsSyncConfig";
 
 const Results: React.FC = () => {
   const { profile, hasRole } = useAuth();
   const isCreatorOrAdmin = hasRole("creator") || hasRole("admin");
   const isLeader = hasRole("lider");
+  const triggerMutation = useTriggerSync();
 
   // Field Sales gate: students only see results if their team is Field Sales
   const isFieldSales = profile?.team?.toLowerCase().includes("field sales");
@@ -58,16 +61,32 @@ const Results: React.FC = () => {
 
         {isCreatorOrAdmin ? (
           <Tabs defaultValue="upload">
-            <TabsList>
-              <TabsTrigger value="upload" className="gap-2">
-                <Upload className="h-4 w-4" />
-                Cargar Resultados
-              </TabsTrigger>
-              <TabsTrigger value="view" className="gap-2">
-                <BarChart3 className="h-4 w-4" />
-                Ver Resultados
-              </TabsTrigger>
-            </TabsList>
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <TabsList>
+                <TabsTrigger value="upload" className="gap-2">
+                  <Upload className="h-4 w-4" />
+                  Cargar Resultados
+                </TabsTrigger>
+                <TabsTrigger value="view" className="gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  Ver Resultados
+                </TabsTrigger>
+              </TabsList>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => triggerMutation.mutate()}
+                disabled={triggerMutation.isPending}
+                className="gap-2"
+              >
+                {triggerMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+                Sincronizar ahora
+              </Button>
+            </div>
             <TabsContent value="upload" className="mt-6">
               <TeamResultsUpload />
             </TabsContent>

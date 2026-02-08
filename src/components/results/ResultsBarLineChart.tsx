@@ -39,33 +39,55 @@ export const ResultsBarLineChart: React.FC<Props> = ({ data, indicator }) => {
     });
 
     grouped.forEach((records, email) => {
-      // Sum all real values and take max meta
-      const totalReal = records.reduce((sum, r) => {
-        switch (indicator) {
-          case "firmas": return sum + Number(r.firmas_real);
-          case "originaciones": return sum + Number(r.originaciones_real);
-          case "gmv": return sum + Number(r.gmv_real);
-        }
-      }, 0);
-
-      const meta = Math.max(...records.map((r) => {
-        switch (indicator) {
-          case "firmas": return Number(r.firmas_meta);
-          case "originaciones": return Number(r.originaciones_meta);
-          case "gmv": return Number(r.gmv_meta);
-        }
-      }));
-
-      // Calculate expected based on weeks elapsed in the month
       const now = new Date();
-      const dayOfMonth = now.getDate();
-      // Determine current week of the month (1-based)
-      const currentWeek = Math.ceil(dayOfMonth / 7);
-      // Use weeks_in_month from the data (take max across records), default to 4
-      const weeksInMonth = Math.max(...records.map((r) => Number(r.weeks_in_month) || 4));
-      // Cap currentWeek to weeksInMonth so it doesn't exceed 100%
-      const weekFraction = Math.min(currentWeek, weeksInMonth) / weeksInMonth;
-      const expected = Math.round(meta * weekFraction);
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth(); // 0-indexed
+
+      // Sum all real values and calculate expected per-record based on whether month is past or current
+      let totalReal = 0;
+      let totalExpected = 0;
+      let maxMeta = 0;
+
+      records.forEach((r) => {
+        const real = (() => {
+          switch (indicator) {
+            case "firmas": return Number(r.firmas_real);
+            case "originaciones": return Number(r.originaciones_real);
+            case "gmv": return Number(r.gmv_real);
+          }
+        })();
+        const recordMeta = (() => {
+          switch (indicator) {
+            case "firmas": return Number(r.firmas_meta);
+            case "originaciones": return Number(r.originaciones_meta);
+            case "gmv": return Number(r.gmv_meta);
+          }
+        })();
+
+        totalReal += real;
+        if (recordMeta > maxMeta) maxMeta = recordMeta;
+
+        // Determine if this record's period is past, current, or future
+        const periodDate = new Date(r.period_date + "T00:00:00");
+        const recordYear = periodDate.getFullYear();
+        const recordMonth = periodDate.getMonth();
+
+        if (recordYear < currentYear || (recordYear === currentYear && recordMonth < currentMonth)) {
+          // Past month — should be 100% complete
+          totalExpected += recordMeta;
+        } else if (recordYear === currentYear && recordMonth === currentMonth) {
+          // Current month — use week-based fraction
+          const dayOfMonth = now.getDate();
+          const currentWeek = Math.ceil(dayOfMonth / 7);
+          const weeksInMonth = Number(r.weeks_in_month) || 4;
+          const weekFraction = Math.min(currentWeek, weeksInMonth) / weeksInMonth;
+          totalExpected += Math.round(recordMeta * weekFraction);
+        }
+        // Future months: expected = 0
+      });
+
+      const meta = maxMeta;
+      const expected = totalExpected;
 
       const name = email.split("@")[0].replace(/\./g, " ");
       userMap.set(email, { real: totalReal, meta, expected, email: name });
