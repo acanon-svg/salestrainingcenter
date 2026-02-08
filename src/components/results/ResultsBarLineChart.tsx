@@ -56,11 +56,16 @@ export const ResultsBarLineChart: React.FC<Props> = ({ data, indicator }) => {
         }
       }));
 
-      // Calculate expected based on days elapsed in the month
+      // Calculate expected based on weeks elapsed in the month
       const now = new Date();
-      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
       const dayOfMonth = now.getDate();
-      const expected = Math.round((meta / daysInMonth) * dayOfMonth);
+      // Determine current week of the month (1-based)
+      const currentWeek = Math.ceil(dayOfMonth / 7);
+      // Use weeks_in_month from the data (take max across records), default to 4
+      const weeksInMonth = Math.max(...records.map((r) => Number(r.weeks_in_month) || 4));
+      // Cap currentWeek to weeksInMonth so it doesn't exceed 100%
+      const weekFraction = Math.min(currentWeek, weeksInMonth) / weeksInMonth;
+      const expected = Math.round(meta * weekFraction);
 
       const name = email.split("@")[0].replace(/\./g, " ");
       userMap.set(email, { real: totalReal, meta, expected, email: name });
