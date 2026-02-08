@@ -153,9 +153,9 @@ export const ResultsSection: React.FC<Props> = ({
       {/* Team Chart (leaders/admins) */}
       {showTeamChart && (
         chartType === "combined" ? (
-          <ResultsBarLineChart data={filteredByTime} indicator={indicator} />
+          <ResultsBarLineChart data={filteredByTime} indicator={indicator} selectedMonth={selectedMonth} selectedYear={selectedYear} />
         ) : (
-          <ResultsHeatmapTable data={filteredByTime} indicator={indicator} />
+          <ResultsHeatmapTable data={filteredByTime} indicator={indicator} selectedMonth={selectedMonth} selectedYear={selectedYear} />
         )
       )}
 
