@@ -117,6 +117,12 @@ export const Sidebar: React.FC = () => {
   const isNavItemVisible = (item: NavItem): boolean => {
     // Herramientas siempre debe aparecer (control de acceso a herramientas específicas vive adentro del módulo)
     if (item.sectionKey === "tools") return true;
+    // Resultados solo visible para Field Sales (estudiantes). Creadores, admins y líderes siempre ven.
+    if (item.sectionKey === "results") {
+      if (hasRole("creator") || hasRole("admin") || hasRole("lider")) return true;
+      if (!profile?.team) return false;
+      return profile.team.toLowerCase().includes("field sales");
+    }
     if (!item.sectionKey || !configs || !user?.id) return true;
     const config = configs.find((c) => c.section_key === item.sectionKey);
     if (!config) return true;

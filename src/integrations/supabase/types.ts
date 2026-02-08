@@ -477,6 +477,99 @@ export type Database = {
           },
         ]
       }
+      commission_reviews: {
+        Row: {
+          base_commission: number
+          calculated_commission: number
+          candado_met: boolean
+          created_at: string
+          firmas_compliance: number
+          firmas_meta: number
+          firmas_real: number
+          gmv_meta: number
+          gmv_real: number
+          gmv_weighted: number
+          has_mb_income: boolean
+          id: string
+          indicator_bonus: number
+          observations: string | null
+          originaciones_meta: number
+          originaciones_real: number
+          originaciones_weighted: number
+          period_month: number
+          period_year: number
+          regional: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          total_commission: number
+          updated_at: string
+          user_email: string
+          user_name: string | null
+        }
+        Insert: {
+          base_commission?: number
+          calculated_commission?: number
+          candado_met?: boolean
+          created_at?: string
+          firmas_compliance?: number
+          firmas_meta?: number
+          firmas_real?: number
+          gmv_meta?: number
+          gmv_real?: number
+          gmv_weighted?: number
+          has_mb_income?: boolean
+          id?: string
+          indicator_bonus?: number
+          observations?: string | null
+          originaciones_meta?: number
+          originaciones_real?: number
+          originaciones_weighted?: number
+          period_month: number
+          period_year: number
+          regional?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          total_commission?: number
+          updated_at?: string
+          user_email: string
+          user_name?: string | null
+        }
+        Update: {
+          base_commission?: number
+          calculated_commission?: number
+          candado_met?: boolean
+          created_at?: string
+          firmas_compliance?: number
+          firmas_meta?: number
+          firmas_real?: number
+          gmv_meta?: number
+          gmv_real?: number
+          gmv_weighted?: number
+          has_mb_income?: boolean
+          id?: string
+          indicator_bonus?: number
+          observations?: string | null
+          originaciones_meta?: number
+          originaciones_real?: number
+          originaciones_weighted?: number
+          period_month?: number
+          period_year?: number
+          regional?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          total_commission?: number
+          updated_at?: string
+          user_email?: string
+          user_name?: string | null
+        }
+        Relationships: []
+      }
       course_enrollments: {
         Row: {
           completed_at: string | null

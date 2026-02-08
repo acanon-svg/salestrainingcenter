@@ -24,6 +24,8 @@ import {
   Users,
   CreditCard,
   Power,
+  DollarSign,
+  Download,
 } from "lucide-react";
 import { useTools, Tool } from "@/hooks/useTools";
 import { useAuth } from "@/contexts/AuthContext";
@@ -31,6 +33,8 @@ import { TeamSelector } from "@/components/tools/TeamSelector";
 import { SalesCommissionCalculator } from "@/components/tools/SalesCommissionCalculator";
 import { CommissionConfigManager } from "@/components/tools/CommissionConfigManager";
 import { useMyCommissionConfig } from "@/hooks/useCommissionCalculatorConfig";
+import { FieldSalesCommissions } from "@/components/tools/FieldSalesCommissions";
+import { CommissionReportSection } from "@/components/tools/CommissionReportSection";
 import { AddiPlansCalculator } from "@/components/tools/AddiPlansCalculator";
 import { useToast } from "@/hooks/use-toast";
 
@@ -216,7 +220,8 @@ const Tools: React.FC = () => {
   const isCreator = hasRole("creator") || hasRole("admin");
 
   const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
-  const [mode, setMode] = useState<"list" | "configure" | "use">("list");
+  const [mode, setMode] = useState<"list" | "configure" | "use" | "commissions" | "commission-report">("list");
+  const isLeader = hasRole("lider");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [teamsDialogOpen, setTeamsDialogOpen] = useState(false);
   const [newToolName, setNewToolName] = useState("");
@@ -358,6 +363,46 @@ const Tools: React.FC = () => {
     );
   }
 
+  if (mode === "commissions") {
+    return (
+      <DashboardLayout>
+        <div className="space-y-6">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" onClick={() => setMode("list")}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Volver
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">Comisiones Field Sales</h1>
+              <p className="text-muted-foreground">Gestión y aprobación de comisiones del equipo</p>
+            </div>
+          </div>
+          <FieldSalesCommissions />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (mode === "commission-report") {
+    return (
+      <DashboardLayout>
+        <div className="space-y-6">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" onClick={() => setMode("list")}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Volver
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">Reporte de Comisiones</h1>
+              <p className="text-muted-foreground">Descarga los reportes de comisiones aprobadas</p>
+            </div>
+          </div>
+          <CommissionReportSection />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -399,6 +444,52 @@ const Tools: React.FC = () => {
                 />
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Field Sales Commission Section - Leaders */}
+        {isLeader && (
+          <div className="space-y-3">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              Comisiones
+            </h2>
+            <Card className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => setMode("commissions")}>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-emerald-500/10">
+                    <DollarSign className="h-6 w-6 text-emerald-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Comisiones Field Sales</CardTitle>
+                    <CardDescription>Gestiona y aprueba las comisiones de tu equipo</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+            </Card>
+          </div>
+        )}
+
+        {/* Commission Report Section - Creators */}
+        {isCreator && (
+          <div className="space-y-3">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Download className="h-5 w-5" />
+              Reportes de Comisiones
+            </h2>
+            <Card className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => setMode("commission-report")}>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Download className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Reporte de Comisiones</CardTitle>
+                    <CardDescription>Descarga los reportes de comisiones aprobadas del equipo</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+            </Card>
           </div>
         )}
 

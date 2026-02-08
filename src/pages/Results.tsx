@@ -4,12 +4,40 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ResultsSection } from "@/components/results/ResultsSection";
 import { TeamResultsUpload } from "@/components/results/TeamResultsUpload";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, Upload } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { BarChart3, Upload, AlertCircle } from "lucide-react";
 
 const Results: React.FC = () => {
   const { profile, hasRole } = useAuth();
   const isCreatorOrAdmin = hasRole("creator") || hasRole("admin");
   const isLeader = hasRole("lider");
+
+  // Field Sales gate: students only see results if their team is Field Sales
+  const isFieldSales = profile?.team?.toLowerCase().includes("field sales");
+  const canSeeResults = isCreatorOrAdmin || isLeader || isFieldSales;
+
+  if (!canSeeResults) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-8 animate-fade-in">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
+              <BarChart3 className="w-8 h-8 text-primary" />
+              Resultados
+            </h1>
+          </div>
+          <Card className="border-border/50">
+            <CardContent className="pt-6 text-center py-12">
+              <AlertCircle className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <p className="text-muted-foreground">
+                Esta sección no está disponible para tu equipo actualmente.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
