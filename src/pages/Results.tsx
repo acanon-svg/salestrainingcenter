@@ -2,6 +2,7 @@ import React from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { ResultsSection } from "@/components/results/ResultsSection";
+import { ResultsTimelineSection } from "@/components/results/ResultsTimelineSection";
 import { TeamResultsUpload } from "@/components/results/TeamResultsUpload";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
@@ -90,18 +91,25 @@ const Results: React.FC = () => {
             <TabsContent value="upload" className="mt-6">
               <TeamResultsUpload />
             </TabsContent>
-            <TabsContent value="view" className="mt-6">
+            <TabsContent value="view" className="mt-6 space-y-8">
               <ResultsSection showTeamChart showTimePeriodFilter />
+              <ResultsTimelineSection />
             </TabsContent>
           </Tabs>
         ) : isLeader ? (
-          <ResultsSection
-            showTeamChart
-            showTimePeriodFilter
-            regional={profile?.regional || undefined}
-          />
+          <div className="space-y-8">
+            <ResultsSection
+              showTeamChart
+              showTimePeriodFilter
+              regional={profile?.regional || undefined}
+            />
+            <ResultsTimelineSection />
+          </div>
         ) : (
-          <ResultsSection userEmail={profile?.email} />
+          <div className="space-y-8">
+            <ResultsSection userEmail={profile?.email} />
+            <ResultsTimelineSection userEmail={profile?.email} />
+          </div>
         )}
       </div>
     </DashboardLayout>

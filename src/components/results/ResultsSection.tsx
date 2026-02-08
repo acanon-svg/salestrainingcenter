@@ -2,12 +2,11 @@ import React, { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BarChart3, Table2, AlertCircle, Calendar } from "lucide-react";
+import { BarChart3, Table2, AlertCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useTeamResults } from "@/hooks/useTeamResults";
 import { ResultsBarLineChart } from "./ResultsBarLineChart";
 import { ResultsHeatmapTable } from "./ResultsHeatmapTable";
-import { ResultsTimelineChart } from "./ResultsTimelineChart";
 import { getMonthName } from "@/hooks/useCommissionMonthlyConfig";
 
 type Indicator = "firmas" | "originaciones" | "gmv";
@@ -159,12 +158,6 @@ export const ResultsSection: React.FC<Props> = ({
         )
       )}
 
-      {/* Timeline Chart (both students and leaders) */}
-      <ResultsTimelineChart
-        data={filteredByTime}
-        indicator={indicator}
-        showOnlyUser={userEmail}
-      />
     </div>
   );
 };
