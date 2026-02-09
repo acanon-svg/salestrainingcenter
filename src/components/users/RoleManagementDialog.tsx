@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -25,7 +26,7 @@ import {
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, Shield, BookOpen, Crown, Users, Check, ChevronsUpDown, Plus, Building, MapPin, UsersRound, LineChart, ClipboardCheck } from "lucide-react";
+import { Loader2, Shield, BookOpen, Crown, Users, Check, ChevronsUpDown, Plus, Building, MapPin, UsersRound, LineChart, ClipboardCheck, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUserRoles, useAddRole, useRemoveRole, AppRole } from "@/hooks/useUserRoles";
 import { useLeaderRegion, useAssignLeaderRegion, useRemoveLeaderRegion } from "@/hooks/useLeaderRegion";
@@ -43,6 +44,7 @@ interface RoleManagementDialogProps {
     company_role?: string | null;
     team?: string | null;
     regional?: string | null;
+    is_guaranteed?: boolean;
   } | null;
   onProfileUpdated?: () => void;
 }
@@ -122,6 +124,7 @@ export const RoleManagementDialog: React.FC<RoleManagementDialogProps> = ({
   const [companyRole, setCompanyRole] = useState<string>("");
   const [team, setTeam] = useState<string>("");
   const [profileRegional, setProfileRegional] = useState<string>("");
+  const [isGuaranteed, setIsGuaranteed] = useState<boolean>(false);
   
   // Leader region state
   const [selectedRegional, setSelectedRegional] = useState<string>("");
@@ -138,6 +141,7 @@ export const RoleManagementDialog: React.FC<RoleManagementDialogProps> = ({
       setCompanyRole(user.company_role || "");
       setTeam(user.team || "");
       setProfileRegional(user.regional || "");
+      setIsGuaranteed(user.is_guaranteed || false);
     }
   }, [user]);
 
@@ -176,7 +180,8 @@ export const RoleManagementDialog: React.FC<RoleManagementDialogProps> = ({
   const profileChanged = 
     companyRole !== (user.company_role || "") ||
     team !== (user.team || "") ||
-    profileRegional !== (user.regional || "");
+    profileRegional !== (user.regional || "") ||
+    isGuaranteed !== (user.is_guaranteed || false);
 
   const handleRoleToggle = async (role: AppRole, checked: boolean) => {
     if (checked) {
@@ -209,6 +214,7 @@ export const RoleManagementDialog: React.FC<RoleManagementDialogProps> = ({
       company_role: companyRole || null,
       team: team || null,
       regional: profileRegional || null,
+      is_guaranteed: isGuaranteed,
     });
     onProfileUpdated?.();
   };
@@ -350,6 +356,24 @@ export const RoleManagementDialog: React.FC<RoleManagementDialogProps> = ({
                     </Command>
                   </PopoverContent>
                 </Popover>
+              </div>
+
+              {/* Garantizado Toggle */}
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-amber-500" />
+                  <div>
+                    <Label className="text-sm font-medium">Garantizado</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Comisión al 100% independiente de resultados
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={isGuaranteed}
+                  onCheckedChange={setIsGuaranteed}
+                  disabled={isSaving}
+                />
               </div>
 
               {/* Save Profile Button */}

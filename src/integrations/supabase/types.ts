@@ -1429,6 +1429,7 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          is_guaranteed: boolean
           last_login: string | null
           password_changed: boolean | null
           password_changed_at: string | null
@@ -1446,6 +1447,7 @@ export type Database = {
           email: string
           full_name?: string | null
           id?: string
+          is_guaranteed?: boolean
           last_login?: string | null
           password_changed?: boolean | null
           password_changed_at?: string | null
@@ -1463,6 +1465,7 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          is_guaranteed?: boolean
           last_login?: string | null
           password_changed?: boolean | null
           password_changed_at?: string | null
