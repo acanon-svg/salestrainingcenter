@@ -11,10 +11,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Download, FileSpreadsheet, AlertCircle, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { Download, FileSpreadsheet, AlertCircle, ArrowUp, ArrowDown, ArrowUpDown, Clock, CheckCircle2 } from "lucide-react";
 import { MonthSelector } from "./MonthSelector";
 import { PendingCommissionsSummary } from "./PendingCommissionsSummary";
-import { useApprovedCommissions, CommissionReview } from "@/hooks/useCommissionReviews";
+import { useApprovedCommissions, usePendingCommissions, CommissionReview } from "@/hooks/useCommissionReviews";
 import * as XLSX from "xlsx";
 
 const formatCOP = (value: number) =>
@@ -53,58 +53,118 @@ const SortableHead: React.FC<{
   </TableHead>
 );
 
+const sortCommissions = (items: CommissionReview[], sortKey: SortKey | null, sortDir: SortDir) => {
+  if (!sortKey) return items;
+  const getValue = (c: CommissionReview): number | string => {
+    const totalWeighted = c.originaciones_weighted + c.gmv_weighted;
+    switch (sortKey) {
+      case "user": return (c.user_name || c.user_email).toLowerCase();
+      case "regional": return (c.regional || "").toLowerCase();
+      case "firmas": return c.firmas_compliance;
+      case "candado": return c.candado_met ? 1 : 0;
+      case "orig": return c.originaciones_weighted;
+      case "gmv": return c.gmv_weighted;
+      case "total": return totalWeighted;
+      case "mbs": return c.has_mb_income ? 1 : 0;
+      case "bonus": return c.indicator_bonus;
+      case "totalComm": return c.total_commission;
+      case "cumplimiento": return c.total_commission / BASE_COMMISSION;
+      default: return 0;
+    }
+  };
+  return [...items].sort((a, b) => {
+    const va = getValue(a);
+    const vb = getValue(b);
+    const cmp = va < vb ? -1 : va > vb ? 1 : 0;
+    return sortDir === "desc" ? -cmp : cmp;
+  });
+};
+
+const CommissionTable: React.FC<{ items: CommissionReview[]; sortKey: SortKey | null; sortDir: SortDir; onSort: (k: SortKey) => void }> = ({ items, sortKey, sortDir, onSort }) => {
+  const sharedHeadProps = { currentKey: sortKey, currentDir: sortDir, onSort };
+  const sorted = useMemo(() => sortCommissions(items, sortKey, sortDir), [items, sortKey, sortDir]);
+
+  return (
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <SortableHead label="Ejecutivo" sortKey="user" {...sharedHeadProps} />
+            <SortableHead label="Regional" sortKey="regional" {...sharedHeadProps} />
+            <SortableHead label="% Firmas" sortKey="firmas" className="text-right" {...sharedHeadProps} />
+            <SortableHead label="Candado" sortKey="candado" className="text-right" {...sharedHeadProps} />
+            <SortableHead label="% Orig" sortKey="orig" className="text-right" {...sharedHeadProps} />
+            <SortableHead label="% GMV" sortKey="gmv" className="text-right" {...sharedHeadProps} />
+            <SortableHead label="Total" sortKey="total" className="text-right" {...sharedHeadProps} />
+            <SortableHead label="MBs" sortKey="mbs" className="text-right" {...sharedHeadProps} />
+            <SortableHead label="Bonus" sortKey="bonus" className="text-right" {...sharedHeadProps} />
+            <SortableHead label="Total $" sortKey="totalComm" className="text-right" {...sharedHeadProps} />
+            <SortableHead label="Cumplimiento" sortKey="cumplimiento" className="text-right" {...sharedHeadProps} />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {sorted.map((c) => {
+            const totalWeighted = c.originaciones_weighted + c.gmv_weighted;
+            const cumplimiento = c.total_commission / BASE_COMMISSION;
+            return (
+              <TableRow key={c.id}>
+                <TableCell>
+                  <div>
+                    <p className="font-medium text-sm">{c.user_name || c.user_email}</p>
+                    <p className="text-xs text-muted-foreground">{c.user_email}</p>
+                  </div>
+                </TableCell>
+                <TableCell>{c.regional}</TableCell>
+                <TableCell className="text-right">{c.firmas_compliance.toFixed(1)}%</TableCell>
+                <TableCell className="text-right">
+                  <Badge variant={c.candado_met ? "default" : "destructive"} className="text-xs">
+                    {c.candado_met ? "✅" : "❌"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right">{c.originaciones_weighted.toFixed(1)}%</TableCell>
+                <TableCell className="text-right">{c.gmv_weighted.toFixed(1)}%</TableCell>
+                <TableCell className="text-right font-semibold">{totalWeighted.toFixed(1)}%</TableCell>
+                <TableCell className="text-right">{c.has_mb_income ? "+20%" : "—"}</TableCell>
+                <TableCell className="text-right">
+                  {c.indicator_bonus > 0 ? formatCOP(c.indicator_bonus) : "—"}
+                </TableCell>
+                <TableCell className="text-right font-bold">{formatCOP(c.total_commission)}</TableCell>
+                <TableCell className="text-right font-semibold">
+                  {(cumplimiento * 100).toFixed(1)}%
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
+  );
+};
+
 export const CommissionReportSection: React.FC = () => {
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
-  const [sortKey, setSortKey] = useState<SortKey | null>(null);
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [sortKeyApproved, setSortKeyApproved] = useState<SortKey | null>(null);
+  const [sortDirApproved, setSortDirApproved] = useState<SortDir>("desc");
+  const [sortKeyPending, setSortKeyPending] = useState<SortKey | null>(null);
+  const [sortDirPending, setSortDirPending] = useState<SortDir>("desc");
 
-  const { data: commissions, isLoading } = useApprovedCommissions(selectedMonth, selectedYear);
+  const { data: approved, isLoading: loadingApproved } = useApprovedCommissions(selectedMonth, selectedYear);
+  const { data: pending, isLoading: loadingPending } = usePendingCommissions(selectedMonth, selectedYear);
 
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDir(d => (d === "desc" ? "asc" : "desc"));
-    } else {
-      setSortKey(key);
-      setSortDir("desc");
-    }
+  const handleSortApproved = (key: SortKey) => {
+    if (sortKeyApproved === key) setSortDirApproved(d => d === "desc" ? "asc" : "desc");
+    else { setSortKeyApproved(key); setSortDirApproved("desc"); }
+  };
+  const handleSortPending = (key: SortKey) => {
+    if (sortKeyPending === key) setSortDirPending(d => d === "desc" ? "asc" : "desc");
+    else { setSortKeyPending(key); setSortDirPending("desc"); }
   };
 
-  const sortedCommissions = useMemo(() => {
-    if (!commissions) return [];
-    if (!sortKey) return commissions;
-
-    const getValue = (c: CommissionReview): number | string => {
-      const totalWeighted = c.originaciones_weighted + c.gmv_weighted;
-      switch (sortKey) {
-        case "user": return (c.user_name || c.user_email).toLowerCase();
-        case "regional": return (c.regional || "").toLowerCase();
-        case "firmas": return c.firmas_compliance;
-        case "candado": return c.candado_met ? 1 : 0;
-        case "orig": return c.originaciones_weighted;
-        case "gmv": return c.gmv_weighted;
-        case "total": return totalWeighted;
-        case "mbs": return c.has_mb_income ? 1 : 0;
-        case "bonus": return c.indicator_bonus;
-        case "totalComm": return c.total_commission;
-        case "cumplimiento": return c.total_commission / BASE_COMMISSION;
-        default: return 0;
-      }
-    };
-
-    return [...commissions].sort((a, b) => {
-      const va = getValue(a);
-      const vb = getValue(b);
-      const cmp = va < vb ? -1 : va > vb ? 1 : 0;
-      return sortDir === "desc" ? -cmp : cmp;
-    });
-  }, [commissions, sortKey, sortDir]);
-
   const handleDownloadExcel = () => {
-    if (!commissions || commissions.length === 0) return;
-
-    const rows = commissions.map((c) => {
+    if (!approved || approved.length === 0) return;
+    const rows = approved.map((c) => {
       const totalWeighted = c.originaciones_weighted + c.gmv_weighted;
       const cumplimiento = c.total_commission / BASE_COMMISSION;
       return {
@@ -131,10 +191,7 @@ export const CommissionReportSection: React.FC = () => {
         Observaciones: c.observations || "",
       };
     });
-
     const ws = XLSX.utils.json_to_sheet(rows);
-
-    // Apply Excel percentage format to percentage columns
     const pctCols = ["% Firmas", "Ponderación Orig (50%)", "Ponderación GMV (50%)", "Total (Orig + GMV)", "Cumplimiento (%)"];
     const headers = Object.keys(rows[0]);
     const range = XLSX.utils.decode_range(ws["!ref"] || "A1");
@@ -143,20 +200,17 @@ export const CommissionReportSection: React.FC = () => {
       if (colIdx === -1) continue;
       for (let r = range.s.r + 1; r <= range.e.r; r++) {
         const cellRef = XLSX.utils.encode_cell({ r, c: colIdx });
-        if (ws[cellRef]) {
-          ws[cellRef].z = "0.0%";
-        }
+        if (ws[cellRef]) ws[cellRef].z = "0.0%";
       }
     }
-
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Comisiones Aprobadas");
     XLSX.writeFile(wb, `reporte_comisiones_${selectedMonth}_${selectedYear}.xlsx`);
   };
 
-  const totalCommission = (commissions || []).reduce((s, c) => s + c.total_commission, 0);
-
-  const sharedHeadProps = { currentKey: sortKey, currentDir: sortDir, onSort: handleSort };
+  const totalApprovedComm = (approved || []).reduce((s, c) => s + c.total_commission, 0);
+  const totalPendingComm = (pending || []).reduce((s, c) => s + c.total_commission, 0);
+  const isLoading = loadingApproved || loadingPending;
 
   return (
     <div className="space-y-6">
@@ -167,25 +221,29 @@ export const CommissionReportSection: React.FC = () => {
         onYearChange={setSelectedYear}
       />
 
-      <PendingCommissionsSummary month={selectedMonth} year={selectedYear} />
-
       {/* Summary */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-4">
         <Card>
           <CardContent className="pt-4 text-center">
-            <p className="text-xs text-muted-foreground">Comisiones Aprobadas</p>
-            <p className="text-2xl font-bold text-emerald-600">{commissions?.length || 0}</p>
+            <p className="text-xs text-muted-foreground">Aprobadas</p>
+            <p className="text-2xl font-bold text-emerald-600">{approved?.length || 0}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4 text-center">
-            <p className="text-xs text-muted-foreground">Total a Pagar</p>
-            <p className="text-2xl font-bold text-primary">{formatCOP(totalCommission)}</p>
+            <p className="text-xs text-muted-foreground">Pendientes</p>
+            <p className="text-2xl font-bold text-amber-600">{pending?.length || 0}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 text-center">
+            <p className="text-xs text-muted-foreground">Total a Pagar (Aprobadas)</p>
+            <p className="text-2xl font-bold text-primary">{formatCOP(totalApprovedComm)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4 flex items-center justify-center">
-            <Button onClick={handleDownloadExcel} disabled={!commissions || commissions.length === 0} className="gap-2">
+            <Button onClick={handleDownloadExcel} disabled={!approved || approved.length === 0} className="gap-2">
               <Download className="h-4 w-4" />
               Descargar Excel
             </Button>
@@ -195,77 +253,50 @@ export const CommissionReportSection: React.FC = () => {
 
       {isLoading ? (
         <Skeleton className="h-[300px] w-full" />
-      ) : !commissions || commissions.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No hay comisiones aprobadas para este período.</p>
-          </CardContent>
-        </Card>
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileSpreadsheet className="h-5 w-5" />
-              Detalle de Comisiones
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <SortableHead label="Ejecutivo" sortKey="user" {...sharedHeadProps} />
-                    <SortableHead label="Regional" sortKey="regional" {...sharedHeadProps} />
-                    <SortableHead label="% Firmas" sortKey="firmas" className="text-right" {...sharedHeadProps} />
-                    <SortableHead label="Candado" sortKey="candado" className="text-right" {...sharedHeadProps} />
-                    <SortableHead label="% Orig" sortKey="orig" className="text-right" {...sharedHeadProps} />
-                    <SortableHead label="% GMV" sortKey="gmv" className="text-right" {...sharedHeadProps} />
-                    <SortableHead label="Total" sortKey="total" className="text-right" {...sharedHeadProps} />
-                    <SortableHead label="MBs" sortKey="mbs" className="text-right" {...sharedHeadProps} />
-                    <SortableHead label="Bonus" sortKey="bonus" className="text-right" {...sharedHeadProps} />
-                    <SortableHead label="Total $" sortKey="totalComm" className="text-right" {...sharedHeadProps} />
-                    <SortableHead label="Cumplimiento" sortKey="cumplimiento" className="text-right" {...sharedHeadProps} />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sortedCommissions.map((c) => {
-                    const totalWeighted = c.originaciones_weighted + c.gmv_weighted;
-                    const cumplimiento = c.total_commission / BASE_COMMISSION;
-                    return (
-                      <TableRow key={c.id}>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium text-sm">{c.user_name || c.user_email}</p>
-                            <p className="text-xs text-muted-foreground">{c.user_email}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell>{c.regional}</TableCell>
-                        <TableCell className="text-right">{c.firmas_compliance.toFixed(1)}%</TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant={c.candado_met ? "default" : "destructive"} className="text-xs">
-                            {c.candado_met ? "✅" : "❌"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">{c.originaciones_weighted.toFixed(1)}%</TableCell>
-                        <TableCell className="text-right">{c.gmv_weighted.toFixed(1)}%</TableCell>
-                        <TableCell className="text-right font-semibold">{totalWeighted.toFixed(1)}%</TableCell>
-                        <TableCell className="text-right">{c.has_mb_income ? "+20%" : "—"}</TableCell>
-                        <TableCell className="text-right">
-                          {c.indicator_bonus > 0 ? formatCOP(c.indicator_bonus) : "—"}
-                        </TableCell>
-                        <TableCell className="text-right font-bold">{formatCOP(c.total_commission)}</TableCell>
-                        <TableCell className="text-right font-semibold">
-                          {(cumplimiento * 100).toFixed(1)}%
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+        <>
+          {/* Pending section */}
+          <Card className="border-amber-200 dark:border-amber-800/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                <Clock className="h-5 w-5" />
+                Comisiones Pendientes por Aprobar
+                <Badge variant="secondary" className="ml-2">{pending?.length || 0}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {!pending || pending.length === 0 ? (
+                <div className="py-8 text-center">
+                  <CheckCircle2 className="h-10 w-10 mx-auto text-emerald-500 mb-3" />
+                  <p className="text-sm text-muted-foreground">Todas las comisiones han sido revisadas</p>
+                </div>
+              ) : (
+                <CommissionTable items={pending} sortKey={sortKeyPending} sortDir={sortDirPending} onSort={handleSortPending} />
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Approved section */}
+          <Card className="border-emerald-200 dark:border-emerald-800/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+                <FileSpreadsheet className="h-5 w-5" />
+                Comisiones Aprobadas
+                <Badge variant="secondary" className="ml-2">{approved?.length || 0}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {!approved || approved.length === 0 ? (
+                <div className="py-8 text-center">
+                  <AlertCircle className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+                  <p className="text-sm text-muted-foreground">No hay comisiones aprobadas para este período</p>
+                </div>
+              ) : (
+                <CommissionTable items={approved} sortKey={sortKeyApproved} sortDir={sortDirApproved} onSort={handleSortApproved} />
+              )}
+            </CardContent>
+          </Card>
+        </>
       )}
     </div>
   );
