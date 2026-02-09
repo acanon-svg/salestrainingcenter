@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,7 @@ import {
   Loader2,
   TrendingUp,
   Target,
+  RotateCcw,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { MonthSelector } from "./MonthSelector";
@@ -40,6 +42,10 @@ import {
 } from "@/hooks/useCommissionReviews";
 import * as XLSX from "xlsx";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+const db = () => supabase as any;
 
 const formatCOP = (value: number) =>
   new Intl.NumberFormat("es-CO", {
@@ -50,7 +56,8 @@ const formatCOP = (value: number) =>
   }).format(value);
 
 export const FieldSalesCommissions: React.FC = () => {
-  const { profile } = useAuth();
+  const { profile, hasRole } = useAuth();
+  const isCreator = hasRole("creator") || hasRole("admin");
   const regional = profile?.regional || "";
 
   const now = new Date();
@@ -80,6 +87,9 @@ export const FieldSalesCommissions: React.FC = () => {
   const [rejectingEmail, setRejectingEmail] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
   const [processingEmail, setProcessingEmail] = useState<string | null>(null);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const queryClient = useQueryClient();
 
   // Sync existing reviews into adjustments
   useEffect(() => {
@@ -244,6 +254,30 @@ export const FieldSalesCommissions: React.FC = () => {
     );
   };
 
+  const handleResetCommissions = async () => {
+    setResetting(true);
+    try {
+      const { error } = await db()
+        .from("commission_reviews")
+        .delete()
+        .eq("period_month", selectedMonth)
+        .eq("period_year", selectedYear);
+
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ["commission-reviews"] });
+      queryClient.invalidateQueries({ queryKey: ["approved-commissions"] });
+      queryClient.invalidateQueries({ queryKey: ["rejected-commission-count"] });
+      setAdjustments({});
+      toast.success(`Comisiones de ${selectedMonth}/${selectedYear} reiniciadas correctamente`);
+      setResetDialogOpen(false);
+    } catch (err: any) {
+      toast.error(`Error al reiniciar: ${err.message}`);
+    } finally {
+      setResetting(false);
+    }
+  };
+
   const updateAdj = (
     email: string,
     field: "hasMb" | "bonus",
@@ -282,6 +316,21 @@ export const FieldSalesCommissions: React.FC = () => {
         onMonthChange={setSelectedMonth}
         onYearChange={setSelectedYear}
       />
+
+      {/* Reset button for creators */}
+      {isCreator && (
+        <div className="flex justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setResetDialogOpen(true)}
+            className="text-destructive hover:bg-destructive/10 border-destructive/30"
+          >
+            <RotateCcw className="h-4 w-4 mr-1" />
+            Reiniciar Comisiones
+          </Button>
+        </div>
+      )}
 
       {/* Summary */}
       <div className="grid gap-4 sm:grid-cols-3">
@@ -578,6 +627,45 @@ export const FieldSalesCommissions: React.FC = () => {
                 <Loader2 className="h-4 w-4 mr-1 animate-spin" />
               ) : null}
               Confirmar Rechazo
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Commissions Dialog */}
+      <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reiniciar Comisiones</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              ¿Estás seguro de que deseas eliminar <strong>todas</strong> las comisiones
+              (aprobadas, rechazadas y pendientes) del período{" "}
+              <strong>{selectedMonth}/{selectedYear}</strong>?
+            </p>
+            <p className="text-sm text-destructive font-medium">
+              Esta acción no se puede deshacer.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setResetDialogOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleResetCommissions}
+              disabled={resetting}
+            >
+              {resetting ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                <RotateCcw className="h-4 w-4 mr-1" />
+              )}
+              Confirmar Reinicio
             </Button>
           </DialogFooter>
         </DialogContent>
