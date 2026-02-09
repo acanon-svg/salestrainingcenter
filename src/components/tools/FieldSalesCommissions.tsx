@@ -58,7 +58,8 @@ const formatCOP = (value: number) =>
 export const FieldSalesCommissions: React.FC = () => {
   const { profile, hasRole } = useAuth();
   const isCreator = hasRole("creator") || hasRole("admin");
-  const regional = profile?.regional || "";
+  // Creators/admins see ALL regionals; regular leaders only see their own
+  const regional = isCreator ? undefined : (profile?.regional || "");
 
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
