@@ -339,7 +339,6 @@ export const useApprovedCommissions = (month?: number, year?: number) => {
 export const usePendingCommissions = (month?: number, year?: number) => {
   const queryClient = useQueryClient();
 
-  // Subscribe to realtime changes on commission_reviews
   React.useEffect(() => {
     const channel = supabase
       .channel("pending-commissions-realtime")
@@ -348,6 +347,7 @@ export const usePendingCommissions = (month?: number, year?: number) => {
         { event: "*", schema: "public", table: "commission_reviews" },
         () => {
           queryClient.invalidateQueries({ queryKey: ["pending-commissions", month, year] });
+          queryClient.invalidateQueries({ queryKey: ["not-approved-commissions", month, year] });
         }
       )
       .subscribe();
@@ -367,6 +367,44 @@ export const usePendingCommissions = (month?: number, year?: number) => {
       if (month) query = query.eq("period_month", month);
       if (year) query = query.eq("period_year", year);
       query = query.order("regional").order("user_email");
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data || []) as CommissionReview[];
+    },
+  });
+};
+
+/** Fetch all non-approved commissions (pending + rejected) for a specific month/year, with realtime refresh. */
+export const useNotApprovedCommissions = (month?: number, year?: number) => {
+  const queryClient = useQueryClient();
+
+  React.useEffect(() => {
+    const channel = supabase
+      .channel("not-approved-commissions-realtime")
+      .on(
+        "postgres_changes" as any,
+        { event: "*", schema: "public", table: "commission_reviews" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["not-approved-commissions", month, year] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [month, year, queryClient]);
+
+  return useQuery({
+    queryKey: ["not-approved-commissions", month, year],
+    queryFn: async () => {
+      let query = db()
+        .from("commission_reviews")
+        .select("*")
+        .in("status", ["pending", "rejected"]);
+      if (month) query = query.eq("period_month", month);
+      if (year) query = query.eq("period_year", year);
+      query = query.order("status").order("regional").order("user_email");
       const { data, error } = await query;
       if (error) throw error;
       return (data || []) as CommissionReview[];

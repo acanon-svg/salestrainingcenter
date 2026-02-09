@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -13,8 +14,7 @@ import {
 } from "@/components/ui/table";
 import { Download, FileSpreadsheet, AlertCircle, ArrowUp, ArrowDown, ArrowUpDown, Clock, CheckCircle2 } from "lucide-react";
 import { MonthSelector } from "./MonthSelector";
-import { PendingCommissionsSummary } from "./PendingCommissionsSummary";
-import { useApprovedCommissions, usePendingCommissions, CommissionReview } from "@/hooks/useCommissionReviews";
+import { useApprovedCommissions, useNotApprovedCommissions, CommissionReview } from "@/hooks/useCommissionReviews";
 import * as XLSX from "xlsx";
 
 const formatCOP = (value: number) =>
@@ -27,7 +27,7 @@ const formatCOP = (value: number) =>
 
 const BASE_COMMISSION = 1500000;
 
-type SortKey = "user" | "regional" | "firmas" | "candado" | "orig" | "gmv" | "total" | "mbs" | "bonus" | "totalComm" | "cumplimiento";
+type SortKey = "user" | "regional" | "firmas" | "candado" | "orig" | "gmv" | "total" | "mbs" | "bonus" | "totalComm" | "cumplimiento" | "status";
 type SortDir = "asc" | "desc";
 
 const SortableHead: React.FC<{
@@ -69,6 +69,7 @@ const sortCommissions = (items: CommissionReview[], sortKey: SortKey | null, sor
       case "bonus": return c.indicator_bonus;
       case "totalComm": return c.total_commission;
       case "cumplimiento": return c.total_commission / BASE_COMMISSION;
+      case "status": return c.status;
       default: return 0;
     }
   };
@@ -80,7 +81,13 @@ const sortCommissions = (items: CommissionReview[], sortKey: SortKey | null, sor
   });
 };
 
-const CommissionTable: React.FC<{ items: CommissionReview[]; sortKey: SortKey | null; sortDir: SortDir; onSort: (k: SortKey) => void }> = ({ items, sortKey, sortDir, onSort }) => {
+const CommissionTable: React.FC<{
+  items: CommissionReview[];
+  sortKey: SortKey | null;
+  sortDir: SortDir;
+  onSort: (k: SortKey) => void;
+  showStatus?: boolean;
+}> = ({ items, sortKey, sortDir, onSort, showStatus }) => {
   const sharedHeadProps = { currentKey: sortKey, currentDir: sortDir, onSort };
   const sorted = useMemo(() => sortCommissions(items, sortKey, sortDir), [items, sortKey, sortDir]);
 
@@ -91,6 +98,7 @@ const CommissionTable: React.FC<{ items: CommissionReview[]; sortKey: SortKey | 
           <TableRow>
             <SortableHead label="Ejecutivo" sortKey="user" {...sharedHeadProps} />
             <SortableHead label="Regional" sortKey="regional" {...sharedHeadProps} />
+            {showStatus && <SortableHead label="Estado" sortKey="status" {...sharedHeadProps} />}
             <SortableHead label="% Firmas" sortKey="firmas" className="text-right" {...sharedHeadProps} />
             <SortableHead label="Candado" sortKey="candado" className="text-right" {...sharedHeadProps} />
             <SortableHead label="% Orig" sortKey="orig" className="text-right" {...sharedHeadProps} />
@@ -115,6 +123,13 @@ const CommissionTable: React.FC<{ items: CommissionReview[]; sortKey: SortKey | 
                   </div>
                 </TableCell>
                 <TableCell>{c.regional}</TableCell>
+                {showStatus && (
+                  <TableCell>
+                    <Badge variant={c.status === "rejected" ? "destructive" : "secondary"} className="text-xs">
+                      {c.status === "pending" ? "⏳ Pendiente" : "🔄 Devuelta"}
+                    </Badge>
+                  </TableCell>
+                )}
                 <TableCell className="text-right">{c.firmas_compliance.toFixed(1)}%</TableCell>
                 <TableCell className="text-right">
                   <Badge variant={c.candado_met ? "default" : "destructive"} className="text-xs">
@@ -147,19 +162,19 @@ export const CommissionReportSection: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [sortKeyApproved, setSortKeyApproved] = useState<SortKey | null>(null);
   const [sortDirApproved, setSortDirApproved] = useState<SortDir>("desc");
-  const [sortKeyPending, setSortKeyPending] = useState<SortKey | null>(null);
-  const [sortDirPending, setSortDirPending] = useState<SortDir>("desc");
+  const [sortKeyNotApproved, setSortKeyNotApproved] = useState<SortKey | null>(null);
+  const [sortDirNotApproved, setSortDirNotApproved] = useState<SortDir>("desc");
 
   const { data: approved, isLoading: loadingApproved } = useApprovedCommissions(selectedMonth, selectedYear);
-  const { data: pending, isLoading: loadingPending } = usePendingCommissions(selectedMonth, selectedYear);
+  const { data: notApproved, isLoading: loadingNotApproved } = useNotApprovedCommissions(selectedMonth, selectedYear);
 
   const handleSortApproved = (key: SortKey) => {
     if (sortKeyApproved === key) setSortDirApproved(d => d === "desc" ? "asc" : "desc");
     else { setSortKeyApproved(key); setSortDirApproved("desc"); }
   };
-  const handleSortPending = (key: SortKey) => {
-    if (sortKeyPending === key) setSortDirPending(d => d === "desc" ? "asc" : "desc");
-    else { setSortKeyPending(key); setSortDirPending("desc"); }
+  const handleSortNotApproved = (key: SortKey) => {
+    if (sortKeyNotApproved === key) setSortDirNotApproved(d => d === "desc" ? "asc" : "desc");
+    else { setSortKeyNotApproved(key); setSortDirNotApproved("desc"); }
   };
 
   const handleDownloadExcel = () => {
@@ -209,8 +224,7 @@ export const CommissionReportSection: React.FC = () => {
   };
 
   const totalApprovedComm = (approved || []).reduce((s, c) => s + c.total_commission, 0);
-  const totalPendingComm = (pending || []).reduce((s, c) => s + c.total_commission, 0);
-  const isLoading = loadingApproved || loadingPending;
+  const isLoading = loadingApproved || loadingNotApproved;
 
   return (
     <div className="space-y-6">
@@ -221,83 +235,88 @@ export const CommissionReportSection: React.FC = () => {
         onYearChange={setSelectedYear}
       />
 
-      {/* Summary */}
-      <div className="grid gap-4 sm:grid-cols-4">
-        <Card>
-          <CardContent className="pt-4 text-center">
-            <p className="text-xs text-muted-foreground">Aprobadas</p>
-            <p className="text-2xl font-bold text-emerald-600">{approved?.length || 0}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 text-center">
-            <p className="text-xs text-muted-foreground">Pendientes</p>
-            <p className="text-2xl font-bold text-amber-600">{pending?.length || 0}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 text-center">
-            <p className="text-xs text-muted-foreground">Total a Pagar (Aprobadas)</p>
-            <p className="text-2xl font-bold text-primary">{formatCOP(totalApprovedComm)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 flex items-center justify-center">
-            <Button onClick={handleDownloadExcel} disabled={!approved || approved.length === 0} className="gap-2">
-              <Download className="h-4 w-4" />
-              Descargar Excel
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <Tabs defaultValue="not-approved">
+        <TabsList>
+          <TabsTrigger value="not-approved" className="gap-2">
+            <Clock className="h-4 w-4" />
+            No Aprobadas
+            {(notApproved?.length || 0) > 0 && (
+              <Badge variant="secondary" className="ml-1 text-xs">{notApproved?.length}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="approved" className="gap-2">
+            <CheckCircle2 className="h-4 w-4" />
+            Aprobadas
+            {(approved?.length || 0) > 0 && (
+              <Badge variant="secondary" className="ml-1 text-xs">{approved?.length}</Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
 
-      {isLoading ? (
-        <Skeleton className="h-[300px] w-full" />
-      ) : (
-        <>
-          {/* Pending section */}
-          <Card className="border-amber-200 dark:border-amber-800/50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
-                <Clock className="h-5 w-5" />
-                Comisiones Pendientes por Aprobar
-                <Badge variant="secondary" className="ml-2">{pending?.length || 0}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {!pending || pending.length === 0 ? (
-                <div className="py-8 text-center">
-                  <CheckCircle2 className="h-10 w-10 mx-auto text-emerald-500 mb-3" />
-                  <p className="text-sm text-muted-foreground">Todas las comisiones han sido revisadas</p>
-                </div>
-              ) : (
-                <CommissionTable items={pending} sortKey={sortKeyPending} sortDir={sortDirPending} onSort={handleSortPending} />
-              )}
-            </CardContent>
-          </Card>
+        <TabsContent value="not-approved" className="mt-6 space-y-4">
+          {isLoading ? (
+            <Skeleton className="h-[300px] w-full" />
+          ) : !notApproved || notApproved.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <CheckCircle2 className="h-12 w-12 mx-auto text-emerald-500 mb-4" />
+                <p className="text-muted-foreground">Todas las comisiones de este período han sido aprobadas.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <CommissionTable
+              items={notApproved}
+              sortKey={sortKeyNotApproved}
+              sortDir={sortDirNotApproved}
+              onSort={handleSortNotApproved}
+              showStatus
+            />
+          )}
+        </TabsContent>
 
-          {/* Approved section */}
-          <Card className="border-emerald-200 dark:border-emerald-800/50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
-                <FileSpreadsheet className="h-5 w-5" />
-                Comisiones Aprobadas
-                <Badge variant="secondary" className="ml-2">{approved?.length || 0}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {!approved || approved.length === 0 ? (
-                <div className="py-8 text-center">
-                  <AlertCircle className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-                  <p className="text-sm text-muted-foreground">No hay comisiones aprobadas para este período</p>
-                </div>
-              ) : (
-                <CommissionTable items={approved} sortKey={sortKeyApproved} sortDir={sortDirApproved} onSort={handleSortApproved} />
-              )}
-            </CardContent>
-          </Card>
-        </>
-      )}
+        <TabsContent value="approved" className="mt-6 space-y-4">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Card>
+              <CardContent className="pt-4 text-center">
+                <p className="text-xs text-muted-foreground">Comisiones Aprobadas</p>
+                <p className="text-2xl font-bold text-primary">{approved?.length || 0}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4 text-center">
+                <p className="text-xs text-muted-foreground">Total a Pagar</p>
+                <p className="text-2xl font-bold text-primary">{formatCOP(totalApprovedComm)}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4 flex items-center justify-center">
+                <Button onClick={handleDownloadExcel} disabled={!approved || approved.length === 0} className="gap-2">
+                  <Download className="h-4 w-4" />
+                  Descargar Excel
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+
+          {isLoading ? (
+            <Skeleton className="h-[300px] w-full" />
+          ) : !approved || approved.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">No hay comisiones aprobadas para este período.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <CommissionTable
+              items={approved}
+              sortKey={sortKeyApproved}
+              sortDir={sortDirApproved}
+              onSort={handleSortApproved}
+            />
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
