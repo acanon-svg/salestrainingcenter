@@ -125,8 +125,8 @@ const CommissionTable: React.FC<{
                 <TableCell>{c.regional}</TableCell>
                 {showStatus && (
                   <TableCell>
-                    <Badge variant={c.status === "rejected" ? "destructive" : "secondary"} className="text-xs">
-                      {c.status === "pending" ? "⏳ Pendiente" : "🔄 Devuelta"}
+                    <Badge variant={c.status === "rejected" ? "destructive" : c.status === "not_sent" ? "outline" : "secondary"} className="text-xs">
+                      {c.status === "pending" ? "⏳ Pendiente" : c.status === "not_sent" ? "📭 Sin enviar" : "🔄 Devuelta"}
                     </Badge>
                   </TableCell>
                 )}
