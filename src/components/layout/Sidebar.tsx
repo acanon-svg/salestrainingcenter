@@ -72,7 +72,7 @@ const creatorItems: NavItem[] = [
   { label: "Herramientas", icon: Wrench, href: "/tools", sectionKey: "tools", roles: ["creator", "admin"] },
   { label: "Feedbacks al Equipo", icon: ClipboardList, href: "/team-feedback-forms", sectionKey: "team_feedback", roles: ["creator", "admin"] },
   { label: "Feedback de Cursos", icon: MessageSquare, href: "/feedback", roles: ["creator", "admin"], showBadge: true },
-  { label: "Comisiones Rechazadas", icon: DollarSign, href: "/tools", roles: ["creator", "admin"], showBadge: true },
+  { label: "Comisiones Rechazadas", icon: DollarSign, href: "/tools?view=rejected-commissions", roles: ["creator", "admin"], showBadge: true },
 ];
 
 const leaderItems: NavItem[] = [
@@ -97,7 +97,13 @@ export const Sidebar: React.FC = () => {
   const { configs, isSectionVisibleForUser } = usePortalSectionConfigs();
   const { data: unreadFeedbackCount = 0 } = useUnreadCourseFeedbackCount();
   const { data: rejectedCommissionCount = 0 } = useRejectedCommissionCount();
-  const isActive = (href: string) => location.pathname === href;
+  const isActive = (href: string) => {
+    const [path, query] = href.split("?");
+    if (query) {
+      return location.pathname === path && location.search === `?${query}`;
+    }
+    return location.pathname === path && !location.search;
+  };
 
   const getInitials = (name: string | null) => {
     if (!name) return "U";

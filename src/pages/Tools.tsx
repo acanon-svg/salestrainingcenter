@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -217,10 +218,18 @@ const Tools: React.FC = () => {
   const { hasRole, profile, user } = useAuth();
   const { tools, isLoading, createTool, updateTool } = useTools();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const isCreator = hasRole("creator") || hasRole("admin");
 
   const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
   const [mode, setMode] = useState<"list" | "configure" | "use" | "commissions" | "commission-report">("list");
+
+  // Auto-open commissions view when navigating from "Comisiones Rechazadas"
+  useEffect(() => {
+    if (searchParams.get("view") === "rejected-commissions") {
+      setMode("commissions");
+    }
+  }, [searchParams]);
   const isLeader = hasRole("lider");
   const isFieldSalesLeader = isLeader && profile?.team?.toLowerCase().includes("field sales");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -369,7 +378,7 @@ const Tools: React.FC = () => {
       <DashboardLayout>
         <div className="space-y-6">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => setMode("list")}>
+            <Button variant="ghost" onClick={() => { setMode("list"); setSearchParams({}); }}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Volver
             </Button>
