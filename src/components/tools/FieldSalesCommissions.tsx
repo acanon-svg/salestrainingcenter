@@ -28,6 +28,7 @@ import {
   TrendingUp,
   Target,
   RotateCcw,
+  Zap,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { MonthSelector } from "./MonthSelector";
@@ -40,12 +41,71 @@ import {
   useProfilesByEmails,
   calculateCommission,
 } from "@/hooks/useCommissionReviews";
+import { useCommissionAccelerators, useAllAcceleratorsForConfigs, CommissionAccelerator } from "@/hooks/useCommissionAccelerators";
+import { useAllCommissionConfigs } from "@/hooks/useCommissionCalculatorConfig";
 import * as XLSX from "xlsx";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const db = () => supabase as any;
+
+/** Find the matching config for a user based on email, team, or default */
+const findConfigForUser = (
+  configs: any[],
+  userEmail: string,
+  userId?: string,
+  userTeam?: string
+): any | null => {
+  // Priority 1: user-specific
+  if (userId) {
+    const userConfig = configs.find(
+      (c) => c.target_users && c.target_users.includes(userId)
+    );
+    if (userConfig) return userConfig;
+  }
+  // Priority 2: team-specific
+  if (userTeam) {
+    const teamConfig = configs.find(
+      (c) => c.target_teams && c.target_teams.includes(userTeam)
+    );
+    if (teamConfig) return teamConfig;
+  }
+  // Priority 3: default
+  return configs.find((c) => c.is_default) || null;
+};
+
+/** Calculate accelerator bonus for an executive */
+const calculateAcceleratorBonus = (
+  accelerators: CommissionAccelerator[],
+  firmasReal: number,
+  origPct: number,
+  gmvPct: number,
+  baseCommissionAmount: number
+) => {
+  const eligible = origPct >= 100 && gmvPct >= 100;
+  if (!eligible || accelerators.length === 0) {
+    return { eligible, totalBonus: 0, applied: [] as { min_firmas: number; bonus_percentage: number; description: string | null; amount: number }[] };
+  }
+
+  const applied: { min_firmas: number; bonus_percentage: number; description: string | null; amount: number }[] = [];
+  let totalBonus = 0;
+
+  accelerators.forEach((acc) => {
+    if (firmasReal >= acc.min_firmas) {
+      const amount = (acc.bonus_percentage / 100) * baseCommissionAmount;
+      totalBonus += amount;
+      applied.push({
+        min_firmas: acc.min_firmas,
+        bonus_percentage: acc.bonus_percentage,
+        description: acc.description,
+        amount,
+      });
+    }
+  });
+
+  return { eligible, totalBonus, applied };
+};
 
 const formatCOP = (value: number) =>
   new Intl.NumberFormat("es-CO", {
@@ -75,6 +135,12 @@ export const FieldSalesCommissions: React.FC = () => {
     [teamResults]
   );
   const { data: profiles } = useProfilesByEmails(emails);
+
+  // Fetch commission configs and accelerators for auto-calculation
+  const { data: commissionConfigs } = useAllCommissionConfigs();
+  const allConfigIds = useMemo(() => (commissionConfigs || []).map((c: any) => c.id), [commissionConfigs]);
+  // Load accelerators for all configs at once
+  const { data: allAccelerators } = useAllAcceleratorsForConfigs(allConfigIds);
 
   const upsertReview = useUpsertCommissionReview();
   const approveCommission = useApproveCommission();
@@ -121,6 +187,15 @@ export const FieldSalesCommissions: React.FC = () => {
     return map;
   }, [profiles]);
 
+  // Map email -> { user_id, team } for config matching
+  const profileInfoMap = useMemo(() => {
+    const map = new Map<string, { user_id: string; team: string | null }>();
+    profiles?.forEach((p) => {
+      map.set(p.email, { user_id: p.user_id, team: p.team });
+    });
+    return map;
+  }, [profiles]);
+
   // Compute commission data per executive
   const executiveData = useMemo(() => {
     if (!teamResults) return [];
@@ -135,9 +210,27 @@ export const FieldSalesCommissions: React.FC = () => {
       };
       const isGuaranteed = guaranteedMap.get(result.user_email) || false;
 
+      // Find matching config and accelerators for this executive
+      const pInfo = profileInfoMap.get(result.user_email);
+      const matchedConfig = commissionConfigs && commissionConfigs.length > 0
+        ? findConfigForUser(commissionConfigs, result.user_email, pInfo?.user_id, pInfo?.team)
+        : null;
+      const configAccelerators = matchedConfig && allAccelerators
+        ? allAccelerators.filter((a) => a.config_id === matchedConfig.id)
+        : [];
+
+      // Calculate the base commission amount used for accelerator
+      const baseForAccelerator = isGuaranteed ? calc.baseCommission : calc.calculatedCommission;
+      const accelResult = calculateAcceleratorBonus(
+        configAccelerators,
+        result.firmas_real,
+        calc.origPct,
+        calc.gmvPct,
+        baseForAccelerator
+      );
+
       let totalCommission: number;
       if (isGuaranteed) {
-        // Guaranteed users get 100% of the base commission
         totalCommission = calc.baseCommission;
         if (adj.hasMb) totalCommission *= 1.2;
         totalCommission += adj.bonus;
@@ -146,6 +239,8 @@ export const FieldSalesCommissions: React.FC = () => {
         if (adj.hasMb) totalCommission *= 1.2;
         totalCommission += adj.bonus;
       }
+      // Add accelerator bonus
+      totalCommission += accelResult.totalBonus;
 
       return {
         ...result,
@@ -156,9 +251,10 @@ export const FieldSalesCommissions: React.FC = () => {
         totalCommission,
         isGuaranteed,
         review,
+        accelerator: accelResult,
       };
     });
-  }, [teamResults, existingReviews, adjustments, nameMap, guaranteedMap]);
+  }, [teamResults, existingReviews, adjustments, nameMap, guaranteedMap, profileInfoMap, commissionConfigs, allAccelerators]);
 
   const buildReviewPayload = (exec: (typeof executiveData)[0]) => {
     const calc = calculateCommission(exec);
@@ -175,6 +271,8 @@ export const FieldSalesCommissions: React.FC = () => {
       if (adj.hasMb) total *= 1.2;
       total += adj.bonus;
     }
+    // Add accelerator bonus from exec data
+    total += exec.accelerator?.totalBonus || 0;
 
     return {
       user_email: exec.user_email,
@@ -195,7 +293,7 @@ export const FieldSalesCommissions: React.FC = () => {
       base_commission: calc.baseCommission,
       calculated_commission: isGuaranteed ? calc.baseCommission : calc.calculatedCommission,
       has_mb_income: adj.hasMb,
-      indicator_bonus: adj.bonus,
+      indicator_bonus: adj.bonus + (exec.accelerator?.totalBonus || 0),
       total_commission: total,
     };
   };
@@ -267,6 +365,7 @@ export const FieldSalesCommissions: React.FC = () => {
       "GMV Meta": exec.gmv_meta,
       "% GMV": `${exec.gmvPct.toFixed(1)}%`,
       "Comisión Calculada (COP)": exec.calculatedCommission,
+      "Acelerador Firmas (COP)": exec.accelerator.totalBonus,
       "MB Income (+20%)": exec.hasMb ? "Sí" : "No",
       "Bonus Indicador (COP)": exec.bonus,
       "Total Comisión (COP)": exec.totalCommission,
@@ -509,6 +608,30 @@ export const FieldSalesCommissions: React.FC = () => {
                       </p>
                     </div>
                   </div>
+
+                  {/* Accelerator Section */}
+                  {exec.accelerator.applied.length > 0 && (
+                    <div className="p-3 rounded-lg border border-amber-500/40 bg-amber-500/5">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <Zap className="h-4 w-4 text-amber-500" />
+                        <span className="text-xs font-semibold">Acelerador de Firmas</span>
+                        <Badge className="bg-amber-500 text-white text-xs ml-auto">
+                          +{formatCOP(exec.accelerator.totalBonus)}
+                        </Badge>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {exec.accelerator.applied.map((a, i) => (
+                          <Badge key={i} variant="outline" className="text-xs font-mono border-amber-500/50">
+                            ≥{a.min_firmas} firmas → +{a.bonus_percentage}%
+                            {a.description && ` (${a.description})`}
+                          </Badge>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Cumple 100% en originaciones y GMV
+                      </p>
+                    </div>
+                  )}
 
                   <Separator />
 
