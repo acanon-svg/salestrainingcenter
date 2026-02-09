@@ -52,8 +52,9 @@ export const ResultsTimelineChart: React.FC<Props> = ({ data, indicator, showOnl
     // Get unique users
     const uniqueUsers = [...new Set(filtered.map((r) => r.user_email))];
 
-    // Group data by year-month and user, summing values
+    // Group data by year-month and user, summing real values AND metas
     const monthlyMap = new Map<string, Map<string, number>>();
+    const monthlyMetaMap = new Map<string, number>();
 
     filtered.forEach((r) => {
       const d = new Date(r.period_date + "T00:00:00");
@@ -74,8 +75,17 @@ export const ResultsTimelineChart: React.FC<Props> = ({ data, indicator, showOnl
         }
       })();
 
+      const metaVal = (() => {
+        switch (indicator) {
+          case "firmas": return Number(r.firmas_meta);
+          case "originaciones": return Number(r.originaciones_meta);
+          case "gmv": return Number(r.gmv_meta);
+        }
+      })();
+
       const userName = r.user_email.split("@")[0].replace(/\./g, " ");
       userMap.set(userName, (userMap.get(userName) || 0) + val);
+      monthlyMetaMap.set(key, (monthlyMetaMap.get(key) || 0) + metaVal);
     });
 
     // Sort months chronologically
@@ -88,7 +98,11 @@ export const ResultsTimelineChart: React.FC<Props> = ({ data, indicator, showOnl
       const month = parseInt(monthStr);
       const label = `${MONTH_NAMES[month]} ${year}`;
 
-      const point: Record<string, any> = { date: label, sortKey: monthKey };
+      const point: Record<string, any> = {
+        date: label,
+        sortKey: monthKey,
+        "Meta Total": monthlyMetaMap.get(monthKey) || 0,
+      };
 
       const userMap = monthlyMap.get(monthKey)!;
       const userNames = uniqueUsers.map((u) => u.split("@")[0].replace(/\./g, " "));
@@ -107,7 +121,9 @@ export const ResultsTimelineChart: React.FC<Props> = ({ data, indicator, showOnl
   }, [data, indicator, showOnlyUser]);
 
   const chartConfig = useMemo(() => {
-    const config: Record<string, { label: string; color: string }> = {};
+    const config: Record<string, { label: string; color: string }> = {
+      "Meta Total": { label: "Meta Total", color: "hsl(var(--destructive))" },
+    };
     users.forEach((u, i) => {
       config[u] = { label: u, color: COLORS[i % COLORS.length] };
     });
@@ -147,6 +163,18 @@ export const ResultsTimelineChart: React.FC<Props> = ({ data, indicator, showOnl
               formatter={(value: number) => value.toLocaleString("es-CO")}
             />
             <Legend wrapperStyle={{ fontSize: "12px" }} />
+
+            {/* Meta Total line */}
+            <Line
+              type="monotone"
+              dataKey="Meta Total"
+              name="Meta Total"
+              stroke="hsl(var(--destructive))"
+              strokeWidth={2.5}
+              strokeDasharray="6 3"
+              dot={{ r: 4 }}
+              activeDot={{ r: 6 }}
+            />
 
             {/* User lines */}
             {users.map((user, i) => (

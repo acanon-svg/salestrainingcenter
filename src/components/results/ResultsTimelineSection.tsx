@@ -12,7 +12,6 @@ import { ResultsTimelineChart } from "./ResultsTimelineChart";
 type Indicator = "firmas" | "originaciones" | "gmv";
 
 const PRIVILEGED_EMAILS = ["staborda@addi.com", "dbarragan@addi.com"];
-const NACIONAL_EMAILS = ["staborda@addi.com"];
 
 interface Props {
   /** For student view — filter to single user */
@@ -27,11 +26,10 @@ export const ResultsTimelineSection: React.FC<Props> = ({ userEmail }) => {
 
   // Determine access levels
   const canFilterRegional = isCreator || PRIVILEGED_EMAILS.includes(email);
-  const canSeeNacional = isCreator || NACIONAL_EMAILS.includes(email);
 
   const [indicator, setIndicator] = useState<Indicator>("firmas");
   const [selectedRegional, setSelectedRegional] = useState<string>(
-    canFilterRegional ? (canSeeNacional ? "nacional" : "") : (profile?.regional || "")
+    canFilterRegional ? "" : (profile?.regional || "")
   );
 
   const { data: regionals } = useRegionals();
@@ -39,8 +37,6 @@ export const ResultsTimelineSection: React.FC<Props> = ({ userEmail }) => {
   // For leaders, always filter by their own regional
   const queryRegional = isLeader && !canFilterRegional
     ? profile?.regional || undefined
-    : selectedRegional === "nacional"
-    ? undefined
     : selectedRegional || undefined;
 
   const { data: results, isLoading } = useTeamResults({
@@ -96,9 +92,6 @@ export const ResultsTimelineSection: React.FC<Props> = ({ userEmail }) => {
                 <SelectValue placeholder="Seleccionar regional" />
               </SelectTrigger>
               <SelectContent>
-                {canSeeNacional && (
-                  <SelectItem value="nacional">Nacional (Todas)</SelectItem>
-                )}
                 {regionals?.map((r) => (
                   <SelectItem key={r} value={r}>
                     {r}
