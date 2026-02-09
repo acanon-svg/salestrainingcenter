@@ -374,7 +374,7 @@ export const usePendingCommissions = (month?: number, year?: number) => {
   });
 };
 
-/** Fetch all non-approved commissions (pending + rejected) for a specific month/year, with realtime refresh. */
+/** Fetch all non-approved commissions (pending + rejected + not yet sent) for a specific month/year, with realtime refresh. */
 export const useNotApprovedCommissions = (month?: number, year?: number) => {
   const queryClient = useQueryClient();
 
@@ -398,17 +398,101 @@ export const useNotApprovedCommissions = (month?: number, year?: number) => {
   return useQuery({
     queryKey: ["not-approved-commissions", month, year],
     queryFn: async () => {
-      let query = db()
+      if (!month || !year) return [];
+
+      // 1. Fetch existing non-approved commission reviews
+      const { data: reviews, error: revError } = await db()
         .from("commission_reviews")
         .select("*")
-        .in("status", ["pending", "rejected"]);
-      if (month) query = query.eq("period_month", month);
-      if (year) query = query.eq("period_year", year);
-      query = query.order("status").order("regional").order("user_email");
-      const { data, error } = await query;
-      if (error) throw error;
-      return (data || []) as CommissionReview[];
+        .in("status", ["pending", "rejected"])
+        .eq("period_month", month)
+        .eq("period_year", year)
+        .order("status")
+        .order("regional")
+        .order("user_email");
+      if (revError) throw revError;
+      const existingReviews = (reviews || []) as CommissionReview[];
+
+      // 2. Fetch ALL commission reviews (any status) to know who already has one
+      const { data: allReviews, error: allRevError } = await db()
+        .from("commission_reviews")
+        .select("user_email")
+        .eq("period_month", month)
+        .eq("period_year", year);
+      if (allRevError) throw allRevError;
+      const reviewedEmails = new Set((allReviews || []).map((r: any) => r.user_email));
+
+      // 3. Fetch team_results for the period
+      const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+      const endDate = month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, "0")}-01`;
+      const { data: results, error: resError } = await db()
+        .from("team_results")
+        .select("*")
+        .gte("period_date", startDate)
+        .lt("period_date", endDate);
+      if (resError) throw resError;
+
+      // Group by user_email, take latest
+      const grouped = new Map<string, any>();
+      for (const row of results || []) {
+        const existing = grouped.get(row.user_email);
+        if (!existing || new Date(row.period_date) > new Date(existing.period_date)) {
+          grouped.set(row.user_email, row);
+        }
+      }
+
+      // 4. Fetch profile names for missing users
+      const missingEmails = Array.from(grouped.keys()).filter(e => !reviewedEmails.has(e));
+      let profileMap = new Map<string, string>();
+      if (missingEmails.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("email, full_name")
+          .in("email", missingEmails);
+        for (const p of profiles || []) {
+          if (p.full_name) profileMap.set(p.email, p.full_name);
+        }
+      }
+
+      // 5. Create synthetic "not_sent" entries for users with results but no commission review
+      const syntheticEntries: CommissionReview[] = missingEmails.map(email => {
+        const r = grouped.get(email)!;
+        const calc = calculateCommission(r);
+        return {
+          id: `synthetic-${email}`,
+          user_email: email,
+          user_name: profileMap.get(email) || null,
+          period_month: month,
+          period_year: year,
+          regional: r.regional || null,
+          firmas_real: r.firmas_real,
+          firmas_meta: r.firmas_meta,
+          originaciones_real: r.originaciones_real,
+          originaciones_meta: r.originaciones_meta,
+          gmv_real: r.gmv_real,
+          gmv_meta: r.gmv_meta,
+          firmas_compliance: calc.firmasCompliance,
+          candado_met: calc.candadoMet,
+          originaciones_weighted: calc.origWeighted,
+          gmv_weighted: calc.gmvWeighted,
+          base_commission: calc.baseCommission,
+          calculated_commission: calc.calculatedCommission,
+          has_mb_income: false,
+          indicator_bonus: 0,
+          total_commission: calc.calculatedCommission,
+          status: "not_sent",
+          rejection_reason: null,
+          observations: null,
+          reviewed_by: null,
+          reviewed_at: null,
+          created_at: "",
+          updated_at: "",
+        };
+      });
+
+      return [...existingReviews, ...syntheticEntries];
     },
+    enabled: !!month && !!year,
   });
 };
 
