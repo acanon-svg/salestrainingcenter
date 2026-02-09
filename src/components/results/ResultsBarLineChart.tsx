@@ -133,8 +133,7 @@ export const ResultsBarLineChart: React.FC<Props> = ({ data, indicator, selected
               tick={{ fontSize: 11 }}
               className="fill-muted-foreground"
             />
-            <YAxis yAxisId="left" className="fill-muted-foreground" tick={{ fontSize: 11 }} />
-            <YAxis yAxisId="right" orientation="right" className="fill-muted-foreground" tick={{ fontSize: 11 }} />
+            <YAxis className="fill-muted-foreground" tick={{ fontSize: 11 }} />
             <Tooltip
               contentStyle={{
                 backgroundColor: "hsl(var(--background))",
@@ -145,9 +144,9 @@ export const ResultsBarLineChart: React.FC<Props> = ({ data, indicator, selected
               formatter={(value: number) => value.toLocaleString("es-CO")}
             />
             <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "10px" }} />
-            <Bar yAxisId="left" dataKey="real" name="Resultado Real" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} barSize={20} />
-            <Bar yAxisId="left" dataKey="expected" name="Debería llevar" fill="hsl(var(--muted-foreground) / 0.4)" radius={[4, 4, 0, 0]} barSize={20} />
-            <Line yAxisId="right" type="monotone" dataKey="meta" name="Meta Total" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 4 }} />
+            <Bar dataKey="real" name="Resultado Real" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} barSize={20} />
+            <Bar dataKey="expected" name="Debería llevar" fill="hsl(var(--muted-foreground) / 0.4)" radius={[4, 4, 0, 0]} barSize={20} />
+            <Line type="monotone" dataKey="meta" name="Meta Total" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 4 }} />
           </ComposedChart>
         </ChartContainer>
       </CardContent>
