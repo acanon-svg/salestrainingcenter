@@ -113,6 +113,14 @@ export const FieldSalesCommissions: React.FC = () => {
     return map;
   }, [profiles]);
 
+  const guaranteedMap = useMemo(() => {
+    const map = new Map<string, boolean>();
+    profiles?.forEach((p) => {
+      map.set(p.email, p.is_guaranteed || false);
+    });
+    return map;
+  }, [profiles]);
+
   // Compute commission data per executive
   const executiveData = useMemo(() => {
     if (!teamResults) return [];
@@ -125,10 +133,19 @@ export const FieldSalesCommissions: React.FC = () => {
         hasMb: false,
         bonus: 0,
       };
+      const isGuaranteed = guaranteedMap.get(result.user_email) || false;
 
-      let totalCommission = calc.calculatedCommission;
-      if (adj.hasMb) totalCommission *= 1.2;
-      totalCommission += adj.bonus;
+      let totalCommission: number;
+      if (isGuaranteed) {
+        // Guaranteed users get 100% of the base commission
+        totalCommission = calc.baseCommission;
+        if (adj.hasMb) totalCommission *= 1.2;
+        totalCommission += adj.bonus;
+      } else {
+        totalCommission = calc.calculatedCommission;
+        if (adj.hasMb) totalCommission *= 1.2;
+        totalCommission += adj.bonus;
+      }
 
       return {
         ...result,
@@ -137,17 +154,27 @@ export const FieldSalesCommissions: React.FC = () => {
         hasMb: adj.hasMb,
         bonus: adj.bonus,
         totalCommission,
+        isGuaranteed,
         review,
       };
     });
-  }, [teamResults, existingReviews, adjustments, nameMap]);
+  }, [teamResults, existingReviews, adjustments, nameMap, guaranteedMap]);
 
   const buildReviewPayload = (exec: (typeof executiveData)[0]) => {
     const calc = calculateCommission(exec);
     const adj = adjustments[exec.user_email] || { hasMb: false, bonus: 0 };
-    let total = calc.calculatedCommission;
-    if (adj.hasMb) total *= 1.2;
-    total += adj.bonus;
+    const isGuaranteed = guaranteedMap.get(exec.user_email) || false;
+    
+    let total: number;
+    if (isGuaranteed) {
+      total = calc.baseCommission;
+      if (adj.hasMb) total *= 1.2;
+      total += adj.bonus;
+    } else {
+      total = calc.calculatedCommission;
+      if (adj.hasMb) total *= 1.2;
+      total += adj.bonus;
+    }
 
     return {
       user_email: exec.user_email,
@@ -162,11 +189,11 @@ export const FieldSalesCommissions: React.FC = () => {
       gmv_real: exec.gmv_real,
       gmv_meta: exec.gmv_meta,
       firmas_compliance: calc.firmasCompliance,
-      candado_met: calc.candadoMet,
+      candado_met: isGuaranteed ? true : calc.candadoMet,
       originaciones_weighted: calc.origWeighted,
       gmv_weighted: calc.gmvWeighted,
       base_commission: calc.baseCommission,
-      calculated_commission: calc.calculatedCommission,
+      calculated_commission: isGuaranteed ? calc.baseCommission : calc.calculatedCommission,
       has_mb_income: adj.hasMb,
       indicator_bonus: adj.bonus,
       total_commission: total,
@@ -389,7 +416,14 @@ export const FieldSalesCommissions: React.FC = () => {
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between flex-wrap gap-2">
                     <div>
-                      <CardTitle className="text-lg">{exec.name}</CardTitle>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        {exec.name}
+                        {exec.isGuaranteed && (
+                          <Badge variant="outline" className="text-xs border-amber-500 text-amber-600 bg-amber-50">
+                            🛡️ Garantizado
+                          </Badge>
+                        )}
+                      </CardTitle>
                       <CardDescription>{exec.user_email}</CardDescription>
                     </div>
                     <Badge

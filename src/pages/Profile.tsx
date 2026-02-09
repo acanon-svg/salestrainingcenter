@@ -30,6 +30,10 @@ const Profile: React.FC = () => {
     user_id: string;
     full_name: string | null;
     email: string;
+    company_role?: string | null;
+    team?: string | null;
+    regional?: string | null;
+    is_guaranteed?: boolean;
   } | null>(null);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(

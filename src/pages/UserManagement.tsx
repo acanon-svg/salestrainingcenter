@@ -48,6 +48,7 @@ interface UserProfile {
   badges_count: number;
   last_login: string | null;
   created_at: string;
+  is_guaranteed?: boolean;
 }
 
 interface UserRole {

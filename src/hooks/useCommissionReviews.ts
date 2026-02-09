@@ -124,7 +124,7 @@ export const useMonthlyTeamResults = (
   });
 };
 
-/** Fetch profiles by emails for name lookup. */
+/** Fetch profiles by emails for name lookup and guaranteed status. */
 export const useProfilesByEmails = (emails: string[]) => {
   const sortedKey = [...emails].sort().join(",");
   return useQuery({
@@ -133,10 +133,10 @@ export const useProfilesByEmails = (emails: string[]) => {
       if (emails.length === 0) return [];
       const { data, error } = await supabase
         .from("profiles")
-        .select("email, full_name")
+        .select("email, full_name, is_guaranteed")
         .in("email", emails);
       if (error) throw error;
-      return (data || []) as { email: string; full_name: string | null }[];
+      return (data || []) as { email: string; full_name: string | null; is_guaranteed: boolean }[];
     },
     enabled: emails.length > 0,
   });

@@ -7,6 +7,7 @@ interface UpdateProfileData {
   company_role?: string | null;
   team?: string | null;
   regional?: string | null;
+  is_guaranteed?: boolean;
 }
 
 export const useUpdateProfile = () => {
