@@ -368,6 +368,44 @@ export type Database = {
         }
         Relationships: []
       }
+      commission_accelerators: {
+        Row: {
+          bonus_percentage: number
+          config_id: string
+          created_at: string
+          description: string | null
+          id: string
+          min_firmas: number
+          order_index: number | null
+        }
+        Insert: {
+          bonus_percentage?: number
+          config_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          min_firmas?: number
+          order_index?: number | null
+        }
+        Update: {
+          bonus_percentage?: number
+          config_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          min_firmas?: number
+          order_index?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_accelerators_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "commission_calculator_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commission_calculator_configs: {
         Row: {
           base_comisional: number
