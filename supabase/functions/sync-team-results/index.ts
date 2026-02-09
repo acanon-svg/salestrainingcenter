@@ -6,7 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const BATCH_ID = 'auto-sync';
+// Fixed UUID for auto-sync batch (deterministic, won't conflict with random UUIDs)
+const BATCH_ID = '00000000-0000-0000-0000-000000000001';
 
 function normalizeHeader(h: string): string {
   return h
@@ -29,6 +30,8 @@ interface ParsedRow {
   gmv_meta: number;
   period_date: string;
   weeks_in_month: number;
+  dias_habiles_transcurridos: number;
+  dias_habiles_mes: number;
   batch_id: string;
 }
 
@@ -121,6 +124,9 @@ function parseRows(rows: Record<string, string>[]): { data: ParsedRow[]; errors:
     const weeksRaw = row.semanas || row.weeks || row.weeks_in_month;
     const weeksInMonth = weeksRaw ? Number(weeksRaw) : 4;
 
+    const diasTranscurridos = Number(row.dias_habiles_transcurridos) || 0;
+    const diasMes = Number(row.dias_habiles_mes) || 0;
+
     data.push({
       user_email: String(email).trim().toLowerCase(),
       regional: row.regional || undefined,
@@ -133,6 +139,8 @@ function parseRows(rows: Record<string, string>[]): { data: ParsedRow[]; errors:
       gmv_meta: Number(row.gmv_meta) || 0,
       period_date: periodDate,
       weeks_in_month: weeksInMonth < 1 || weeksInMonth > 6 ? 4 : weeksInMonth,
+      dias_habiles_transcurridos: diasTranscurridos,
+      dias_habiles_mes: diasMes,
       batch_id: BATCH_ID,
     });
   });
