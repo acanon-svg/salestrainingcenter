@@ -63,13 +63,15 @@ export const calculateCommission = (result: {
   const totalPct = origWeighted + gmvWeighted;
 
   const baseCommission = 1500000;
-  const calculatedCommission = candadoMet
+  const indicatorsMet = totalPct >= 85;
+  const calculatedCommission = candadoMet && indicatorsMet
     ? (totalPct / 100) * baseCommission
     : 0;
 
   return {
     firmasCompliance,
     candadoMet,
+    indicatorsMet,
     origPct,
     gmvPct,
     origWeighted,
