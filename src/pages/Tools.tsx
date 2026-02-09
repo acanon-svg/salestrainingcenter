@@ -447,8 +447,8 @@ const Tools: React.FC = () => {
           </div>
         )}
 
-        {/* Field Sales Commission Section - Leaders */}
-        {isLeader && (
+        {/* Field Sales Commission Section - Leaders & Creators */}
+        {(isLeader || isCreator) && (
           <div className="space-y-3">
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <DollarSign className="h-5 w-5" />
