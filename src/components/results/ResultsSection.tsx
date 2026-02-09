@@ -158,6 +158,11 @@ export const ResultsSection: React.FC<Props> = ({
         )
       )}
 
+      {/* Personal Chart (students) */}
+      {!showTeamChart && userEmail && (
+        <ResultsBarLineChart data={filteredByTime} indicator={indicator} selectedMonth={selectedMonth} selectedYear={selectedYear} />
+      )}
+
     </div>
   );
 };
