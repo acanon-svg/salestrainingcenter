@@ -1,3 +1,4 @@
+import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -324,6 +325,45 @@ export const useApprovedCommissions = (month?: number, year?: number) => {
         .from("commission_reviews")
         .select("*")
         .eq("status", "approved");
+      if (month) query = query.eq("period_month", month);
+      if (year) query = query.eq("period_year", year);
+      query = query.order("regional").order("user_email");
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data || []) as CommissionReview[];
+    },
+  });
+};
+
+/** Fetch pending commissions for a specific month/year, with realtime refresh. */
+export const usePendingCommissions = (month?: number, year?: number) => {
+  const queryClient = useQueryClient();
+
+  // Subscribe to realtime changes on commission_reviews
+  React.useEffect(() => {
+    const channel = supabase
+      .channel("pending-commissions-realtime")
+      .on(
+        "postgres_changes" as any,
+        { event: "*", schema: "public", table: "commission_reviews" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["pending-commissions", month, year] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [month, year, queryClient]);
+
+  return useQuery({
+    queryKey: ["pending-commissions", month, year],
+    queryFn: async () => {
+      let query = db()
+        .from("commission_reviews")
+        .select("*")
+        .eq("status", "pending");
       if (month) query = query.eq("period_month", month);
       if (year) query = query.eq("period_year", year);
       query = query.order("regional").order("user_email");
