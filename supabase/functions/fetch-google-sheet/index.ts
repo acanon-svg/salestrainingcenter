@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,11 +12,73 @@ serve(async (req) => {
   }
 
   try {
+    // Verify authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userId = claimsData.claims.sub;
+
+    // Verify user has admin or creator role
+    const { data: roles, error: rolesError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId);
+
+    if (rolesError) {
+      return new Response(
+        JSON.stringify({ error: 'Error checking permissions' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userRoles = roles?.map((r: any) => r.role) || [];
+    if (!userRoles.includes('admin') && !userRoles.includes('creator')) {
+      return new Response(
+        JSON.stringify({ error: 'Only admins and creators can fetch Google Sheets' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { url, sheetName } = await req.json();
 
     if (!url || typeof url !== 'string') {
       return new Response(
         JSON.stringify({ error: 'URL del Google Sheet es requerida' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate URL is a Google Sheets URL
+    if (!url.startsWith('https://docs.google.com/spreadsheets/')) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid Google Sheets URL' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (url.length > 500) {
+      return new Response(
+        JSON.stringify({ error: 'URL too long' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -35,18 +98,13 @@ serve(async (req) => {
     const gidMatch = url.match(/[?&#]gid=(\d+)/);
     const gid = gidMatch ? gidMatch[1] : null;
 
-    // Build the gviz/tq URL - this endpoint works for "Anyone with the link" sheets
-    // and returns calculated/formulated values (not raw formulas)
     let csvUrl: string;
     
     if (sheetName) {
-      // Use sheet name to target specific tab
       csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
     } else if (gid) {
-      // Use gid from URL
       csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${gid}`;
     } else {
-      // Default: first sheet
       csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv`;
     }
 
@@ -64,7 +122,6 @@ serve(async (req) => {
       const bodyText = await response.text();
       console.error(`Google Sheets responded with ${response.status}: ${statusText}`, bodyText.substring(0, 500));
       
-      // If gviz fails, try the pub endpoint as fallback
       const pubUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/pub?output=csv${gid ? `&gid=${gid}` : ''}${sheetName ? `&sheet=${encodeURIComponent(sheetName)}` : ''}`;
       console.log(`Trying pub fallback: ${pubUrl}`);
       
@@ -99,7 +156,6 @@ serve(async (req) => {
 
     const csvText = await response.text();
 
-    // Check if Google returned an HTML error page instead of CSV
     if (csvText.startsWith('<!DOCTYPE') || csvText.startsWith('<html')) {
       return new Response(
         JSON.stringify({ 
@@ -116,7 +172,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error fetching Google Sheet:', error);
     return new Response(
-      JSON.stringify({ error: `Error al obtener el Sheet: ${error.message}` }),
+      JSON.stringify({ error: 'Error al obtener el Sheet' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
