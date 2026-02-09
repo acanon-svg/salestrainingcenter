@@ -36,6 +36,7 @@ import { CommissionConfigManager } from "@/components/tools/CommissionConfigMana
 import { useMyCommissionConfig } from "@/hooks/useCommissionCalculatorConfig";
 import { FieldSalesCommissions } from "@/components/tools/FieldSalesCommissions";
 import { CommissionReportSection } from "@/components/tools/CommissionReportSection";
+import { RejectedCommissionsView } from "@/components/tools/RejectedCommissionsView";
 import { AddiPlansCalculator } from "@/components/tools/AddiPlansCalculator";
 import { useToast } from "@/hooks/use-toast";
 
@@ -222,11 +223,11 @@ const Tools: React.FC = () => {
   const isCreator = hasRole("creator") || hasRole("admin");
 
   const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
-  const [mode, setMode] = useState<"list" | "configure" | "use" | "commissions" | "commission-report">("list");
+  const [mode, setMode] = useState<"list" | "configure" | "use" | "commissions" | "commission-report" | "rejected-commissions">("list");
 
   // Derive effective mode: URL query param takes priority over local state
   const isRejectedCommissionsView = searchParams.get("view") === "rejected-commissions";
-  const effectiveMode = isRejectedCommissionsView ? "commissions" : mode;
+  const effectiveMode = isRejectedCommissionsView ? "rejected-commissions" : mode;
   const isLeader = hasRole("lider");
   const isFieldSalesLeader = isLeader && profile?.team?.toLowerCase().includes("field sales");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -365,6 +366,26 @@ const Tools: React.FC = () => {
             userTeam={profile?.team}
             userRole={getUserRole()} 
           />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (effectiveMode === "rejected-commissions") {
+    return (
+      <DashboardLayout>
+        <div className="space-y-6">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" onClick={() => { setMode("list"); setSearchParams({}); }}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Volver
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">Comisiones Rechazadas</h1>
+              <p className="text-muted-foreground">Revisa los motivos de rechazo y envía las comisiones corregidas a revisión</p>
+            </div>
+          </div>
+          <RejectedCommissionsView />
         </div>
       </DashboardLayout>
     );
