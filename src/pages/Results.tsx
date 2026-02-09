@@ -107,7 +107,7 @@ const Results: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-8">
-            <ResultsSection userEmail={profile?.email} />
+            <ResultsSection userEmail={profile?.email} showTimePeriodFilter />
             <ResultsTimelineSection userEmail={profile?.email} />
           </div>
         )}
