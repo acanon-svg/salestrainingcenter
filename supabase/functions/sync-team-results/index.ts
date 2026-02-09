@@ -264,28 +264,18 @@ serve(async (req) => {
       );
     }
 
-    // Delete old auto-sync batch
-    const { error: deleteError } = await supabase
-      .from('team_results')
-      .delete()
-      .eq('batch_id', BATCH_ID);
-
-    if (deleteError) {
-      console.error(`[sync] Delete error: ${deleteError.message}`);
-    }
-
-    // Insert new data in chunks
+    // Upsert data in chunks (uses unique index on user_email + period_date)
     const chunkSize = 500;
     let totalInserted = 0;
     for (let i = 0; i < parsedData.length; i += chunkSize) {
       const chunk = parsedData.slice(i, i + chunkSize);
-      const { error: insertError } = await supabase
+      const { error: upsertError } = await supabase
         .from('team_results')
-        .insert(chunk);
+        .upsert(chunk, { onConflict: 'user_email,period_date' });
 
-      if (insertError) {
-        await updateSyncStatus(supabase, configRow.id, config, 'error', totalInserted, `Insert error: ${insertError.message}`);
-        throw new Error(`Insert error at chunk ${i}: ${insertError.message}`);
+      if (upsertError) {
+        await updateSyncStatus(supabase, configRow.id, config, 'error', totalInserted, `Upsert error: ${upsertError.message}`);
+        throw new Error(`Upsert error at chunk ${i}: ${upsertError.message}`);
       }
       totalInserted += chunk.length;
     }
