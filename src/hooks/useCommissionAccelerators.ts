@@ -28,6 +28,25 @@ export const useCommissionAccelerators = (configId: string | undefined) => {
   });
 };
 
+export const useAllAcceleratorsForConfigs = (configIds: string[]) => {
+  const sortedKey = [...configIds].sort().join(",");
+  return useQuery({
+    queryKey: ["commission-accelerators-all", sortedKey],
+    queryFn: async () => {
+      if (configIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("commission_accelerators")
+        .select("*")
+        .in("config_id", configIds)
+        .order("min_firmas", { ascending: true });
+
+      if (error) throw error;
+      return data as CommissionAccelerator[];
+    },
+    enabled: configIds.length > 0,
+  });
+};
+
 export const useCreateAccelerator = () => {
   const queryClient = useQueryClient();
 

@@ -35,6 +35,21 @@ export const useCommissionCalculatorConfigs = (toolId: string) => {
   });
 };
 
+export const useAllCommissionConfigs = () => {
+  return useQuery({
+    queryKey: ["commission-calculator-configs-all"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("commission_calculator_configs")
+        .select("*")
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+      return data as CommissionCalculatorConfig[];
+    },
+  });
+};
+
 export const useMyCommissionConfig = (toolId: string, userId: string | undefined, userTeam: string | null | undefined) => {
   return useQuery({
     queryKey: ["my-commission-config", toolId, userId, userTeam],

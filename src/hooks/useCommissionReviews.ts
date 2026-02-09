@@ -133,10 +133,10 @@ export const useProfilesByEmails = (emails: string[]) => {
       if (emails.length === 0) return [];
       const { data, error } = await supabase
         .from("profiles")
-        .select("email, full_name, is_guaranteed")
+        .select("email, full_name, is_guaranteed, user_id, team")
         .in("email", emails);
       if (error) throw error;
-      return (data || []) as { email: string; full_name: string | null; is_guaranteed: boolean }[];
+      return (data || []) as { email: string; full_name: string | null; is_guaranteed: boolean; user_id: string; team: string | null }[];
     },
     enabled: emails.length > 0,
   });
