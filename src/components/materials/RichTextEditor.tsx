@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback } from "react";
+import DOMPurify from "dompurify";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -667,7 +668,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       {previewMode ? (
         <div 
           className="min-h-[150px] p-4 border border-t-0 rounded-b-md bg-background prose prose-sm max-w-none dark:prose-invert"
-          dangerouslySetInnerHTML={{ __html: parseRichText(value) || '<p class="text-muted-foreground">No hay contenido para mostrar</p>' }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(parseRichText(value)) || '<p class="text-muted-foreground">No hay contenido para mostrar</p>' }}
         />
       ) : (
         <Textarea

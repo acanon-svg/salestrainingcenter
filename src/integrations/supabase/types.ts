@@ -1066,6 +1066,36 @@ export type Database = {
         }
         Relationships: []
       }
+      impersonation_audit_log: {
+        Row: {
+          created_at: string
+          failure_reason: string | null
+          id: string
+          ip_address: string | null
+          requester_id: string
+          success: boolean
+          target_email: string
+        }
+        Insert: {
+          created_at?: string
+          failure_reason?: string | null
+          id?: string
+          ip_address?: string | null
+          requester_id: string
+          success?: boolean
+          target_email: string
+        }
+        Update: {
+          created_at?: string
+          failure_reason?: string | null
+          id?: string
+          ip_address?: string | null
+          requester_id?: string
+          success?: boolean
+          target_email?: string
+        }
+        Relationships: []
+      }
       leader_hierarchy: {
         Row: {
           assigned_by: string | null
