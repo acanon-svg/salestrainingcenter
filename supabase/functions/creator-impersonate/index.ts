@@ -95,26 +95,31 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get target user by email
-    const { data: targetUserData, error: targetUserError } = await adminClient.auth.admin.listUsers();
-    
-    if (targetUserError) {
-      return new Response(
-        JSON.stringify({ error: "Error buscando usuario" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    // Get target user by looking up user_id from profiles table first (avoids listUsers pagination issues)
+    const { data: targetProfile, error: profileError } = await adminClient
+      .from("profiles")
+      .select("user_id, email")
+      .ilike("email", targetEmail)
+      .maybeSingle();
 
-    const targetUser = targetUserData.users.find(
-      (u) => u.email?.toLowerCase() === targetEmail.toLowerCase()
-    );
-
-    if (!targetUser) {
+    if (profileError || !targetProfile) {
       return new Response(
         JSON.stringify({ error: "Usuario no encontrado" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Verify the user exists in auth
+    const { data: targetUserData, error: targetUserError } = await adminClient.auth.admin.getUserById(targetProfile.user_id);
+
+    if (targetUserError || !targetUserData?.user) {
+      return new Response(
+        JSON.stringify({ error: "Usuario no encontrado en el sistema de autenticación" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const targetUser = targetUserData.user;
 
     // Generate a magic link for the target user
     const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
