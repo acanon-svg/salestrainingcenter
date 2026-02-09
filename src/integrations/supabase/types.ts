@@ -1676,6 +1676,8 @@ export type Database = {
         Row: {
           batch_id: string | null
           created_at: string
+          dias_habiles_mes: number
+          dias_habiles_transcurridos: number
           firmas_meta: number
           firmas_real: number
           gmv_meta: number
@@ -1694,6 +1696,8 @@ export type Database = {
         Insert: {
           batch_id?: string | null
           created_at?: string
+          dias_habiles_mes?: number
+          dias_habiles_transcurridos?: number
           firmas_meta?: number
           firmas_real?: number
           gmv_meta?: number
@@ -1712,6 +1716,8 @@ export type Database = {
         Update: {
           batch_id?: string | null
           created_at?: string
+          dias_habiles_mes?: number
+          dias_habiles_transcurridos?: number
           firmas_meta?: number
           firmas_real?: number
           gmv_meta?: number

@@ -16,6 +16,8 @@ export interface TeamResult {
   gmv_meta: number;
   period_date: string;
   weeks_in_month: number;
+  dias_habiles_transcurridos: number;
+  dias_habiles_mes: number;
   batch_id: string | null;
   uploaded_by: string | null;
   created_at: string;
@@ -33,6 +35,8 @@ export interface TeamResultInsert {
   gmv_meta: number;
   period_date: string;
   weeks_in_month: number;
+  dias_habiles_transcurridos: number;
+  dias_habiles_mes: number;
   batch_id?: string;
   uploaded_by?: string;
 }
