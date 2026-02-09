@@ -279,17 +279,19 @@ export const useRejectCommission = () => {
         .eq("id", id);
       if (error) throw error;
 
-      // Try to notify creators
+      // Notify creators AND admins
       try {
-        const { data: creators } = await supabase
+        const { data: creatorsAndAdmins } = await supabase
           .from("user_roles")
-          .select("user_id")
-          .eq("role", "creator");
+          .select("user_id, role")
+          .in("role", ["creator", "admin"]);
 
-        if (creators && creators.length > 0) {
+        if (creatorsAndAdmins && creatorsAndAdmins.length > 0) {
+          // Deduplicate user_ids (a user may have both creator and admin roles)
+          const uniqueUserIds = [...new Set(creatorsAndAdmins.map((c: any) => c.user_id))];
           const executiveName = user_name || user_email || "un ejecutivo";
-          const notifications = creators.map((c: any) => ({
-            user_id: c.user_id,
+          const notifications = uniqueUserIds.map((userId) => ({
+            user_id: userId,
             title: "⚠️ Comisión rechazada - Requiere revisión",
             message: `La comisión de ${executiveName} ha sido rechazada. Motivo: ${rejection_reason}`,
             type: "commission_rejected",
