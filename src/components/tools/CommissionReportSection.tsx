@@ -112,26 +112,42 @@ export const CommissionReportSection: React.FC = () => {
         Regional: c.regional || "",
         "Firmas Real": c.firmas_real,
         "Firmas Meta": c.firmas_meta,
-        "% Firmas": `${c.firmas_compliance.toFixed(1)}%`,
+        "% Firmas": c.firmas_compliance / 100,
         Candado: c.candado_met ? "Cumplido" : "No cumplido",
         "Originaciones Real": c.originaciones_real,
         "Originaciones Meta": c.originaciones_meta,
-        "Ponderación Orig (50%)": `${c.originaciones_weighted.toFixed(2)}%`,
+        "Ponderación Orig (50%)": c.originaciones_weighted / 100,
         "GMV Real": c.gmv_real,
         "GMV Meta": c.gmv_meta,
-        "Ponderación GMV (50%)": `${c.gmv_weighted.toFixed(2)}%`,
-        "Total (Orig + GMV)": `${totalWeighted.toFixed(2)}%`,
+        "Ponderación GMV (50%)": c.gmv_weighted / 100,
+        "Total (Orig + GMV)": totalWeighted / 100,
         "Base Comisional (COP)": c.base_commission,
         "Comisión Calculada (COP)": c.calculated_commission,
         "MB Income (+20%)": c.has_mb_income ? "Sí" : "No",
         "Bonus Indicador (COP)": c.indicator_bonus,
         "Total Comisión (COP)": c.total_commission,
-        "Cumplimiento (%)": `${(cumplimiento * 100).toFixed(1)}%`,
+        "Cumplimiento (%)": cumplimiento,
         Observaciones: c.observations || "",
       };
     });
 
     const ws = XLSX.utils.json_to_sheet(rows);
+
+    // Apply Excel percentage format to percentage columns
+    const pctCols = ["% Firmas", "Ponderación Orig (50%)", "Ponderación GMV (50%)", "Total (Orig + GMV)", "Cumplimiento (%)"];
+    const headers = Object.keys(rows[0]);
+    const range = XLSX.utils.decode_range(ws["!ref"] || "A1");
+    for (const colName of pctCols) {
+      const colIdx = headers.indexOf(colName);
+      if (colIdx === -1) continue;
+      for (let r = range.s.r + 1; r <= range.e.r; r++) {
+        const cellRef = XLSX.utils.encode_cell({ r, c: colIdx });
+        if (ws[cellRef]) {
+          ws[cellRef].z = "0.0%";
+        }
+      }
+    }
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Comisiones Aprobadas");
     XLSX.writeFile(wb, `reporte_comisiones_${selectedMonth}_${selectedYear}.xlsx`);
