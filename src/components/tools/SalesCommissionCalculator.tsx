@@ -16,9 +16,11 @@ import {
   Target,
   TrendingUp,
   Trophy,
-  Sparkles
+  Sparkles,
+  Zap
 } from "lucide-react";
 import { CommissionCalculatorConfig } from "@/hooks/useCommissionCalculatorConfig";
+import { useCommissionAccelerators } from "@/hooks/useCommissionAccelerators";
 import { useMonthlyConfigForMonth, getMonthName } from "@/hooks/useCommissionMonthlyConfig";
 import { MonthSelector } from "./MonthSelector";
 import { cn } from "@/lib/utils";
@@ -49,6 +51,9 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
 
   // Fetch monthly config if available
   const { data: monthlyConfig } = useMonthlyConfigForMonth(config.id, selectedMonth, selectedYear);
+  
+  // Fetch accelerators for this config
+  const { data: accelerators } = useCommissionAccelerators(config.id);
 
   // Use monthly config if available, otherwise use base config
   const effectiveConfig = useMemo(() => {
@@ -90,7 +95,30 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
 
     // Total commission calculation
     const porcentajeTotal = participacionOriginaciones + participacionGMV;
-    const comisionTotal = (porcentajeTotal / 100) * effectiveConfig.base_comisional;
+    const comisionBase = (porcentajeTotal / 100) * effectiveConfig.base_comisional;
+
+    // Accelerator calculation
+    // Only applies if originaciones >= 100% AND GMV >= 100%
+    const acceleratorEligible = porcentajeOriginaciones >= 100 && porcentajeGMV >= 100;
+    let acceleratorBonus = 0;
+    let appliedAccelerators: { min_firmas: number; bonus_percentage: number; description: string | null; bonusAmount: number }[] = [];
+
+    if (acceleratorEligible && accelerators && accelerators.length > 0) {
+      accelerators.forEach((acc) => {
+        if (firmasReales >= acc.min_firmas) {
+          const bonus = (acc.bonus_percentage / 100) * comisionBase;
+          acceleratorBonus += bonus;
+          appliedAccelerators.push({
+            min_firmas: acc.min_firmas,
+            bonus_percentage: acc.bonus_percentage,
+            description: acc.description,
+            bonusAmount: bonus,
+          });
+        }
+      });
+    }
+
+    const comisionTotal = comisionBase + acceleratorBonus;
 
     return {
       porcentajeFirmas,
@@ -100,9 +128,13 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
       porcentajeGMV,
       participacionGMV,
       porcentajeTotal,
+      comisionBase,
       comisionTotal,
+      acceleratorEligible,
+      acceleratorBonus,
+      appliedAccelerators,
     };
-  }, [firmasReales, originacionesReales, gmvReal, effectiveConfig]);
+  }, [firmasReales, originacionesReales, gmvReal, effectiveConfig, accelerators]);
 
   const getCommissionMessage = () => {
     const { comisionTotal, candadoDesbloqueado } = calculations;
@@ -415,6 +447,88 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
         </CardContent>
       </Card>
 
+      {/* Accelerators Section */}
+      {accelerators && accelerators.length > 0 && (
+        <Card className={cn(
+          "transition-all duration-300",
+          calculations.acceleratorEligible
+            ? "border-amber-500/30 bg-amber-500/5"
+            : "border-muted"
+        )}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-amber-500" />
+              Aceleradores de Firmas
+            </CardTitle>
+            <CardDescription>
+              {calculations.acceleratorEligible
+                ? "¡Cumples el 100% en originaciones y GMV! Los aceleradores están activos."
+                : "Para activar los aceleradores debes cumplir el 100% en originaciones y GMV."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {accelerators.map((acc) => {
+              const isApplied = calculations.appliedAccelerators.some(
+                (a) => a.min_firmas === acc.min_firmas && a.bonus_percentage === acc.bonus_percentage
+              );
+              return (
+                <div
+                  key={acc.id}
+                  className={cn(
+                    "flex items-center justify-between p-3 rounded-lg border",
+                    isApplied
+                      ? "bg-amber-500/10 border-amber-500/40"
+                      : "bg-muted/30 border-muted opacity-60"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <Badge variant={isApplied ? "default" : "outline"} className={cn(
+                      "font-mono",
+                      isApplied && "bg-amber-500 text-white"
+                    )}>
+                      ≥ {acc.min_firmas} firmas
+                    </Badge>
+                    <span className="text-sm font-medium">+{acc.bonus_percentage}% sobre comisión</span>
+                    {acc.description && (
+                      <span className="text-xs text-muted-foreground">({acc.description})</span>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    {isApplied ? (
+                      <span className="text-sm font-bold text-amber-600">
+                        +{formatCurrency(calculations.appliedAccelerators.find(
+                          (a) => a.min_firmas === acc.min_firmas
+                        )?.bonusAmount || 0)}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">No aplica</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {!calculations.acceleratorEligible && (
+              <Alert className="mt-2">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  Necesitas alcanzar el 100% en originaciones y GMV para desbloquear los aceleradores.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {calculations.acceleratorBonus > 0 && (
+              <div className="text-right pt-2 border-t">
+                <span className="text-sm text-muted-foreground mr-2">Total aceleradores:</span>
+                <span className="text-lg font-bold text-amber-600">
+                  +{formatCurrency(calculations.acceleratorBonus)}
+                </span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <Separator />
 
       {/* Final Commission Result */}
@@ -429,7 +543,10 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className={cn(
+            "grid gap-4",
+            calculations.acceleratorBonus > 0 ? "sm:grid-cols-4" : "sm:grid-cols-3"
+          )}>
             {/* Porcentaje Total */}
             <div className="text-center p-4 rounded-lg bg-background border">
               <p className="text-sm text-muted-foreground mb-1">% Total Ejecución</p>
@@ -441,13 +558,23 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
               </p>
             </div>
 
-            {/* Base Comisional */}
+            {/* Comisión Base */}
             <div className="text-center p-4 rounded-lg bg-background border">
-              <p className="text-sm text-muted-foreground mb-1">Base Comisional</p>
+              <p className="text-sm text-muted-foreground mb-1">Comisión Base</p>
               <p className="text-3xl font-bold">
-                {formatCurrency(effectiveConfig.base_comisional)}
+                {formatCurrency(calculations.comisionBase)}
               </p>
             </div>
+
+            {/* Accelerator Bonus */}
+            {calculations.acceleratorBonus > 0 && (
+              <div className="text-center p-4 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                <p className="text-sm text-muted-foreground mb-1">Aceleradores</p>
+                <p className="text-3xl font-bold text-amber-600">
+                  +{formatCurrency(calculations.acceleratorBonus)}
+                </p>
+              </div>
+            )}
 
             {/* Comisión Total */}
             <div className={cn(
@@ -458,7 +585,7 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
                   ? "bg-primary/20 border-primary" 
                   : "bg-amber-500/20 border-amber-500"
             )}>
-              <p className="text-sm text-muted-foreground mb-1">Tu Comisión</p>
+              <p className="text-sm text-muted-foreground mb-1">Tu Comisión Total</p>
               <p className={cn(
                 "text-3xl font-bold",
                 calculations.comisionTotal >= 1500000 

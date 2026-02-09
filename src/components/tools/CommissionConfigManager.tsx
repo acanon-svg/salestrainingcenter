@@ -33,12 +33,14 @@ import {
   Target,
   DollarSign,
   Save,
-  Calendar
+  Calendar,
+  Zap
 } from "lucide-react";
 import { toast } from "sonner";
 import { TeamSelector } from "./TeamSelector";
 import { UserSelector } from "./UserSelector";
 import { MonthlyConfigEditor } from "./MonthlyConfigEditor";
+import { AcceleratorManager } from "./AcceleratorManager";
 import {
   CommissionCalculatorConfig,
   useCommissionCalculatorConfigs,
@@ -65,6 +67,7 @@ export const CommissionConfigManager: React.FC<CommissionConfigManagerProps> = (
   const [isNewConfigOpen, setIsNewConfigOpen] = useState(false);
   const [configToDelete, setConfigToDelete] = useState<string | null>(null);
   const [configForMonthly, setConfigForMonthly] = useState<CommissionCalculatorConfig | null>(null);
+  const [configForAccelerators, setConfigForAccelerators] = useState<CommissionCalculatorConfig | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -410,6 +413,14 @@ export const CommissionConfigManager: React.FC<CommissionConfigManagerProps> = (
                 <Button
                   size="sm"
                   variant="outline"
+                  onClick={() => setConfigForAccelerators(config)}
+                >
+                  <Zap className="h-4 w-4 mr-1" />
+                  Aceleradores
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
                   onClick={() => handleDuplicate(config.id)}
                 >
                   <Copy className="h-4 w-4 mr-1" />
@@ -505,6 +516,29 @@ export const CommissionConfigManager: React.FC<CommissionConfigManagerProps> = (
           {configForMonthly && <MonthlyConfigEditor config={configForMonthly} />}
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfigForMonthly(null)}>
+              Cerrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Accelerators Dialog */}
+      <Dialog open={!!configForAccelerators} onOpenChange={() => setConfigForAccelerators(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-amber-500" />
+              Aceleradores - {configForAccelerators?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Configura bonos adicionales por cantidad de firmas. Solo aplican si el ejecutivo cumple 100% en originaciones y GMV.
+            </DialogDescription>
+          </DialogHeader>
+          {configForAccelerators && (
+            <AcceleratorManager configId={configForAccelerators.id} configName={configForAccelerators.name} />
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfigForAccelerators(null)}>
               Cerrar
             </Button>
           </DialogFooter>
