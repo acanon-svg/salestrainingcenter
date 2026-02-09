@@ -185,15 +185,59 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Check if called manually (with body) or by cron (no body)
+    // Authentication: verify caller is authorized
     let forceSync = false;
-    try {
-      const body = await req.json();
-      forceSync = body?.force === true;
-    } catch {
-      // No body = cron call
+    const authHeader = req.headers.get('Authorization');
+
+    if (authHeader?.startsWith('Bearer ')) {
+      // Manual call - verify JWT and require admin/creator role
+      const userClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const token = authHeader.replace('Bearer ', '');
+      const { data: userData, error: authError } = await userClient.auth.getUser(token);
+
+      if (authError || !userData?.user) {
+        return new Response(
+          JSON.stringify({ error: 'No autorizado' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Check roles
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userData.user.id);
+
+      const userRoles = roles?.map((r: { role: string }) => r.role) || [];
+      const hasAccess = userRoles.includes('creator') || userRoles.includes('admin');
+
+      if (!hasAccess) {
+        return new Response(
+          JSON.stringify({ error: 'Solo creadores y administradores pueden ejecutar la sincronización' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Parse body for force flag
+      try {
+        const body = await req.json();
+        forceSync = body?.force === true;
+      } catch {
+        // No body
+      }
+    } else {
+      // No auth header - only allow if called with the service role key (cron/internal)
+      // Cron jobs use the anon key in the Authorization header, so reaching here
+      // means no valid auth was provided. Reject the request.
+      return new Response(
+        JSON.stringify({ error: 'Se requiere autenticación' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Read sync config from app_settings
