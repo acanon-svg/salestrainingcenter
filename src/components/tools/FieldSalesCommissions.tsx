@@ -89,20 +89,29 @@ const calculateAcceleratorBonus = (
   }
 
   const applied: { min_firmas: number; bonus_percentage: number; description: string | null; amount: number }[] = [];
-  let totalBonus = 0;
 
+  // Find the highest applicable accelerator (not cumulative)
+  let bestAccelerator: CommissionAccelerator | null = null;
   accelerators.forEach((acc) => {
     if (firmasReal >= acc.min_firmas) {
-      const amount = (acc.bonus_percentage / 100) * baseCommissionAmount;
-      totalBonus += amount;
-      applied.push({
-        min_firmas: acc.min_firmas,
-        bonus_percentage: acc.bonus_percentage,
-        description: acc.description,
-        amount,
-      });
+      if (!bestAccelerator || acc.bonus_percentage > bestAccelerator.bonus_percentage) {
+        bestAccelerator = acc;
+      }
     }
   });
+
+  let totalBonus = 0;
+  if (bestAccelerator) {
+    const best = bestAccelerator as CommissionAccelerator;
+    const amount = (best.bonus_percentage / 100) * baseCommissionAmount;
+    totalBonus = amount;
+    applied.push({
+      min_firmas: best.min_firmas,
+      bonus_percentage: best.bonus_percentage,
+      description: best.description,
+      amount,
+    });
+  }
 
   return { eligible, totalBonus, applied };
 };
