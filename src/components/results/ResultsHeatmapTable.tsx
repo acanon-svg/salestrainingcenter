@@ -67,14 +67,16 @@ export const ResultsHeatmapTable: React.FC<Props> = ({ data, indicator, selected
         totalReal += real;
         if (recordMeta > maxMeta) maxMeta = recordMeta;
 
-        if (isPast) {
+        // Use business days from the data to calculate expected
+        const diasTranscurridos = Number(r.dias_habiles_transcurridos) || 0;
+        const diasMes = Number(r.dias_habiles_mes) || 0;
+
+        if (diasMes > 0 && diasTranscurridos > 0) {
+          const fraction = Math.min(diasTranscurridos / diasMes, 1);
+          totalExpected += Math.round(recordMeta * fraction);
+        } else if (isPast) {
+          // Fallback for old data without business days: past months = 100%
           totalExpected += recordMeta;
-        } else if (isCurrent) {
-          const dayOfMonth = now.getDate();
-          const currentWeek = Math.ceil(dayOfMonth / 7);
-          const weeksInMonth = Number(r.weeks_in_month) || 4;
-          const weekFraction = Math.min(currentWeek, weeksInMonth) / weeksInMonth;
-          totalExpected += Math.round(recordMeta * weekFraction);
         }
       });
 

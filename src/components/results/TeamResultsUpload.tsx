@@ -34,6 +34,8 @@ const REQUIRED_COLUMNS = [
   { name: "mes", description: "Número de mes (1-12)", example: "2" },
   { name: "año", description: "Año (4 dígitos)", example: "2026" },
   { name: "semanas", description: "Número de semanas del mes (para dividir metas semanales)", example: "4" },
+  { name: "dias_habiles_transcurridos", description: "Días hábiles transcurridos en el mes", example: "12" },
+  { name: "dias_habiles_mes", description: "Total de días hábiles del mes", example: "20" },
   { name: "regional", description: "Regional del ejecutivo", example: "Bogotá" },
   { name: "equipo", description: "Equipo al que pertenece", example: "Field Sales" },
   { name: "firmas_real", description: "Firmas reales del período", example: "45" },
@@ -115,6 +117,9 @@ const parseRows = (rows: Record<string, any>[]): { data: TeamResultInsert[]; err
       return;
     }
 
+    const diasTranscurridos = Number(normalized.dias_habiles_transcurridos) || 0;
+    const diasMes = Number(normalized.dias_habiles_mes) || 0;
+
     data.push({
       user_email: String(email).trim().toLowerCase(),
       regional: normalized.regional || undefined,
@@ -127,6 +132,8 @@ const parseRows = (rows: Record<string, any>[]): { data: TeamResultInsert[]; err
       gmv_meta: Number(normalized.gmv_meta) || 0,
       period_date: periodDate,
       weeks_in_month: weeksInMonth,
+      dias_habiles_transcurridos: diasTranscurridos,
+      dias_habiles_mes: diasMes,
     });
   });
 
@@ -140,6 +147,8 @@ const handleDownloadTemplate = () => {
       mes: 1,
       año: 2026,
       semanas: 4,
+      dias_habiles_transcurridos: 20,
+      dias_habiles_mes: 20,
       regional: "Bogotá",
       equipo: "Field Sales",
       firmas_real: 45,
@@ -154,6 +163,8 @@ const handleDownloadTemplate = () => {
       mes: 1,
       año: 2026,
       semanas: 4,
+      dias_habiles_transcurridos: 20,
+      dias_habiles_mes: 20,
       regional: "Medellín",
       equipo: "Field Sales",
       firmas_real: 38,
@@ -168,6 +179,8 @@ const handleDownloadTemplate = () => {
       mes: 2,
       año: 2026,
       semanas: 4,
+      dias_habiles_transcurridos: 12,
+      dias_habiles_mes: 20,
       regional: "Bogotá",
       equipo: "Field Sales",
       firmas_real: 52,
@@ -340,7 +353,7 @@ export const TeamResultsUpload: React.FC = () => {
                 <AlertCircle className="h-4 w-4 text-primary mt-0.5 shrink-0" />
                 <div className="text-xs text-muted-foreground space-y-1">
                   <p><strong>Histórico:</strong> Puedes tener múltiples meses en el mismo archivo. Cada fila debe indicar a qué mes y año corresponde.</p>
-                  <p><strong>Semanas:</strong> La columna <code className="px-1 py-0.5 bg-muted rounded text-foreground">semanas</code> permite dividir la meta mensual por semanas. Ejemplo: si la meta de firmas es 50 y el mes tiene 4 semanas, la meta semanal es 12.5. Si se omite, se asume 4 semanas.</p>
+                  <p><strong>Días hábiles:</strong> La columna <code className="px-1 py-0.5 bg-muted rounded text-foreground">dias_habiles_transcurridos</code> indica cuántos días hábiles han pasado y <code className="px-1 py-0.5 bg-muted rounded text-foreground">dias_habiles_mes</code> el total de días hábiles del mes. Con esto se calcula "lo que debería llevar".</p>
                   <p><strong>Alternativa fecha:</strong> En lugar de <code className="px-1 py-0.5 bg-muted rounded text-foreground">mes</code> y <code className="px-1 py-0.5 bg-muted rounded text-foreground">año</code>, puedes usar una columna <code className="px-1 py-0.5 bg-muted rounded text-foreground">fecha</code> con formato YYYY-MM-DD (ej: 2026-02-01).</p>
                   <p><strong>Google Sheets:</strong> El Sheet debe ser público o estar compartido con "Cualquiera con el enlace".</p>
                 </div>
@@ -445,10 +458,11 @@ export const TeamResultsUpload: React.FC = () => {
               <div className="border rounded-lg overflow-auto max-h-64">
                 <Table>
                   <TableHeader>
-                    <TableRow>
+                     <TableRow>
                       <TableHead className="text-xs">Correo</TableHead>
                       <TableHead className="text-xs">Período</TableHead>
-                      <TableHead className="text-xs text-center">Sem.</TableHead>
+                      <TableHead className="text-xs text-center">D.H. Trans.</TableHead>
+                      <TableHead className="text-xs text-center">D.H. Mes</TableHead>
                       <TableHead className="text-xs">Regional</TableHead>
                       <TableHead className="text-xs">Equipo</TableHead>
                       <TableHead className="text-xs text-right">Firmas R</TableHead>
@@ -464,7 +478,8 @@ export const TeamResultsUpload: React.FC = () => {
                       <TableRow key={i}>
                         <TableCell className="text-xs">{row.user_email}</TableCell>
                         <TableCell className="text-xs">{row.period_date}</TableCell>
-                        <TableCell className="text-xs text-center">{row.weeks_in_month}</TableCell>
+                        <TableCell className="text-xs text-center">{row.dias_habiles_transcurridos}</TableCell>
+                        <TableCell className="text-xs text-center">{row.dias_habiles_mes}</TableCell>
                         <TableCell className="text-xs">{row.regional || "—"}</TableCell>
                         <TableCell className="text-xs">{row.team || "—"}</TableCell>
                         <TableCell className="text-xs text-right">{row.firmas_real}</TableCell>
