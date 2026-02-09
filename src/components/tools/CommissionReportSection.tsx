@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Download, FileSpreadsheet, AlertCircle, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { MonthSelector } from "./MonthSelector";
+import { PendingCommissionsSummary } from "./PendingCommissionsSummary";
 import { useApprovedCommissions, CommissionReview } from "@/hooks/useCommissionReviews";
 import * as XLSX from "xlsx";
 
@@ -165,6 +166,8 @@ export const CommissionReportSection: React.FC = () => {
         onMonthChange={setSelectedMonth}
         onYearChange={setSelectedYear}
       />
+
+      <PendingCommissionsSummary month={selectedMonth} year={selectedYear} />
 
       {/* Summary */}
       <div className="grid gap-4 sm:grid-cols-3">
