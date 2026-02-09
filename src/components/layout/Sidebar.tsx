@@ -77,7 +77,7 @@ const creatorItems: NavItem[] = [
 
 const leaderItems: NavItem[] = [
   { label: "Mi Equipo", icon: Users, href: "/team", roles: ["lider"] },
-  { label: "Reportes Regional", icon: BarChart3, href: "/reports", roles: ["lider"] },
+  { label: "Reportes Regional", icon: BarChart3, href: "/reports", roles: ["lider"], sectionKey: "reports_field_sales" },
   { label: "Herramientas", icon: Wrench, href: "/tools", sectionKey: "tools", roles: ["lider"] },
   { label: "Feedbacks al Equipo", icon: ClipboardList, href: "/team-feedback", sectionKey: "team_feedback", roles: ["lider"] },
 ];
@@ -132,6 +132,17 @@ export const Sidebar: React.FC = () => {
     return isSectionVisibleForUser(config, profile?.team || null, user.id);
   };
 
+  // Check if a leader nav item is visible (some items are Field Sales only)
+  const isLeaderItemVisible = (item: NavItem): boolean => {
+    if (!item.roles || !item.roles.some((role) => hasRole(role))) return false;
+    // Reportes Regional solo visible para líderes de Field Sales
+    if (item.sectionKey === "reports_field_sales") {
+      if (!profile?.team) return false;
+      return profile.team.toLowerCase().includes("field sales");
+    }
+    return true;
+  };
+
   const visibleNavItems = defaultNavItems.filter(isNavItemVisible);
 
   // Creator items should always be visible to creators/admins - portal config visibility should NOT affect them
@@ -140,10 +151,8 @@ export const Sidebar: React.FC = () => {
     (item) => !item.roles || item.roles.some((role) => hasRole(role))
   );
 
-  // Leader items should always be visible to leaders - portal config visibility should NOT affect them
-  const visibleLeaderItems = leaderItems.filter(
-    (item) => !item.roles || item.roles.some((role) => hasRole(role))
-  );
+  // Leader items: use specific visibility check (some items gated to Field Sales)
+  const visibleLeaderItems = leaderItems.filter(isLeaderItemVisible);
 
   const visibleAnalistaItems = analistaItems.filter(
     (item) => !item.roles || item.roles.some((role) => hasRole(role))

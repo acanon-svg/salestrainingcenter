@@ -222,6 +222,7 @@ const Tools: React.FC = () => {
   const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
   const [mode, setMode] = useState<"list" | "configure" | "use" | "commissions" | "commission-report">("list");
   const isLeader = hasRole("lider");
+  const isFieldSalesLeader = isLeader && profile?.team?.toLowerCase().includes("field sales");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [teamsDialogOpen, setTeamsDialogOpen] = useState(false);
   const [newToolName, setNewToolName] = useState("");
@@ -447,8 +448,8 @@ const Tools: React.FC = () => {
           </div>
         )}
 
-        {/* Field Sales Commission Section - Leaders & Creators */}
-        {(isLeader || isCreator) && (
+        {/* Field Sales Commission Section - Field Sales Leaders & Creators/Admins */}
+        {(isFieldSalesLeader || isCreator) && (
           <div className="space-y-3">
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <DollarSign className="h-5 w-5" />

@@ -337,7 +337,8 @@ const LeaderReportsView: React.FC<{ dateRange: string }> = ({ dateRange }) => {
 
 const Reports: React.FC = () => {
   const { hasRole, profile } = useAuth();
-  const isLeader = hasRole("lider");
+  const isFieldSalesLeader = hasRole("lider") && profile?.team?.toLowerCase().includes("field sales");
+  const isLeader = isFieldSalesLeader;
   const isAdminOrAnalyst = hasRole("admin") || hasRole("analista") || hasRole("creator");
 
   const [dateRange, setDateRange] = useState("30");
