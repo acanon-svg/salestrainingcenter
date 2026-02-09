@@ -6,6 +6,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const MAX_ATTEMPTS_PER_HOUR = 5;
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -43,7 +45,6 @@ Deno.serve(async (req) => {
     const { data: claimsData, error: claimsError } = await userClient.auth.getUser(token);
 
     if (claimsError || !claimsData?.user) {
-      console.error("Auth error:", claimsError);
       return new Response(
         JSON.stringify({ error: "Token inválido" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -51,6 +52,7 @@ Deno.serve(async (req) => {
     }
 
     const requesterId = claimsData.user.id;
+    const clientIp = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "unknown";
 
     // Check if requester has creator or admin role
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
@@ -67,7 +69,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const userRoles = roles?.map((r) => r.role) || [];
+    const userRoles = roles?.map((r: { role: string }) => r.role) || [];
     const hasCreatorAccess = userRoles.includes("creator") || userRoles.includes("admin");
 
     if (!hasCreatorAccess) {
@@ -87,8 +89,41 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Rate limiting: check recent attempts by this requester
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { count: recentAttempts } = await adminClient
+      .from("impersonation_audit_log")
+      .select("*", { count: "exact", head: true })
+      .eq("requester_id", requesterId)
+      .gte("created_at", oneHourAgo);
+
+    if ((recentAttempts ?? 0) >= MAX_ATTEMPTS_PER_HOUR) {
+      // Log the rate-limited attempt
+      await adminClient.from("impersonation_audit_log").insert({
+        requester_id: requesterId,
+        target_email: targetEmail,
+        success: false,
+        failure_reason: "rate_limited",
+        ip_address: clientIp,
+      });
+
+      return new Response(
+        JSON.stringify({ error: "Demasiados intentos. Intenta de nuevo más tarde." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Verify universal password
     if (password !== universalPassword) {
+      // Log failed attempt
+      await adminClient.from("impersonation_audit_log").insert({
+        requester_id: requesterId,
+        target_email: targetEmail,
+        success: false,
+        failure_reason: "invalid_password",
+        ip_address: clientIp,
+      });
+
       return new Response(
         JSON.stringify({ error: "Contraseña universal incorrecta" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -103,6 +138,14 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (profileError || !targetProfile) {
+      await adminClient.from("impersonation_audit_log").insert({
+        requester_id: requesterId,
+        target_email: targetEmail,
+        success: false,
+        failure_reason: "user_not_found",
+        ip_address: clientIp,
+      });
+
       return new Response(
         JSON.stringify({ error: "Usuario no encontrado" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -113,6 +156,14 @@ Deno.serve(async (req) => {
     const { data: targetUserData, error: targetUserError } = await adminClient.auth.admin.getUserById(targetProfile.user_id);
 
     if (targetUserError || !targetUserData?.user) {
+      await adminClient.from("impersonation_audit_log").insert({
+        requester_id: requesterId,
+        target_email: targetEmail,
+        success: false,
+        failure_reason: "auth_user_not_found",
+        ip_address: clientIp,
+      });
+
       return new Response(
         JSON.stringify({ error: "Usuario no encontrado en el sistema de autenticación" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -128,7 +179,14 @@ Deno.serve(async (req) => {
     });
 
     if (linkError || !linkData) {
-      console.error("Error generating link:", linkError);
+      await adminClient.from("impersonation_audit_log").insert({
+        requester_id: requesterId,
+        target_email: targetEmail,
+        success: false,
+        failure_reason: "link_generation_failed",
+        ip_address: clientIp,
+      });
+
       return new Response(
         JSON.stringify({ error: "Error generando acceso" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -139,12 +197,27 @@ Deno.serve(async (req) => {
     const emailOtp = linkData.properties?.email_otp;
     
     if (!emailOtp) {
-      console.error("No email_otp in response:", linkData);
+      await adminClient.from("impersonation_audit_log").insert({
+        requester_id: requesterId,
+        target_email: targetEmail,
+        success: false,
+        failure_reason: "no_otp_generated",
+        ip_address: clientIp,
+      });
+
       return new Response(
         JSON.stringify({ error: "No se pudo generar el código de acceso" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Log successful impersonation
+    await adminClient.from("impersonation_audit_log").insert({
+      requester_id: requesterId,
+      target_email: targetEmail,
+      success: true,
+      ip_address: clientIp,
+    });
 
     return new Response(
       JSON.stringify({

@@ -27,6 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAvailableTeams } from "@/hooks/useCourseTargeting";
 import { useMaterialCategories } from "@/hooks/useMaterialCategories";
 import { useAssignTagsToMaterial, useMaterialTagAssignments } from "@/hooks/useMaterialTags";
+import DOMPurify from "dompurify";
 import { RichTextEditor, parseRichText } from "./RichTextEditor";
 import { KeywordsInput } from "./KeywordsInput";
 import { TagSelector } from "./TagSelector";
@@ -62,7 +63,7 @@ const MaterialPreview: React.FC<{
       return (
         <div 
           className="prose prose-sm max-w-none dark:prose-invert bg-muted/30 p-4 rounded-lg max-h-64 overflow-y-auto"
-          dangerouslySetInnerHTML={{ __html: parseRichText(contentText) }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(parseRichText(contentText)) }}
         />
       );
     }
@@ -175,7 +176,7 @@ const MaterialPreview: React.FC<{
       {description && (
         <div 
           className="text-sm text-muted-foreground mb-4"
-          dangerouslySetInnerHTML={{ __html: parseRichText(description) }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(parseRichText(description)) }}
         />
       )}
       
