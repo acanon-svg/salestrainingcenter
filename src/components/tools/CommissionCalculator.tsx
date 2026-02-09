@@ -7,6 +7,45 @@ import { Separator } from "@/components/ui/separator";
 import { Calculator, DollarSign, Percent, Hash } from "lucide-react";
 import { CalculatorVariable, CalculatorFormula } from "@/hooks/useTools";
 
+// Safe math evaluator - recursive descent parser for arithmetic without eval/Function
+function safeMathEval(expr: string): number {
+  const s = expr.replace(/\s/g, "");
+  if (/[^0-9+\-*/().]/g.test(s)) throw new Error("Invalid characters");
+  let pos = 0;
+  function parseExpr(): number {
+    let r = parseTerm();
+    while (pos < s.length && (s[pos] === '+' || s[pos] === '-')) {
+      const op = s[pos++]; const t = parseTerm();
+      r = op === '+' ? r + t : r - t;
+    }
+    return r;
+  }
+  function parseTerm(): number {
+    let r = parseFactor();
+    while (pos < s.length && (s[pos] === '*' || s[pos] === '/')) {
+      const op = s[pos++]; const f = parseFactor();
+      r = op === '*' ? r * f : r / f;
+    }
+    return r;
+  }
+  function parseFactor(): number {
+    if (s[pos] === '-') { pos++; return -parseFactor(); }
+    if (s[pos] === '+') { pos++; return parseFactor(); }
+    if (s[pos] === '(') {
+      pos++;
+      const r = parseExpr();
+      if (s[pos] === ')') pos++;
+      return r;
+    }
+    const start = pos;
+    while (pos < s.length && /[0-9.]/.test(s[pos])) pos++;
+    if (start === pos) throw new Error("Unexpected token");
+    return parseFloat(s.slice(start, pos));
+  }
+  const result = parseExpr();
+  if (pos < s.length) throw new Error("Unexpected character");
+  return result;
+}
 interface CommissionCalculatorProps {
   variables: CalculatorVariable[];
   formulas: CalculatorFormula[];
@@ -67,15 +106,8 @@ export const CommissionCalculator: React.FC<CommissionCalculatorProps> = ({
           expression = expression.replace(regex, String(context[varName] ?? 0));
         });
 
-        // Safe evaluation using Function constructor
-        // Only allows basic math operations
-        const sanitized = expression.replace(/[^0-9+\-*/().]/g, "");
-        if (sanitized !== expression.replace(/\s/g, "")) {
-          throw new Error("Invalid characters in formula");
-        }
-        
-        // eslint-disable-next-line no-new-func
-        const result = new Function(`return (${expression})`)();
+        // Safe math evaluation without Function constructor
+        const result = safeMathEval(expression);
         calculated[formula.name] = typeof result === "number" && !isNaN(result) ? result : 0;
       } catch (error) {
         calculated[formula.name] = 0;
