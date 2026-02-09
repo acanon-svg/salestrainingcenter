@@ -29,6 +29,8 @@ import {
   Target,
   RotateCcw,
   Zap,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { MonthSelector } from "./MonthSelector";
@@ -373,6 +375,8 @@ export const FieldSalesCommissions: React.FC = () => {
       "GMV Real": exec.gmv_real,
       "GMV Meta": exec.gmv_meta,
       "% GMV": `${exec.gmvPct.toFixed(1)}%`,
+      "Indicadores Combinados": `${exec.totalPct.toFixed(1)}%`,
+      "Indicadores ≥85%": exec.indicatorsMet ? "Cumplido" : "No cumplido",
       "Comisión Calculada (COP)": exec.calculatedCommission,
       "Acelerador Firmas (COP)": exec.accelerator.totalBonus,
       "MB Income (+20%)": exec.hasMb ? "Sí" : "No",
@@ -614,6 +618,35 @@ export const FieldSalesCommissions: React.FC = () => {
                       </p>
                       <p className="text-sm text-primary font-medium">
                         {exec.gmvPct.toFixed(1)}% → {exec.gmvWeighted.toFixed(2)}%
+                      </p>
+                    </div>
+
+                    {/* Indicadores Combinados */}
+                    <div
+                      className={cn(
+                        "p-3 rounded-lg border sm:col-span-3",
+                        exec.indicatorsMet
+                          ? "bg-emerald-500/10 border-emerald-500/30"
+                          : "bg-destructive/10 border-destructive/30"
+                      )}
+                    >
+                      <div className="flex items-center gap-1.5 mb-1">
+                        {exec.indicatorsMet ? (
+                          <CheckCircle className="h-4 w-4 text-emerald-600" />
+                        ) : (
+                          <XCircle className="h-4 w-4 text-destructive" />
+                        )}
+                        <span className="text-xs font-semibold">Indicadores Combinados (Orig + GMV)</span>
+                      </div>
+                      <p
+                        className={cn(
+                          "text-sm font-medium",
+                          exec.indicatorsMet ? "text-emerald-600" : "text-destructive"
+                        )}
+                      >
+                        {exec.totalPct.toFixed(1)}%
+                        {!exec.indicatorsMet && " (mín. 85%)"}
+                        {exec.indicatorsMet && " ✓ Cumplido"}
                       </p>
                     </div>
                   </div>
