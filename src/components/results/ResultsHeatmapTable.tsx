@@ -46,7 +46,7 @@ export const ResultsHeatmapTable: React.FC<Props> = ({ data, indicator, selected
     grouped.forEach((records, email) => {
       let totalReal = 0;
       let totalExpected = 0;
-      let maxMeta = 0;
+      let totalMeta = 0;
 
       records.forEach((r) => {
         const real = (() => {
@@ -65,9 +65,8 @@ export const ResultsHeatmapTable: React.FC<Props> = ({ data, indicator, selected
         })();
 
         totalReal += real;
-        if (recordMeta > maxMeta) maxMeta = recordMeta;
+        totalMeta += recordMeta;
 
-        // Use business days from the data to calculate expected
         const diasTranscurridos = Number(r.dias_habiles_transcurridos) || 0;
         const diasMes = Number(r.dias_habiles_mes) || 0;
 
@@ -75,13 +74,12 @@ export const ResultsHeatmapTable: React.FC<Props> = ({ data, indicator, selected
           const fraction = Math.min(diasTranscurridos / diasMes, 1);
           totalExpected += Math.round(recordMeta * fraction);
         } else if (isPast) {
-          // Fallback for old data without business days: past months = 100%
           totalExpected += recordMeta;
         }
       });
 
       const name = email.split("@")[0].replace(/\./g, " ");
-      userMap.set(email, { real: totalReal, meta: maxMeta, expected: totalExpected, email: name });
+      userMap.set(email, { real: totalReal, meta: totalMeta, expected: totalExpected, email: name });
     });
 
     return Array.from(userMap.values()).sort((a, b) => b.real - a.real);
