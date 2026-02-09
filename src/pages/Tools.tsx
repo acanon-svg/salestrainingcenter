@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -224,12 +224,9 @@ const Tools: React.FC = () => {
   const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
   const [mode, setMode] = useState<"list" | "configure" | "use" | "commissions" | "commission-report">("list");
 
-  // Auto-open commissions view when navigating from "Comisiones Rechazadas"
-  useEffect(() => {
-    if (searchParams.get("view") === "rejected-commissions") {
-      setMode("commissions");
-    }
-  }, [searchParams]);
+  // Derive effective mode: URL query param takes priority over local state
+  const isRejectedCommissionsView = searchParams.get("view") === "rejected-commissions";
+  const effectiveMode = isRejectedCommissionsView ? "commissions" : mode;
   const isLeader = hasRole("lider");
   const isFieldSalesLeader = isLeader && profile?.team?.toLowerCase().includes("field sales");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -326,7 +323,7 @@ const Tools: React.FC = () => {
     ? tools 
     : tools?.filter(t => t.is_active);
 
-  if (mode === "configure" && selectedTool) {
+  if (effectiveMode === "configure" && selectedTool) {
     return (
       <DashboardLayout>
         <div className="space-y-6">
@@ -346,7 +343,7 @@ const Tools: React.FC = () => {
     );
   }
 
-  if (mode === "use" && selectedTool) {
+  if (effectiveMode === "use" && selectedTool) {
     return (
       <DashboardLayout>
         <div className="space-y-6">
@@ -373,7 +370,7 @@ const Tools: React.FC = () => {
     );
   }
 
-  if (mode === "commissions") {
+  if (effectiveMode === "commissions") {
     return (
       <DashboardLayout>
         <div className="space-y-6">
@@ -393,7 +390,7 @@ const Tools: React.FC = () => {
     );
   }
 
-  if (mode === "commission-report") {
+  if (effectiveMode === "commission-report") {
     return (
       <DashboardLayout>
         <div className="space-y-6">

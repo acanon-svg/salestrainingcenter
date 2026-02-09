@@ -98,11 +98,14 @@ export const Sidebar: React.FC = () => {
   const { data: unreadFeedbackCount = 0 } = useUnreadCourseFeedbackCount();
   const { data: rejectedCommissionCount = 0 } = useRejectedCommissionCount();
   const isActive = (href: string) => {
-    const [path, query] = href.split("?");
-    if (query) {
-      return location.pathname === path && location.search === `?${query}`;
+    const questionMark = href.indexOf("?");
+    if (questionMark !== -1) {
+      const path = href.substring(0, questionMark);
+      const query = href.substring(questionMark);
+      return location.pathname === path && location.search === query;
     }
-    return location.pathname === path && !location.search;
+    // For items without query params, only match when location also has no query params
+    return location.pathname === href && location.search === "";
   };
 
   const getInitials = (name: string | null) => {
