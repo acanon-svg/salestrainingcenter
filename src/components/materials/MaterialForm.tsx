@@ -21,6 +21,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { X, Upload, Loader2, Folder, Plus, Eye, FileText, Video, Link as LinkIcon, HelpCircle, TableIcon } from "lucide-react";
+import { MaterialShareLink } from "./MaterialShareLink";
 import { TrainingMaterial, useCreateTrainingMaterial, useUpdateTrainingMaterial } from "@/hooks/useTrainingMaterials";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -679,18 +680,28 @@ export const MaterialForm: React.FC<MaterialFormProps> = ({
             )}
           </Tabs>
 
-          <DialogFooter className="mt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button 
-              type="submit" 
-              form="material-form"
-              disabled={isPending || !title}
-            >
-              {isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {isEditing ? "Guardar cambios" : "Crear material"}
-            </Button>
+          <DialogFooter className="mt-4 flex-col sm:flex-row gap-3">
+            {isEditing && material?.is_published && (
+              <div className="flex-1 mr-auto">
+                <MaterialShareLink
+                  materialId={material.id}
+                  materialTitle={material.title}
+                />
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button 
+                type="submit" 
+                form="material-form"
+                disabled={isPending || !title}
+              >
+                {isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {isEditing ? "Guardar cambios" : "Crear material"}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

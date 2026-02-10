@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTrainingMaterials, useDeleteTrainingMaterial, TrainingMaterial } from "@/hooks/useTrainingMaterials";
@@ -36,6 +37,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Video, FileText, Link as LinkIcon, FolderOpen, Loader2, Folder, ChevronRight, ChevronDown, Settings, Tag, X, List, BookOpen, Layers } from "lucide-react";
 
 const TrainingMaterials: React.FC = () => {
+  const { id: materialIdParam } = useParams<{ id?: string }>();
   const { hasRole } = useAuth();
   const isCreator = hasRole("creator") || hasRole("admin");
 
@@ -60,6 +62,15 @@ const TrainingMaterials: React.FC = () => {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
+  // Auto-open material viewer when navigating to /materials/:id
+  useEffect(() => {
+    if (materialIdParam && materials && !isLoading) {
+      const mat = materials.find((m) => m.id === materialIdParam);
+      if (mat) {
+        setViewingMaterial(mat);
+      }
+    }
+  }, [materialIdParam, materials, isLoading]);
   // Search by keywords in title, description, content, and keywords array
   const filteredMaterials = useMemo(() => {
     return materials?.filter((material) => {

@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ThumbsUp, ThumbsDown, Video, FileText, Link as LinkIcon, Eye, Edit, Trash2, Calendar, Users, TableIcon } from "lucide-react";
 import { TrainingMaterial, useMaterialFeedback } from "@/hooks/useTrainingMaterials";
+import { MaterialShareLink } from "./MaterialShareLink";
 import { MaterialCategory } from "@/hooks/useMaterialCategories";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -161,6 +162,13 @@ export const MaterialListItem: React.FC<MaterialListItemProps> = ({
 
         {isCreator ? (
           <>
+            {material.is_published && (
+              <MaterialShareLink
+                materialId={material.id}
+                materialTitle={material.title}
+                compact
+              />
+            )}
             <Button variant="ghost" size="icon" onClick={() => onEdit?.(material)}>
               <Edit className="h-4 w-4" />
             </Button>
