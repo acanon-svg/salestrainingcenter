@@ -159,8 +159,8 @@ export const CourseTimer: React.FC<CourseTimerProps> = ({
       </div>
 
       {isExpired && (
-        <p className="text-xs text-warning mt-2">
-          El tiempo ha expirado. Puedes continuar, pero recibirás solo el 50% de los puntos al aprobar el quiz.
+        <p className="text-xs text-destructive mt-2">
+          El tiempo para completar este curso ha expirado. Ya no puedes continuar con el contenido.
         </p>
       )}
 

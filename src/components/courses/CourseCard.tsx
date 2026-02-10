@@ -122,10 +122,11 @@ export const CourseCard: React.FC<CourseCardProps> = ({
         </div>
 
         {isExpired && (
-          <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
-            <Badge variant="destructive" className="text-sm">
+          <div className="absolute inset-0 bg-background/80 flex items-center justify-center flex-col gap-1">
+            <Badge className="bg-warning text-warning-foreground text-sm">
               Curso Vencido
             </Badge>
+            <span className="text-xs text-muted-foreground font-medium">50% de puntos</span>
           </div>
         )}
 
@@ -235,8 +236,8 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             </Link>
           </div>
         ) : showEnrollButton ? (
-          <Button onClick={onEnroll} className="w-full" disabled={isExpired}>
-            {isExpired ? "No disponible" : "Inscribirme"}
+          <Button onClick={onEnroll} className="w-full">
+            {isExpired ? "Inscribirme (50% pts)" : "Inscribirme"}
           </Button>
         ) : (
           <Link to={`/courses/${course.id}`} className="block w-full">
