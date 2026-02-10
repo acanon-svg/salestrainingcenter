@@ -747,9 +747,12 @@ const CourseDetail: React.FC = () => {
                       <Button
                         onClick={handleSubmitQuiz}
                         className="w-full"
-                        disabled={Object.keys(quizAnswers).length < (selectedQuiz.questions?.length || 0)}
+                        disabled={
+                          Object.keys(quizAnswers).length < (selectedQuiz.questions?.length || 0) ||
+                          submitQuiz.isPending
+                        }
                       >
-                        Enviar respuestas
+                        {submitQuiz.isPending ? "Enviando..." : "Enviar respuestas"}
                       </Button>
                     </>
                   )}
