@@ -144,9 +144,9 @@ export const ResultsBarLineChart: React.FC<Props> = ({ data, indicator, selected
               formatter={(value: number) => value.toLocaleString("es-CO")}
             />
             <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "10px" }} />
-            <Bar dataKey="real" name="Resultado Real" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} barSize={20} />
-            <Bar dataKey="expected" name="Debería llevar" fill="hsl(var(--muted-foreground) / 0.4)" radius={[4, 4, 0, 0]} barSize={20} />
-            <Line type="monotone" dataKey="meta" name="Meta Total" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 4 }} />
+            <Bar dataKey="real" name="Resultado Real" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} barSize={20} label={{ position: "top", fontSize: 10, fill: "hsl(var(--foreground))", formatter: (v: number) => v.toLocaleString("es-CO") }} />
+            <Bar dataKey="expected" name="Debería llevar" fill="hsl(var(--muted-foreground) / 0.4)" radius={[4, 4, 0, 0]} barSize={20} label={{ position: "top", fontSize: 10, fill: "hsl(var(--muted-foreground))", formatter: (v: number) => v.toLocaleString("es-CO") }} />
+            <Line type="monotone" dataKey="meta" name="Meta Total" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 4 }} label={{ position: "top", fontSize: 10, fill: "hsl(var(--destructive))", formatter: (v: number) => v.toLocaleString("es-CO") }} />
           </ComposedChart>
         </ChartContainer>
       </CardContent>
