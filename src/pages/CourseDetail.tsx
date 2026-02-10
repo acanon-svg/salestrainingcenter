@@ -237,6 +237,8 @@ const CourseDetail: React.FC = () => {
     const MINIMUM_PASSING_SCORE = 90;
     const passed = score >= MINIMUM_PASSING_SCORE;
 
+    const effectivePoints = isTimeExpired ? Math.floor((course?.points || 0) / 2) : course?.points;
+
     try {
       await submitQuiz.mutateAsync({
         quizId: selectedQuiz.id,
@@ -245,16 +247,19 @@ const CourseDetail: React.FC = () => {
         passed,
         startedAt: quizStartTime,
         courseId: id,
-        coursePoints: course?.points,
+        coursePoints: effectivePoints,
       });
 
-      setLastQuizScore({ score, passed, coursePoints: course?.points });
+      setLastQuizScore({ score, passed, coursePoints: effectivePoints });
       setShowQuizResults(true);
 
       if (passed) {
+        const pointsMsg = isTimeExpired
+          ? `Obtuviste ${score}% y has ganado ${effectivePoints} puntos (50% por completar fuera de tiempo). Podrás verlos reflejados en tu perfil.`
+          : `Obtuviste ${score}% y has ganado ${course?.points || 0} puntos. Podrás verlos reflejados en tu perfil.`;
         toast({
           title: "🎉 ¡Felicitaciones! Has aprobado el curso",
-          description: `Obtuviste ${score}% y has ganado ${course?.points || 0} puntos. Podrás verlos reflejados en tu perfil.`,
+          description: pointsMsg,
         });
         // Small delay to ensure database has updated enrollment status before checking badges
         setTimeout(async () => {
@@ -441,8 +446,8 @@ const CourseDetail: React.FC = () => {
             onTimeExpired={() => {
               setIsTimeExpired(true);
               toast({
-                title: "Tiempo agotado",
-                description: "El tiempo para completar este curso ha expirado. Ya no puedes continuar con el contenido.",
+                title: "⚠️ Tiempo agotado",
+                description: "El tiempo asignado ha expirado. Puedes continuar, pero recibirás solo el 50% de los puntos del curso.",
                 variant: "destructive",
               });
             }}
@@ -472,19 +477,20 @@ const CourseDetail: React.FC = () => {
           </Card>
         )}
 
-        {/* Time expired overlay message */}
+        {/* Time expired warning message - allow continuing but with 50% points */}
         {isTimeExpired && enrollment?.status !== "completed" && (
-          <Card className="border-destructive bg-destructive/10">
-            <CardContent className="py-6 text-center">
-              <AlertTriangle className="w-12 h-12 text-destructive mx-auto mb-3" />
-              <h3 className="text-lg font-bold text-destructive mb-2">Tiempo Expirado</h3>
-              <p className="text-sm text-muted-foreground">
-                El tiempo asignado para completar este curso ha terminado. 
-                No puedes continuar con el contenido.
-              </p>
-              <Button onClick={() => navigate("/courses")} className="mt-4">
-                Volver a cursos
-              </Button>
+          <Card className="border-warning bg-warning/10">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-8 h-8 text-warning flex-shrink-0" />
+                <div>
+                  <h3 className="font-semibold text-warning">Tiempo Expirado - 50% de Puntos</h3>
+                  <p className="text-sm text-muted-foreground">
+                    El tiempo asignado para completar este curso ha terminado. 
+                    Puedes continuar con el contenido, pero al aprobar el quiz recibirás solo el <strong>50% de los puntos</strong> ({Math.floor((course?.points || 0) / 2)} pts en vez de {course?.points || 0} pts).
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -602,8 +608,8 @@ const CourseDetail: React.FC = () => {
           </div>
         )}
 
-        {/* Main content - visible when enrolled (always visible for completed courses, hidden only for expired non-completed courses) */}
-        {enrollment && (enrollment.status === "completed" || !isTimeExpired) && (
+        {/* Main content - visible when enrolled (always visible, including expired courses) */}
+        {enrollment && (
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Content viewer */}
           <div className="lg:col-span-2 space-y-4">
