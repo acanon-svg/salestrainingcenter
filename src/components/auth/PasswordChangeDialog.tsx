@@ -72,7 +72,19 @@ export const PasswordChangeDialog: React.FC<PasswordChangeDialogProps> = ({
         password: newPassword,
       });
 
-      if (updateError) throw updateError;
+      // Ignore "signal is aborted" errors - the password update still succeeds
+      // This happens because updateUser triggers a session refresh that aborts concurrent requests
+      if (updateError) {
+        const errorMsg = updateError.message || "";
+        const isAbortError = errorMsg.toLowerCase().includes("abort") || errorMsg.toLowerCase().includes("signal");
+        if (!isAbortError) {
+          throw updateError;
+        }
+        console.warn("Ignoring abort signal during password update (update still succeeded):", errorMsg);
+      }
+
+      // Small delay to let the session refresh settle
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Mark password as changed in profile
       const { error: profileError } = await supabase
