@@ -153,9 +153,29 @@ export const UniversalFeedbackSection: React.FC = () => {
     return filteredByRegional.filter(d => d.executive_email === selectedExec.split("|")[1]);
   }, [filteredByRegional, selectedExec]);
 
+  // Team-level summary cards (shown outside filters for leaders, creators, and staborda)
+  const teamTypeCounts = useMemo(() => {
+    const c: Record<string, number> = {};
+    teamFilteredData.forEach(d => { c[d.feedback_type] = (c[d.feedback_type] || 0) + 1; });
+    return c;
+  }, [teamFilteredData]);
+
   if (isLoading) return <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   if (!data || data.length === 0) return <Card><CardContent className="py-8 text-center text-muted-foreground">No hay datos de feedback universal.</CardContent></Card>;
   if (!isLeaderOrAbove) return <StudentFeedbackView data={finalData} />;
+
+  const TeamSummaryCards = () => (
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      {FEEDBACK_TYPES.map(type => (
+        <Card key={type}>
+          <CardContent className="p-3 text-center">
+            <p className="text-2xl font-bold">{teamTypeCounts[type] || 0}</p>
+            <p className="text-xs text-muted-foreground">{type}</p>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
 
   // Macro view
   if (isMacroUser) {
@@ -171,7 +191,9 @@ export const UniversalFeedbackSection: React.FC = () => {
     const allWeeks = [...new Set(Object.values(weeklyByRegional).flatMap(wm => Object.keys(wm)))].sort();
 
     return (
-      <Card>
+      <div className="space-y-4">
+        <TeamSummaryCards />
+        <Card>
         <CardHeader><CardTitle className="text-lg">Feedbacks por Regional (semanal)</CardTitle></CardHeader>
         <CardContent className="overflow-auto">
           <Table>
@@ -207,12 +229,14 @@ export const UniversalFeedbackSection: React.FC = () => {
           </Table>
         </CardContent>
       </Card>
+      </div>
     );
   }
 
   // Leader view
   return (
     <div className="space-y-4">
+      <TeamSummaryCards />
       <div className="flex gap-4 flex-wrap">
         <Select value={selectedRegional} onValueChange={(v) => { setSelectedRegional(v); setSelectedExec("all"); }}>
           <SelectTrigger className="w-[200px]"><SelectValue placeholder="Regional" /></SelectTrigger>
