@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAccompaniments, FollowupAccompaniment } from "@/hooks/useFollowups";
+import { useLeaderTeamEmails } from "@/hooks/useLeaderTeamEmails";
 import { Loader2 } from "lucide-react";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Legend } from "recharts";
@@ -170,19 +171,30 @@ const StudentAccompanimentView: React.FC<{ data: FollowupAccompaniment[] }> = ({
 export const AccompanimentsSection: React.FC = () => {
   const { data, isLoading } = useAccompaniments();
   const { profile, hasRole } = useAuth();
+  const { data: teamEmails } = useLeaderTeamEmails();
   const [selectedRegional, setSelectedRegional] = useState<string>("all");
   const [selectedExec, setSelectedExec] = useState<string>("all");
 
   const isLeaderOrAbove = hasRole("lider") || hasRole("creator") || hasRole("admin");
+  const isCreatorOrAdmin = hasRole("creator") || hasRole("admin");
   const isMacroUser = profile?.email === "staborda@addi.com";
 
-  const regionals = useMemo(() => [...new Set((data || []).map(d => d.regional))].sort(), [data]);
-  const filteredByRegional = useMemo(() => {
+  // Leaders see only their team's data; creators/admins see all
+  const teamFilteredData = useMemo(() => {
     if (!data) return [];
     if (!isLeaderOrAbove) return data.filter(d => d.executive_email === profile?.email);
-    if (selectedRegional === "all") return data;
-    return data.filter(d => d.regional === selectedRegional);
-  }, [data, isLeaderOrAbove, profile?.email, selectedRegional]);
+    if (isCreatorOrAdmin || isMacroUser) return data;
+    // Leader: filter by evaluator_email matching leader's team emails
+    if (!teamEmails) return [];
+    return data.filter(d => teamEmails.has(d.evaluator_email));
+  }, [data, isLeaderOrAbove, isCreatorOrAdmin, isMacroUser, profile?.email, teamEmails]);
+
+  const regionals = useMemo(() => [...new Set(teamFilteredData.map(d => d.regional))].sort(), [teamFilteredData]);
+  const filteredByRegional = useMemo(() => {
+    if (!isLeaderOrAbove) return teamFilteredData;
+    if (selectedRegional === "all") return teamFilteredData;
+    return teamFilteredData.filter(d => d.regional === selectedRegional);
+  }, [teamFilteredData, isLeaderOrAbove, selectedRegional]);
 
   const executives = useMemo(() => {
     return [...new Set(filteredByRegional.map(d => `${d.executive_name}|${d.executive_email}`))].sort();
@@ -198,7 +210,7 @@ export const AccompanimentsSection: React.FC = () => {
     return <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   }
 
-  if (!data || data.length === 0) {
+  if (!teamFilteredData || teamFilteredData.length === 0) {
     return <Card><CardContent className="py-8 text-center text-muted-foreground">No hay datos de acompañamientos. Solicita una sincronización a tu administrador.</CardContent></Card>;
   }
 

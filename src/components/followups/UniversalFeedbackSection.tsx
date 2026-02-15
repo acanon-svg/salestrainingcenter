@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUniversalFeedback, FollowupUniversalFeedback } from "@/hooks/useFollowups";
+import { useLeaderTeamEmails } from "@/hooks/useLeaderTeamEmails";
 import { Loader2, FileText, Target, TrendingUp, CheckCircle, AlertTriangle } from "lucide-react";
 
 const FEEDBACK_TYPES = ["Feedback 1-1", "Feedback Recurrente", "Feedback de Oportunidad", "PDP Inicial", "Seguimiento al PDP", "Resultado del PDP"];
@@ -122,19 +123,29 @@ const StudentFeedbackView: React.FC<{ data: FollowupUniversalFeedback[] }> = ({ 
 export const UniversalFeedbackSection: React.FC = () => {
   const { data, isLoading } = useUniversalFeedback();
   const { profile, hasRole } = useAuth();
+  const { data: teamEmails } = useLeaderTeamEmails();
   const [selectedRegional, setSelectedRegional] = useState<string>("all");
   const [selectedExec, setSelectedExec] = useState<string>("all");
 
   const isLeaderOrAbove = hasRole("lider") || hasRole("creator") || hasRole("admin");
+  const isCreatorOrAdmin = hasRole("creator") || hasRole("admin");
   const isMacroUser = profile?.email === "staborda@addi.com";
 
-  const regionals = useMemo(() => [...new Set((data || []).map(d => d.regional))].sort(), [data]);
-  const filteredByRegional = useMemo(() => {
+  // Leaders see only their team's data; creators/admins see all
+  const teamFilteredData = useMemo(() => {
     if (!data) return [];
     if (!isLeaderOrAbove) return data.filter(d => d.executive_email === profile?.email);
-    if (selectedRegional === "all") return data;
-    return data.filter(d => d.regional === selectedRegional);
-  }, [data, isLeaderOrAbove, profile?.email, selectedRegional]);
+    if (isCreatorOrAdmin || isMacroUser) return data;
+    if (!teamEmails) return [];
+    return data.filter(d => teamEmails.has(d.leader_email));
+  }, [data, isLeaderOrAbove, isCreatorOrAdmin, isMacroUser, profile?.email, teamEmails]);
+
+  const regionals = useMemo(() => [...new Set(teamFilteredData.map(d => d.regional))].sort(), [teamFilteredData]);
+  const filteredByRegional = useMemo(() => {
+    if (!isLeaderOrAbove) return teamFilteredData;
+    if (selectedRegional === "all") return teamFilteredData;
+    return teamFilteredData.filter(d => d.regional === selectedRegional);
+  }, [teamFilteredData, isLeaderOrAbove, selectedRegional]);
 
   const executives = useMemo(() => [...new Set(filteredByRegional.map(d => `${d.executive_name}|${d.executive_email}`))].sort(), [filteredByRegional]);
   const finalData = useMemo(() => {
