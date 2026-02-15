@@ -63,12 +63,26 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
     }
   }, [user]);
 
+  const emailChanged = user ? formData.email !== user.email : false;
+
   const handleSave = async () => {
     if (!user) return;
 
     setIsLoading(true);
     try {
       const client = getSupabaseClient();
+
+      // If email changed, call the edge function to update auth + profile
+      if (emailChanged && formData.email) {
+        const { data: result, error: fnError } = await supabase.functions.invoke(
+          "update-user-email",
+          { body: { user_id: user.user_id, new_email: formData.email } }
+        );
+        if (fnError) throw fnError;
+        if (result?.error) throw new Error(result.error);
+      }
+
+      // Update other profile fields
       const { error } = await client
         .from("profiles")
         .update({
@@ -83,7 +97,9 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
 
       toast({
         title: "Usuario actualizado",
-        description: "Los datos del usuario han sido corregidos correctamente.",
+        description: emailChanged
+          ? "Los datos y el correo del usuario han sido actualizados. El usuario debe iniciar sesión con su nuevo correo."
+          : "Los datos del usuario han sido corregidos correctamente.",
       });
 
       onUserUpdated();
@@ -129,18 +145,20 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
           <div className="space-y-2">
             <Label htmlFor="email" className="flex items-center gap-2">
               <Mail className="h-4 w-4 text-muted-foreground" />
-              Email (Solo lectura)
+              Email
             </Label>
             <Input
               id="email"
               type="email"
               value={formData.email}
-              disabled
-              className="bg-muted"
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              placeholder="correo@addi.com"
             />
-            <p className="text-xs text-muted-foreground">
-              El email de acceso no puede ser modificado desde aquí. El usuario debe iniciar sesión con su email original registrado.
-            </p>
+            {emailChanged && (
+              <p className="text-xs text-amber-600">
+                ⚠️ Al cambiar el correo, el usuario deberá iniciar sesión con el nuevo correo. Solo se permiten correos @addi.com.
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
