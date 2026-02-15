@@ -103,8 +103,8 @@ export const useSubmitQuizAttempt = () => {
 
         console.log("[Quiz] Enrollment found:", enrollment);
 
-        // Only award points if not already awarded
-        if (enrollment && (!enrollment.points_earned || enrollment.points_earned === 0)) {
+        // Only award points if not already awarded and enrollment is not already completed
+        if (enrollment && enrollment.status !== "completed" && (!enrollment.points_earned || enrollment.points_earned === 0)) {
           console.log("[Quiz] Awarding", coursePoints, "points to enrollment:", enrollment.id);
           
           // Update enrollment with points earned and score
