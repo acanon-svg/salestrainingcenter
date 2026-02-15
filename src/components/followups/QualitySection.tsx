@@ -93,7 +93,6 @@ export const QualitySection: React.FC = () => {
   const isCreatorOrAdmin = hasRole("creator") || hasRole("admin");
   const isMacroUser = profile?.email === "staborda@addi.com";
 
-  // Leaders see only their team's data; creators/admins see all
   const teamFilteredData = useMemo(() => {
     if (!data) return [];
     if (!isLeaderOrAbove) return data.filter(d => d.hunter_email === profile?.email);
@@ -115,54 +114,114 @@ export const QualitySection: React.FC = () => {
     return filteredByLeader.filter(d => d.hunter_email === selectedHunter.split("|")[1]);
   }, [filteredByLeader, selectedHunter]);
 
+  // Team quality summary
+  const teamSummary = useMemo(() => {
+    if (teamFilteredData.length === 0) return null;
+    const total = teamFilteredData.length;
+    const avgScore = teamFilteredData.reduce((s, e) => s + (e.score_numeric || 0), 0) / total;
+    const excellent = teamFilteredData.filter(e => (e.score_numeric || 0) >= 90).length;
+    const good = teamFilteredData.filter(e => (e.score_numeric || 0) >= 70 && (e.score_numeric || 0) < 90).length;
+    const needsWork = teamFilteredData.filter(e => (e.score_numeric || 0) < 70).length;
+    return { total, avgScore, excellent, good, needsWork };
+  }, [teamFilteredData]);
+
+  // Regional/leader breakdown for creators/staborda
+  const leaderBreakdown = useMemo(() => {
+    if (!isCreatorOrAdmin && !isMacroUser) return [];
+    const byLeader: Record<string, { count: number; avgScore: number; scores: number[] }> = {};
+    teamFilteredData.forEach(d => {
+      const k = d.leader_email || "Sin líder";
+      if (!byLeader[k]) byLeader[k] = { count: 0, avgScore: 0, scores: [] };
+      byLeader[k].count++;
+      byLeader[k].scores.push(d.score_numeric || 0);
+    });
+    return Object.entries(byLeader).map(([leader, info]) => ({
+      leader,
+      count: info.count,
+      avgScore: info.scores.reduce((a, b) => a + b, 0) / info.scores.length,
+    })).sort((a, b) => a.leader.localeCompare(b.leader));
+  }, [teamFilteredData, isCreatorOrAdmin, isMacroUser]);
+
   if (isLoading) return <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   if (!data || data.length === 0) return <Card><CardContent className="py-8 text-center text-muted-foreground">No hay evaluaciones de calidad.</CardContent></Card>;
   if (!isLeaderOrAbove) return <StudentQualityView data={finalData} />;
 
-  // Macro view
-  if (isMacroUser) {
-    const byLeader: Record<string, FollowupQualityEvaluation[]> = {};
-    data.forEach(d => {
-      const k = d.leader_email || "Sin líder";
-      if (!byLeader[k]) byLeader[k] = [];
-      byLeader[k].push(d);
-    });
-
+  const QualitySummaryCards = () => {
+    if (!teamSummary) return null;
     return (
-      <Card>
-        <CardHeader><CardTitle className="text-lg">Evaluaciones de Calidad por Líder</CardTitle></CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Líder</TableHead>
-                <TableHead className="text-center">Evaluaciones</TableHead>
-                <TableHead className="text-center">Promedio</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {Object.entries(byLeader).sort().map(([leader, evals]) => {
-                const avg = evals.reduce((s, e) => s + (e.score_numeric || 0), 0) / evals.length;
-                return (
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <Card>
+          <CardContent className="p-3 text-center">
+            <p className="text-2xl font-bold">{teamSummary.total}</p>
+            <p className="text-xs text-muted-foreground">Total Evaluaciones</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3 text-center">
+            <p className="text-2xl font-bold">{teamSummary.avgScore.toFixed(0)}</p>
+            <p className="text-xs text-muted-foreground">Promedio General</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3 text-center">
+            <p className="text-2xl font-bold text-green-600">{teamSummary.excellent}</p>
+            <p className="text-xs text-muted-foreground">Excelente (≥90)</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3 text-center">
+            <p className="text-2xl font-bold text-amber-600">{teamSummary.good}</p>
+            <p className="text-xs text-muted-foreground">Bueno (70-89)</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3 text-center">
+            <p className="text-2xl font-bold text-red-600">{teamSummary.needsWork}</p>
+            <p className="text-xs text-muted-foreground">Por mejorar (&lt;70)</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
+  // Macro view / Creator view
+  if (isMacroUser || isCreatorOrAdmin) {
+    return (
+      <div className="space-y-4">
+        <QualitySummaryCards />
+        <Card>
+          <CardHeader><CardTitle className="text-lg">Calidad por Líder / Regional</CardTitle></CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Líder</TableHead>
+                  <TableHead className="text-center">Evaluaciones</TableHead>
+                  <TableHead className="text-center">Promedio</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {leaderBreakdown.map(({ leader, count, avgScore }) => (
                   <TableRow key={leader}>
                     <TableCell className="font-medium">{leader}</TableCell>
-                    <TableCell className="text-center">{evals.length}</TableCell>
+                    <TableCell className="text-center">{count}</TableCell>
                     <TableCell className="text-center">
-                      <Badge variant={avg >= 90 ? "default" : avg >= 70 ? "secondary" : "destructive"}>{avg.toFixed(0)} / 100</Badge>
+                      <Badge variant={avgScore >= 90 ? "default" : avgScore >= 70 ? "secondary" : "destructive"}>{avgScore.toFixed(0)} / 100</Badge>
                     </TableCell>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   // Leader view
   return (
     <div className="space-y-4">
+      <QualitySummaryCards />
       <div className="flex gap-4 flex-wrap">
         <Select value={selectedLeader} onValueChange={(v) => { setSelectedLeader(v); setSelectedHunter("all"); }}>
           <SelectTrigger className="w-[260px]"><SelectValue placeholder="Líder" /></SelectTrigger>
