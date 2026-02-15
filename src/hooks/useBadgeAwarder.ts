@@ -80,10 +80,10 @@ export const useBadgeAwarder = () => {
       const completedCourses = completedEnrollments?.length || 0;
       console.log("[BadgeAwarder] User completed courses:", completedCourses);
 
-      // Count perfect scores (100%) using quiz_attempts
+      // Count perfect scores (100%) using UNIQUE quiz_ids only (not retakes)
       const { data: perfectAttempts, error: perfectError } = await supabase
         .from("quiz_attempts")
-        .select("id")
+        .select("quiz_id")
         .eq("user_id", user.id)
         .eq("score", 100)
         .eq("passed", true);
@@ -93,8 +93,10 @@ export const useBadgeAwarder = () => {
         return;
       }
 
-      const perfectScores = perfectAttempts?.length || 0;
-      console.log("[BadgeAwarder] User perfect scores:", perfectScores);
+      // Count unique quiz_ids with perfect scores
+      const uniquePerfectQuizIds = new Set(perfectAttempts?.map((a) => a.quiz_id) || []);
+      const perfectScores = uniquePerfectQuizIds.size;
+      console.log("[BadgeAwarder] User unique perfect scores:", perfectScores);
 
       // Count feedback sent
       const { data: feedbackData, error: feedbackError } = await supabase
