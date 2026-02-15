@@ -1033,6 +1033,291 @@ export type Database = {
         }
         Relationships: []
       }
+      followup_accompaniments: {
+        Row: {
+          comp_abordaje: number | null
+          comp_claridad_negociacion: number | null
+          comp_conocimiento_confianza: number | null
+          comp_objeciones_cierre: number | null
+          comp_optimiza_zona: number | null
+          comp_pitch_comercial: number | null
+          craft_conocimiento_productos: string | null
+          craft_herramientas: string | null
+          craft_manejo_objeciones: string | null
+          craft_negociacion: string | null
+          craft_persuasion: string | null
+          created_at: string
+          evaluator_email: string
+          evidencia_url: string | null
+          executive_email: string
+          executive_name: string
+          fecha_nuevo_acompanamiento: string | null
+          google_sheets_row_id: string | null
+          id: string
+          necesidades_identificadas: string | null
+          observaciones: string | null
+          oportunidades_entrenamiento: string | null
+          regional: string
+          synced_at: string | null
+          timestamp: string
+        }
+        Insert: {
+          comp_abordaje?: number | null
+          comp_claridad_negociacion?: number | null
+          comp_conocimiento_confianza?: number | null
+          comp_objeciones_cierre?: number | null
+          comp_optimiza_zona?: number | null
+          comp_pitch_comercial?: number | null
+          craft_conocimiento_productos?: string | null
+          craft_herramientas?: string | null
+          craft_manejo_objeciones?: string | null
+          craft_negociacion?: string | null
+          craft_persuasion?: string | null
+          created_at?: string
+          evaluator_email: string
+          evidencia_url?: string | null
+          executive_email: string
+          executive_name: string
+          fecha_nuevo_acompanamiento?: string | null
+          google_sheets_row_id?: string | null
+          id?: string
+          necesidades_identificadas?: string | null
+          observaciones?: string | null
+          oportunidades_entrenamiento?: string | null
+          regional: string
+          synced_at?: string | null
+          timestamp: string
+        }
+        Update: {
+          comp_abordaje?: number | null
+          comp_claridad_negociacion?: number | null
+          comp_conocimiento_confianza?: number | null
+          comp_objeciones_cierre?: number | null
+          comp_optimiza_zona?: number | null
+          comp_pitch_comercial?: number | null
+          craft_conocimiento_productos?: string | null
+          craft_herramientas?: string | null
+          craft_manejo_objeciones?: string | null
+          craft_negociacion?: string | null
+          craft_persuasion?: string | null
+          created_at?: string
+          evaluator_email?: string
+          evidencia_url?: string | null
+          executive_email?: string
+          executive_name?: string
+          fecha_nuevo_acompanamiento?: string | null
+          google_sheets_row_id?: string | null
+          id?: string
+          necesidades_identificadas?: string | null
+          observaciones?: string | null
+          oportunidades_entrenamiento?: string | null
+          regional?: string
+          synced_at?: string | null
+          timestamp?: string
+        }
+        Relationships: []
+      }
+      followup_quality_evaluations: {
+        Row: {
+          bot_actualizacion_correos: boolean | null
+          calificacion_aliados: string | null
+          created_at: string
+          cumple_requisitos_activacion: boolean | null
+          documentos_completos: boolean | null
+          evaluation_date: string | null
+          flujo_salesforce_correcto: boolean | null
+          formatos_slug_correctos: boolean | null
+          fotos_correctas_primer_intento: boolean | null
+          gestion_tyc_oportuna: boolean | null
+          google_sheets_row_id: string | null
+          hunter_email: string
+          hunter_name: string
+          id: string
+          info_comercial_correcta: boolean | null
+          leader_email: string | null
+          recomendacion_compromisos: string | null
+          red_social_correcta: boolean | null
+          score: string | null
+          score_numeric: number | null
+          slug_monitoreado: string | null
+          slug_monitoreado_2: string | null
+          synced_at: string | null
+          timestamp: string
+          valida_duplicidad_sf: boolean | null
+        }
+        Insert: {
+          bot_actualizacion_correos?: boolean | null
+          calificacion_aliados?: string | null
+          created_at?: string
+          cumple_requisitos_activacion?: boolean | null
+          documentos_completos?: boolean | null
+          evaluation_date?: string | null
+          flujo_salesforce_correcto?: boolean | null
+          formatos_slug_correctos?: boolean | null
+          fotos_correctas_primer_intento?: boolean | null
+          gestion_tyc_oportuna?: boolean | null
+          google_sheets_row_id?: string | null
+          hunter_email: string
+          hunter_name: string
+          id?: string
+          info_comercial_correcta?: boolean | null
+          leader_email?: string | null
+          recomendacion_compromisos?: string | null
+          red_social_correcta?: boolean | null
+          score?: string | null
+          score_numeric?: number | null
+          slug_monitoreado?: string | null
+          slug_monitoreado_2?: string | null
+          synced_at?: string | null
+          timestamp: string
+          valida_duplicidad_sf?: boolean | null
+        }
+        Update: {
+          bot_actualizacion_correos?: boolean | null
+          calificacion_aliados?: string | null
+          created_at?: string
+          cumple_requisitos_activacion?: boolean | null
+          documentos_completos?: boolean | null
+          evaluation_date?: string | null
+          flujo_salesforce_correcto?: boolean | null
+          formatos_slug_correctos?: boolean | null
+          fotos_correctas_primer_intento?: boolean | null
+          gestion_tyc_oportuna?: boolean | null
+          google_sheets_row_id?: string | null
+          hunter_email?: string
+          hunter_name?: string
+          id?: string
+          info_comercial_correcta?: boolean | null
+          leader_email?: string | null
+          recomendacion_compromisos?: string | null
+          red_social_correcta?: boolean | null
+          score?: string | null
+          score_numeric?: number | null
+          slug_monitoreado?: string | null
+          slug_monitoreado_2?: string | null
+          synced_at?: string | null
+          timestamp?: string
+          valida_duplicidad_sf?: boolean | null
+        }
+        Relationships: []
+      }
+      followup_universal_feedback: {
+        Row: {
+          acciones_resaltar: string | null
+          compromiso_colega: string | null
+          compromiso_seguimiento: string | null
+          conclusiones_plan: string | null
+          consecuencia: string | null
+          consecuencia_seguimiento: string | null
+          created_at: string
+          diagnostico_desempeno: string | null
+          duracion_plan: string | null
+          evaluacion_final: string | null
+          executive_email: string
+          executive_name: string
+          expectativa_clara: string | null
+          expectativa_seguimiento: string | null
+          feedback_date: string | null
+          feedback_type: string
+          google_sheets_row_id: string | null
+          hecho_observado: string | null
+          id: string
+          impacto_incumplimiento: string | null
+          impacto_seguimiento: string | null
+          leader_email: string
+          objetivo_metrica_exito: string | null
+          oportunidades_trabajar: string | null
+          plan_accion_semanas: string | null
+          plan_apoyo: string | null
+          plan_apoyo_seguimiento: string | null
+          proxima_fecha_feedback: string | null
+          proxima_fecha_revision: string | null
+          regional: string
+          regla_metrica: string | null
+          regla_metrica_seguimiento: string | null
+          seguimiento_reuniones: string | null
+          synced_at: string | null
+          team: string | null
+          timestamp: string
+        }
+        Insert: {
+          acciones_resaltar?: string | null
+          compromiso_colega?: string | null
+          compromiso_seguimiento?: string | null
+          conclusiones_plan?: string | null
+          consecuencia?: string | null
+          consecuencia_seguimiento?: string | null
+          created_at?: string
+          diagnostico_desempeno?: string | null
+          duracion_plan?: string | null
+          evaluacion_final?: string | null
+          executive_email: string
+          executive_name: string
+          expectativa_clara?: string | null
+          expectativa_seguimiento?: string | null
+          feedback_date?: string | null
+          feedback_type: string
+          google_sheets_row_id?: string | null
+          hecho_observado?: string | null
+          id?: string
+          impacto_incumplimiento?: string | null
+          impacto_seguimiento?: string | null
+          leader_email: string
+          objetivo_metrica_exito?: string | null
+          oportunidades_trabajar?: string | null
+          plan_accion_semanas?: string | null
+          plan_apoyo?: string | null
+          plan_apoyo_seguimiento?: string | null
+          proxima_fecha_feedback?: string | null
+          proxima_fecha_revision?: string | null
+          regional: string
+          regla_metrica?: string | null
+          regla_metrica_seguimiento?: string | null
+          seguimiento_reuniones?: string | null
+          synced_at?: string | null
+          team?: string | null
+          timestamp: string
+        }
+        Update: {
+          acciones_resaltar?: string | null
+          compromiso_colega?: string | null
+          compromiso_seguimiento?: string | null
+          conclusiones_plan?: string | null
+          consecuencia?: string | null
+          consecuencia_seguimiento?: string | null
+          created_at?: string
+          diagnostico_desempeno?: string | null
+          duracion_plan?: string | null
+          evaluacion_final?: string | null
+          executive_email?: string
+          executive_name?: string
+          expectativa_clara?: string | null
+          expectativa_seguimiento?: string | null
+          feedback_date?: string | null
+          feedback_type?: string
+          google_sheets_row_id?: string | null
+          hecho_observado?: string | null
+          id?: string
+          impacto_incumplimiento?: string | null
+          impacto_seguimiento?: string | null
+          leader_email?: string
+          objetivo_metrica_exito?: string | null
+          oportunidades_trabajar?: string | null
+          plan_accion_semanas?: string | null
+          plan_apoyo?: string | null
+          plan_apoyo_seguimiento?: string | null
+          proxima_fecha_feedback?: string | null
+          proxima_fecha_revision?: string | null
+          regional?: string
+          regla_metrica?: string | null
+          regla_metrica_seguimiento?: string | null
+          seguimiento_reuniones?: string | null
+          synced_at?: string | null
+          team?: string | null
+          timestamp?: string
+        }
+        Relationships: []
+      }
       glossary_terms: {
         Row: {
           created_at: string
