@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQualityEvaluations, FollowupQualityEvaluation } from "@/hooks/useFollowups";
+import { useLeaderTeamEmails } from "@/hooks/useLeaderTeamEmails";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Legend } from "recharts";
@@ -84,19 +85,29 @@ const StudentQualityView: React.FC<{ data: FollowupQualityEvaluation[] }> = ({ d
 export const QualitySection: React.FC = () => {
   const { data, isLoading } = useQualityEvaluations();
   const { profile, hasRole } = useAuth();
+  const { data: teamEmails } = useLeaderTeamEmails();
   const [selectedLeader, setSelectedLeader] = useState<string>("all");
   const [selectedHunter, setSelectedHunter] = useState<string>("all");
 
   const isLeaderOrAbove = hasRole("lider") || hasRole("creator") || hasRole("admin");
+  const isCreatorOrAdmin = hasRole("creator") || hasRole("admin");
   const isMacroUser = profile?.email === "staborda@addi.com";
 
-  const leaders = useMemo(() => [...new Set((data || []).map(d => d.leader_email).filter(Boolean))].sort() as string[], [data]);
-  const filteredByLeader = useMemo(() => {
+  // Leaders see only their team's data; creators/admins see all
+  const teamFilteredData = useMemo(() => {
     if (!data) return [];
     if (!isLeaderOrAbove) return data.filter(d => d.hunter_email === profile?.email);
-    if (selectedLeader === "all") return data;
-    return data.filter(d => d.leader_email === selectedLeader);
-  }, [data, isLeaderOrAbove, profile?.email, selectedLeader]);
+    if (isCreatorOrAdmin || isMacroUser) return data;
+    if (!teamEmails) return [];
+    return data.filter(d => d.leader_email && teamEmails.has(d.leader_email));
+  }, [data, isLeaderOrAbove, isCreatorOrAdmin, isMacroUser, profile?.email, teamEmails]);
+
+  const leaders = useMemo(() => [...new Set(teamFilteredData.map(d => d.leader_email).filter(Boolean))].sort() as string[], [teamFilteredData]);
+  const filteredByLeader = useMemo(() => {
+    if (!isLeaderOrAbove) return teamFilteredData;
+    if (selectedLeader === "all") return teamFilteredData;
+    return teamFilteredData.filter(d => d.leader_email === selectedLeader);
+  }, [teamFilteredData, isLeaderOrAbove, selectedLeader]);
 
   const hunters = useMemo(() => [...new Set(filteredByLeader.map(d => `${d.hunter_name}|${d.hunter_email}`))].sort(), [filteredByLeader]);
   const finalData = useMemo(() => {
