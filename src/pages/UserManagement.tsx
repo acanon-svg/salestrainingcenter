@@ -12,6 +12,7 @@ import { PortalSectionManager } from "@/components/admin/PortalSectionManager";
 import { DataResetManager } from "@/components/admin/DataResetManager";
 import { ImpersonateUserDialog } from "@/components/admin/ImpersonateUserDialog";
 import { UserCourseResetManager } from "@/components/admin/UserCourseResetManager";
+import { FollowupSyncCard } from "@/components/admin/FollowupSyncCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -704,6 +705,7 @@ const UserManagement: React.FC = () => {
                 <UserCourseResetManager />
                 <DataResetManager />
               </div>
+              <FollowupSyncCard />
             </div>
           </TabsContent>
 
