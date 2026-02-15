@@ -31,6 +31,7 @@ import Tools from "@/pages/Tools";
 import TeamFeedbackForms from "@/pages/TeamFeedbackForms";
 import TeamFeedbackView from "@/pages/TeamFeedbackView";
 import Results from "@/pages/Results";
+import Followups from "@/pages/Followups";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
@@ -279,6 +280,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Results />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/followups"
+        element={
+          <ProtectedRoute>
+            <Followups />
           </ProtectedRoute>
         }
       />
