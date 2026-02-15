@@ -19,6 +19,7 @@ import {
   ClipboardList,
   TrendingUp,
   DollarSign,
+  ClipboardCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -51,6 +52,7 @@ const defaultNavItems: NavItem[] = [
   { label: "Resultados", icon: TrendingUp, href: "/results", sectionKey: "results" },
   { label: "Ranking", icon: Trophy, href: "/ranking", sectionKey: "ranking" },
   { label: "Insignias", icon: Award, href: "/badges", sectionKey: "badges" },
+  { label: "Seguimientos", icon: ClipboardCheck, href: "/followups" },
   { label: "Notificaciones", icon: Bell, href: "/notifications" },
   { label: "Feedback", icon: MessageSquare, href: "/feedback" },
 ];
