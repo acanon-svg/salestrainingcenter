@@ -52,36 +52,36 @@ const defaultNavItems: NavItem[] = [
   { label: "Resultados", icon: TrendingUp, href: "/results", sectionKey: "results" },
   { label: "Ranking", icon: Trophy, href: "/ranking", sectionKey: "ranking" },
   { label: "Insignias", icon: Award, href: "/badges", sectionKey: "badges" },
-  { label: "Seguimientos", icon: ClipboardCheck, href: "/followups" },
-  { label: "Notificaciones", icon: Bell, href: "/notifications" },
-  { label: "Feedback", icon: MessageSquare, href: "/feedback" },
+  { label: "Seguimientos", icon: ClipboardCheck, href: "/followups", sectionKey: "followups" },
+  { label: "Notificaciones", icon: Bell, href: "/notifications", sectionKey: "notifications" },
+  { label: "Feedback", icon: MessageSquare, href: "/feedback", sectionKey: "feedback" },
 ];
 
 const creatorItems: NavItem[] = [
-  { label: "Crear Curso", icon: PlusCircle, href: "/courses/create", roles: ["creator"] },
-  { label: "Mis Creaciones", icon: BookOpen, href: "/my-courses", roles: ["creator"] },
-  { label: "Resultados del Equipo", icon: TrendingUp, href: "/results", roles: ["creator", "admin"] },
+  { label: "Crear Curso", icon: PlusCircle, href: "/courses/create", roles: ["creator"], sectionKey: "create_course" },
+  { label: "Mis Creaciones", icon: BookOpen, href: "/my-courses", roles: ["creator"], sectionKey: "my_courses" },
+  { label: "Resultados del Equipo", icon: TrendingUp, href: "/results", roles: ["creator", "admin"], sectionKey: "results" },
   { label: "Anuncios", icon: Bell, href: "/announcements", sectionKey: "announcements", roles: ["creator"] },
   { label: "Herramientas", icon: Wrench, href: "/tools", sectionKey: "tools", roles: ["creator", "admin"] },
   { label: "Feedbacks al Equipo", icon: ClipboardList, href: "/team-feedback-forms", sectionKey: "team_feedback", roles: ["creator", "admin"] },
-  { label: "Feedback de Cursos", icon: MessageSquare, href: "/feedback", roles: ["creator", "admin"], showBadge: true },
-  { label: "Comisiones Rechazadas", icon: DollarSign, href: "/tools?view=rejected-commissions", roles: ["creator", "admin"], showBadge: true },
+  { label: "Feedback de Cursos", icon: MessageSquare, href: "/feedback", roles: ["creator", "admin"], sectionKey: "feedback", showBadge: true },
+  { label: "Comisiones Rechazadas", icon: DollarSign, href: "/tools?view=rejected-commissions", roles: ["creator", "admin"], sectionKey: "rejected_commissions", showBadge: true },
 ];
 
 const leaderItems: NavItem[] = [
-  { label: "Mi Equipo", icon: Users, href: "/team", roles: ["lider"] },
+  { label: "Mi Equipo", icon: Users, href: "/team", roles: ["lider"], sectionKey: "team" },
   { label: "Reportes Regional", icon: BarChart3, href: "/reports", roles: ["lider"], sectionKey: "reports_field_sales" },
   { label: "Herramientas", icon: Wrench, href: "/tools", sectionKey: "tools", roles: ["lider"] },
   { label: "Feedbacks al Equipo", icon: ClipboardList, href: "/team-feedback", sectionKey: "team_feedback", roles: ["lider"] },
 ];
 
 const analistaItems: NavItem[] = [
-  { label: "Reportes", icon: BarChart3, href: "/reports", roles: ["analista"] },
+  { label: "Reportes", icon: BarChart3, href: "/reports", roles: ["analista"], sectionKey: "reports" },
 ];
 
 const adminItems: NavItem[] = [
-  { label: "Usuarios", icon: Users, href: "/users", roles: ["admin"] },
-  { label: "Reportes", icon: BarChart3, href: "/reports", roles: ["admin"] },
+  { label: "Usuarios", icon: Users, href: "/users", roles: ["admin"], sectionKey: "users" },
+  { label: "Reportes", icon: BarChart3, href: "/reports", roles: ["admin"], sectionKey: "reports" },
 ];
 
 export const SidebarContent: React.FC<SidebarContentProps> = ({ onNavigate }) => {
@@ -118,38 +118,35 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({ onNavigate }) =>
   };
 
   const isNavItemVisible = (item: NavItem): boolean => {
-    if (item.sectionKey === "tools") return true;
-    if (item.sectionKey === "results") {
-      if (hasRole("creator") || hasRole("admin") || hasRole("lider")) return true;
-      if (!profile?.team) return false;
-      return profile.team.toLowerCase().includes("field sales");
-    }
     if (!item.sectionKey || !configs || !user?.id) return true;
+    
+    // Special logic for results - only show to field sales students
+    if (item.sectionKey === "results" && !hasRole("creator") && !hasRole("admin") && !hasRole("lider")) {
+      if (!profile?.team) return false;
+      if (!profile.team.toLowerCase().includes("field sales")) return false;
+    }
+    
+    // Special logic for reports_field_sales - only show to field sales leaders
+    if (item.sectionKey === "reports_field_sales") {
+      if (!profile?.team) return false;
+      if (!profile.team.toLowerCase().includes("field sales")) return false;
+    }
+
     const config = configs.find((c) => c.section_key === item.sectionKey);
     if (!config) return true;
     return isSectionVisibleForUser(config, profile?.team || null, user.id);
   };
 
-  const isLeaderItemVisible = (item: NavItem): boolean => {
-    if (!item.roles || !item.roles.some((role) => hasRole(role))) return false;
-    if (item.sectionKey === "reports_field_sales") {
-      if (!profile?.team) return false;
-      return profile.team.toLowerCase().includes("field sales");
-    }
-    return true;
+  const isRoleItemVisible = (item: NavItem): boolean => {
+    if (item.roles && !item.roles.some((role) => hasRole(role))) return false;
+    return isNavItemVisible(item);
   };
 
   const visibleNavItems = defaultNavItems.filter(isNavItemVisible);
-  const visibleCreatorItems = creatorItems.filter(
-    (item) => !item.roles || item.roles.some((role) => hasRole(role))
-  );
-  const visibleLeaderItems = leaderItems.filter(isLeaderItemVisible);
-  const visibleAnalistaItems = analistaItems.filter(
-    (item) => !item.roles || item.roles.some((role) => hasRole(role))
-  );
-  const visibleAdminItems = adminItems.filter(
-    (item) => !item.roles || item.roles.some((role) => hasRole(role))
-  );
+  const visibleCreatorItems = creatorItems.filter(isRoleItemVisible);
+  const visibleLeaderItems = leaderItems.filter(isRoleItemVisible);
+  const visibleAnalistaItems = analistaItems.filter(isRoleItemVisible);
+  const visibleAdminItems = adminItems.filter(isRoleItemVisible);
 
   const handleClick = () => onNavigate?.();
 
