@@ -33,26 +33,21 @@ export const useAnnouncements = () => {
         .lte("starts_at", now)
         .order("created_at", { ascending: false });
 
+      // Filter by target_teams on the server side when user has a team
+      if (profile?.team) {
+        // Get announcements that either have no target_teams or include the user's team
+        query = query.or(`target_teams.is.null,target_teams.cs.{"${profile.team}"}`);
+      } else {
+        // If user has no team, only show announcements with no target_teams
+        query = query.is("target_teams", null);
+      }
+
       const { data, error } = await query;
 
       if (error) throw error;
 
-      // Filter by team if user has a team and announcement targets specific teams
-      const filtered = (data || []).filter((announcement: Announcement) => {
-        // If no target teams, show to everyone
-        if (!announcement.target_teams || announcement.target_teams.length === 0) {
-          return true;
-        }
-        // If user has a team, check if it's in target teams
-        if (profile?.team) {
-          return announcement.target_teams.includes(profile.team);
-        }
-        // If user has no team but announcement targets specific teams, don't show
-        return false;
-      });
-
-      // Filter expired announcements (RLS should handle this but double-check client-side)
-      return filtered.filter((a: Announcement) => 
+      // Double-check: filter expired announcements client-side
+      return (data || []).filter((a: Announcement) => 
         !a.expires_at || new Date(a.expires_at) > new Date()
       );
     },
