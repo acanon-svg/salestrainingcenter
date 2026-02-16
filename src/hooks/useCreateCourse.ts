@@ -36,9 +36,9 @@ interface Material {
 interface QuizQuestion {
   id: string;
   question: string;
-  question_type?: "multiple_choice" | "true_false";
+  question_type?: string;
   points?: number;
-  options: { text: string; is_correct: boolean }[];
+  options: any;
 }
 
 interface AdditionalResource {
@@ -129,7 +129,15 @@ export const useCreateCourse = () => {
       // 3. Create quiz if questions exist
       if (quizQuestions.length > 0) {
         const validQuestions = quizQuestions.filter(
-          q => q.question && q.options.some(o => o.text && o.is_correct)
+          q => {
+            if (!q.question) return false;
+            const type = q.question_type || "multiple_choice";
+            if (["multiple_choice", "true_false"].includes(type)) {
+              return Array.isArray(q.options) && q.options.some((o: any) => o.text && o.is_correct);
+            }
+            // Advanced types are valid if they have content
+            return q.options && typeof q.options === "object";
+          }
         );
 
         if (validQuestions.length > 0) {
@@ -153,7 +161,9 @@ export const useCreateCourse = () => {
             quiz_id: quiz.id,
             question: q.question,
             question_type: q.question_type || "multiple_choice",
-            options: q.options.filter(o => o.text),
+            options: ["multiple_choice", "true_false"].includes(q.question_type || "multiple_choice")
+              ? q.options.filter((o: any) => o.text)
+              : q.options,
             order_index: index,
             points: q.points || 10,
           }));
