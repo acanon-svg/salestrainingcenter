@@ -55,6 +55,17 @@ const sectionIcons: Record<string, React.ReactNode> = {
   tools: <Wrench className="h-4 w-4" />,
   team_feedback: <ClipboardList className="h-4 w-4" />,
   announcements: <Megaphone className="h-4 w-4" />,
+  results: <LayoutDashboard className="h-4 w-4" />,
+  followups: <ClipboardList className="h-4 w-4" />,
+  notifications: <Megaphone className="h-4 w-4" />,
+  feedback: <ClipboardList className="h-4 w-4" />,
+  reports_field_sales: <LayoutDashboard className="h-4 w-4" />,
+  team: <Users className="h-4 w-4" />,
+  my_courses: <BookOpen className="h-4 w-4" />,
+  create_course: <LayoutDashboard className="h-4 w-4" />,
+  users: <Users className="h-4 w-4" />,
+  reports: <LayoutDashboard className="h-4 w-4" />,
+  rejected_commissions: <Wrench className="h-4 w-4" />,
 };
 
 export const PortalSectionManager: React.FC = () => {
