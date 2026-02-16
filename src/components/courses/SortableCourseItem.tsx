@@ -29,6 +29,8 @@ import {
   Loader2,
   Send,
   Archive,
+  Calendar,
+  AlertTriangle,
 } from "lucide-react";
 import { statusLabels, dimensionLabels } from "@/lib/types";
 import { format } from "date-fns";
@@ -139,6 +141,26 @@ export const SortableCourseItem: React.FC<SortableCourseItemProps> = ({
           <span>
             Creado: {format(new Date(course.created_at), "d MMM yyyy", { locale: es })}
           </span>
+          {course.expires_at ? (() => {
+            const expiresDate = new Date(course.expires_at);
+            const now = new Date();
+            const daysUntilExpiry = Math.ceil((expiresDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            const isExpired = daysUntilExpiry < 0;
+            const isNearExpiry = !isExpired && daysUntilExpiry <= 7;
+            return (
+              <span className={`flex items-center gap-1 ${isExpired ? "text-destructive font-medium" : isNearExpiry ? "text-warning font-medium" : ""}`}>
+                {isExpired ? <AlertTriangle className="w-3 h-3" /> : <Calendar className="w-3 h-3" />}
+                Vence: {format(expiresDate, "d MMM yyyy", { locale: es })}
+                {isExpired && " (Vencido)"}
+                {isNearExpiry && ` (${daysUntilExpiry}d)`}
+              </span>
+            );
+          })() : (
+            <span className="flex items-center gap-1">
+              <Calendar className="w-3 h-3" />
+              Sin vencimiento
+            </span>
+          )}
           {course.scheduled_at && new Date(course.scheduled_at) > new Date() && (
             <span className="flex items-center gap-1 text-addi-cyan">
               <Timer className="w-3 h-3" />
