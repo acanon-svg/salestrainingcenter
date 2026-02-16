@@ -31,6 +31,7 @@ export const useCourses = (filters?: { status?: string; dimension?: string }) =>
       // 1. No target_teams AND no target_users (available to all)
       // 2. User's team is in target_teams
       // 3. User's ID is in target_users
+      // Creators also see only courses targeted to their team
       const filteredCourses = (data as Course[]).filter((course) => {
         const hasNoTargeting =
           (!course.target_teams || course.target_teams.length === 0) &&
