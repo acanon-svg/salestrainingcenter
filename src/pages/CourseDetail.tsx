@@ -8,6 +8,12 @@ import { useQuizAttempts, useSubmitQuizAttempt } from "@/hooks/useQuizAttempts";
 import { useCourseFeedback, useSubmitCourseFeedback } from "@/hooks/useFeedback";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBadgeAwarder } from "@/hooks/useBadgeAwarder";
+import { gradeQuestion } from "@/components/quiz/grading";
+import { isAdvancedType, questionTypeLabels } from "@/components/quiz/types";
+import { MindMapPlayer } from "@/components/quiz/players/MindMapPlayer";
+import { FillBlanksPlayer } from "@/components/quiz/players/FillBlanksPlayer";
+import { MatchColumnsPlayer } from "@/components/quiz/players/MatchColumnsPlayer";
+import { ImagePuzzlePlayer } from "@/components/quiz/players/ImagePuzzlePlayer";
 import { generateDiploma } from "@/lib/generateDiploma";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -164,10 +170,10 @@ const CourseDetail: React.FC = () => {
 
   const [selectedMaterial, setSelectedMaterial] = useState<CourseMaterial | null>(null);
   const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
-  const [quizAnswers, setQuizAnswers] = useState<Record<string, string>>({});
+  const [quizAnswers, setQuizAnswers] = useState<Record<string, any>>({});
   const [quizStartTime, setQuizStartTime] = useState<Date | null>(null);
   const [showQuizResults, setShowQuizResults] = useState(false);
-  const [lastQuizScore, setLastQuizScore] = useState<{ score: number; passed: boolean; coursePoints?: number } | null>(null);
+  const [lastQuizScore, setLastQuizScore] = useState<{ score: number; passed: boolean; coursePoints?: number; gradeDetails?: Record<string, Record<string, boolean>> } | null>(null);
   const [currentMaterialIndex, setCurrentMaterialIndex] = useState<number>(0);
   const [isTimeExpired, setIsTimeExpired] = useState(false);
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
@@ -227,17 +233,22 @@ const CourseDetail: React.FC = () => {
 
     const questions = selectedQuiz.questions || [];
     let correctAnswers = 0;
+    const allGradeDetails: Record<string, Record<string, boolean>> = {};
 
     questions.forEach((q) => {
       const userAnswer = quizAnswers[q.id];
-      const correctOption = q.options?.find((opt) => opt.is_correct);
-      if (correctOption && userAnswer === correctOption.text) {
+      const result = gradeQuestion(
+        (q.question_type || "multiple_choice") as any,
+        q.options,
+        userAnswer
+      );
+      allGradeDetails[q.id] = result.details;
+      if (result.correct) {
         correctAnswers++;
       }
     });
 
     const score = questions.length > 0 ? Math.round((correctAnswers / questions.length) * 100) : 0;
-    // Minimum passing score is always 90 points
     const MINIMUM_PASSING_SCORE = 90;
     const passed = score >= MINIMUM_PASSING_SCORE;
 
@@ -254,7 +265,7 @@ const CourseDetail: React.FC = () => {
         coursePoints: effectivePoints,
       });
 
-      setLastQuizScore({ score, passed, coursePoints: effectivePoints });
+      setLastQuizScore({ score, passed, coursePoints: effectivePoints, gradeDetails: allGradeDetails });
       setShowQuizResults(true);
 
       if (passed) {
@@ -724,26 +735,85 @@ const CourseDetail: React.FC = () => {
                   ) : (
                     // Questions view
                     <>
-                      {selectedQuiz.questions?.map((question, index) => (
-                        <div key={question.id} className="space-y-3 p-4 rounded-lg bg-muted/50">
-                          <p className="font-medium">
-                            {index + 1}. {question.question}
-                          </p>
-                          <RadioGroup
-                            value={quizAnswers[question.id] || ""}
-                            onValueChange={(value) =>
-                              setQuizAnswers((prev) => ({ ...prev, [question.id]: value }))
-                            }
-                          >
-                            {question.options?.map((option, optIndex) => (
-                              <div key={optIndex} className="flex items-center space-x-2">
-                                <RadioGroupItem value={option.text} id={`${question.id}-${optIndex}`} />
-                                <Label htmlFor={`${question.id}-${optIndex}`}>{option.text}</Label>
-                              </div>
-                            ))}
-                          </RadioGroup>
-                        </div>
-                      ))}
+                      {selectedQuiz.questions?.map((question, index) => {
+                        const qType = (question.question_type || "multiple_choice") as string;
+                        const showResultsForQ = showQuizResults && lastQuizScore;
+                        const resultDetails = lastQuizScore?.gradeDetails?.[question.id];
+
+                        return (
+                          <div key={question.id} className="space-y-3 p-4 rounded-lg bg-muted/50">
+                            <p className="font-medium">
+                              {index + 1}. {question.question}
+                              {qType !== "multiple_choice" && qType !== "true_false" && (
+                                <span className="ml-2 text-xs text-muted-foreground">
+                                  ({questionTypeLabels[qType as keyof typeof questionTypeLabels] || qType})
+                                </span>
+                              )}
+                            </p>
+
+                            {/* Standard MC/TF */}
+                            {(qType === "multiple_choice" || qType === "true_false") && (
+                              <RadioGroup
+                                value={quizAnswers[question.id] || ""}
+                                onValueChange={(value) =>
+                                  setQuizAnswers((prev) => ({ ...prev, [question.id]: value }))
+                                }
+                              >
+                                {question.options?.map((option: any, optIndex: number) => (
+                                  <div key={optIndex} className="flex items-center space-x-2">
+                                    <RadioGroupItem value={option.text} id={`${question.id}-${optIndex}`} />
+                                    <Label htmlFor={`${question.id}-${optIndex}`}>{option.text}</Label>
+                                  </div>
+                                ))}
+                              </RadioGroup>
+                            )}
+
+                            {/* Mind Map */}
+                            {qType === "mind_map" && (
+                              <MindMapPlayer
+                                data={question.options as any}
+                                answer={quizAnswers[question.id] || {}}
+                                onChange={(val) => setQuizAnswers((prev) => ({ ...prev, [question.id]: val }))}
+                                showResults={showResultsForQ ? true : false}
+                                resultDetails={resultDetails}
+                              />
+                            )}
+
+                            {/* Fill Blanks */}
+                            {qType === "fill_blanks" && (
+                              <FillBlanksPlayer
+                                data={question.options as any}
+                                answer={quizAnswers[question.id] || {}}
+                                onChange={(val) => setQuizAnswers((prev) => ({ ...prev, [question.id]: val }))}
+                                showResults={showResultsForQ ? true : false}
+                                resultDetails={resultDetails}
+                              />
+                            )}
+
+                            {/* Match Columns */}
+                            {qType === "match_columns" && (
+                              <MatchColumnsPlayer
+                                data={question.options as any}
+                                answer={quizAnswers[question.id] || {}}
+                                onChange={(val) => setQuizAnswers((prev) => ({ ...prev, [question.id]: val }))}
+                                showResults={showResultsForQ ? true : false}
+                                resultDetails={resultDetails}
+                              />
+                            )}
+
+                            {/* Image Puzzle */}
+                            {qType === "image_puzzle" && (
+                              <ImagePuzzlePlayer
+                                data={question.options as any}
+                                answer={quizAnswers[question.id] || []}
+                                onChange={(val) => setQuizAnswers((prev) => ({ ...prev, [question.id]: val }))}
+                                showResults={showResultsForQ ? true : false}
+                                resultDetails={resultDetails}
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
                       <Button
                         onClick={handleSubmitQuiz}
                         className="w-full"

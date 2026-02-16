@@ -42,6 +42,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAvailableTeams, useAvailableUsers } from "@/hooks/useCourseTargeting";
 import { useCreateCourse } from "@/hooks/useCreateCourse";
 import { CourseTagSelector } from "@/components/courses/CourseTagSelector";
+import { QuizQuestionType, QuizQuestionState, createDefaultOptions } from "@/components/quiz/types";
+import { QuestionEditor } from "@/components/quiz/QuestionEditor";
 
 const CreateCourse: React.FC = () => {
   const { user } = useAuth();
@@ -80,9 +82,7 @@ const CreateCourse: React.FC = () => {
     { id: string; title: string; type: string; content_url: string }[]
   >([]);
 
-  const [quizQuestions, setQuizQuestions] = useState<
-    { id: string; question: string; question_type: "multiple_choice" | "true_false"; points: number; options: { text: string; is_correct: boolean }[] }[]
-  >([]);
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestionState[]>([]);
 
   const [additionalResources, setAdditionalResources] = useState<
     { id: string; title: string; url: string }[]
@@ -206,25 +206,13 @@ const CreateCourse: React.FC = () => {
     setMaterials(materials.filter((m) => m.id !== id));
   };
 
-  const handleAddQuestion = (type: "multiple_choice" | "true_false") => {
-    const options = type === "true_false" 
-      ? [
-          { text: "Verdadero", is_correct: false },
-          { text: "Falso", is_correct: false },
-        ]
-      : [
-          { text: "", is_correct: false },
-          { text: "", is_correct: false },
-          { text: "", is_correct: false },
-          { text: "", is_correct: false },
-        ];
-    
-    const newQuestion = {
+  const handleAddQuestion = (type: QuizQuestionType) => {
+    const newQuestion: QuizQuestionState = {
       id: Date.now().toString(),
       question: "",
       question_type: type,
       points: 10,
-      options,
+      options: createDefaultOptions(type),
     };
     setQuizQuestions([...quizQuestions, newQuestion]);
   };
@@ -722,6 +710,22 @@ const CreateCourse: React.FC = () => {
                     <Plus className="w-4 h-4 mr-2" />
                     Verdadero/Falso
                   </Button>
+                  <Button variant="outline" onClick={() => handleAddQuestion("mind_map")}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Mapa Mental
+                  </Button>
+                  <Button variant="outline" onClick={() => handleAddQuestion("fill_blanks")}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Completar Frases
+                  </Button>
+                  <Button variant="outline" onClick={() => handleAddQuestion("match_columns")}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Unir Columnas
+                  </Button>
+                  <Button variant="outline" onClick={() => handleAddQuestion("image_puzzle")}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Rompecabezas
+                  </Button>
                 </div>
 
                 {quizQuestions.length > 0 && (
@@ -742,94 +746,17 @@ const CreateCourse: React.FC = () => {
 
                 <div className="space-y-6">
                   {quizQuestions.map((q, qIndex) => (
-                    <div
+                    <QuestionEditor
                       key={q.id}
-                      className="p-4 rounded-lg border border-border/50 space-y-4"
-                    >
-                      <div className="flex items-start gap-4">
-                        <span className="text-lg font-semibold text-primary">
-                          {qIndex + 1}.
-                        </span>
-                        <div className="flex-1 space-y-4">
-                          <div className="flex gap-2 items-center">
-                            <Badge variant="outline">
-                              {q.question_type === "true_false" ? "V/F" : "Selección múltiple"}
-                            </Badge>
-                            <div className="flex items-center gap-2 ml-auto">
-                              <Label className="text-sm">Puntos:</Label>
-                              <Input
-                                type="number"
-                                min={1}
-                                max={100}
-                                className="w-20"
-                                value={q.points}
-                                onChange={(e) => {
-                                  const updated = [...quizQuestions];
-                                  updated[qIndex].points = Math.min(100, Math.max(1, parseInt(e.target.value) || 1));
-                                  setQuizQuestions(updated);
-                                }}
-                              />
-                            </div>
-                          </div>
-                          <Input
-                            placeholder="Escribe la pregunta..."
-                            value={q.question}
-                            onChange={(e) => {
-                              const updated = [...quizQuestions];
-                              updated[qIndex].question = e.target.value;
-                              setQuizQuestions(updated);
-                            }}
-                          />
-                          <div className={`grid gap-2 ${q.question_type === "true_false" ? "md:grid-cols-2" : "md:grid-cols-2"}`}>
-                            {q.options.map((opt, oIndex) => (
-                              <div key={oIndex} className="flex items-center gap-2">
-                                <input
-                                  type="radio"
-                                  name={`correct-${q.id}`}
-                                  checked={opt.is_correct}
-                                  onChange={() => {
-                                    const updated = [...quizQuestions];
-                                    updated[qIndex].options = updated[qIndex].options.map(
-                                      (o, i) => ({
-                                        ...o,
-                                        is_correct: i === oIndex,
-                                      })
-                                    );
-                                    setQuizQuestions(updated);
-                                  }}
-                                  className="w-4 h-4"
-                                />
-                                {q.question_type === "true_false" ? (
-                                  <span className={`px-3 py-2 rounded border ${opt.is_correct ? "border-success bg-success/10" : "border-border"}`}>
-                                    {opt.text}
-                                  </span>
-                                ) : (
-                                  <Input
-                                    placeholder={`Opción ${oIndex + 1}`}
-                                    value={opt.text}
-                                    onChange={(e) => {
-                                      const updated = [...quizQuestions];
-                                      updated[qIndex].options[oIndex].text = e.target.value;
-                                      setQuizQuestions(updated);
-                                    }}
-                                    className={opt.is_correct ? "border-success" : ""}
-                                  />
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() =>
-                            setQuizQuestions(quizQuestions.filter((_, i) => i !== qIndex))
-                          }
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
+                      question={q}
+                      index={qIndex}
+                      onUpdate={(updated) => {
+                        const newQuestions = [...quizQuestions];
+                        newQuestions[qIndex] = updated;
+                        setQuizQuestions(newQuestions);
+                      }}
+                      onDelete={() => setQuizQuestions(quizQuestions.filter((_, i) => i !== qIndex))}
+                    />
                   ))}
 
                   {quizQuestions.length === 0 && (
