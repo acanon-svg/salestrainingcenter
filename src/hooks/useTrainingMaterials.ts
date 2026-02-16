@@ -56,17 +56,22 @@ export function useTrainingMaterials(options?: { onlyPublished?: boolean }) {
 
       if (error) throw error;
 
-      // Filter by team if user is a student
+      // Filter by team
       let materials = (data as TrainingMaterial[]).map(m => ({
         ...m,
         keywords: m.keywords || [],
         target_teams: m.target_teams || [],
       }));
       
-      if (options?.onlyPublished && profile?.team) {
-        materials = materials.filter(
-          (m) => m.target_teams.length === 0 || m.target_teams.includes(profile.team!)
-        );
+      // For students: filter by published + team
+      // For creators: filter by their team (they should only see materials for their team)
+      if (profile?.team) {
+        const shouldFilterByTeam = options?.onlyPublished || (isCreatorOrAdmin && !options?.onlyPublished);
+        if (shouldFilterByTeam) {
+          materials = materials.filter(
+            (m) => m.target_teams.length === 0 || m.target_teams.includes(profile.team!)
+          );
+        }
       }
 
       // Fetch feedback and tag assignments for each material

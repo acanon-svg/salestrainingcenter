@@ -17,23 +17,32 @@ export interface CreatorCourse {
 }
 
 export const useCreatorCourses = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   return useQuery({
-    queryKey: ["creator-courses", user?.id],
+    queryKey: ["creator-courses", user?.id, profile?.team],
     queryFn: async () => {
       // Get courses created by this user
       const { data: courses, error } = await supabase
         .from("courses")
-        .select("id, title, status, dimension, created_at, published_at, scheduled_at, order_index")
+        .select("id, title, status, dimension, created_at, published_at, scheduled_at, order_index, target_teams")
         .eq("created_by", user?.id)
         .order("order_index", { ascending: false })
         .order("created_at", { ascending: false });
 
       if (error) throw error;
 
+      // Filter by creator's team - only show courses targeted to their team
+      let filteredCourses = courses || [];
+      if (profile?.team) {
+        filteredCourses = filteredCourses.filter((c: any) => {
+          const targetTeams = c.target_teams || [];
+          return targetTeams.length === 0 || targetTeams.includes(profile.team);
+        });
+      }
+
       // Get enrollment stats for each course
-      const courseIds = courses?.map((c) => c.id) || [];
+      const courseIds = filteredCourses.map((c: any) => c.id);
 
       if (courseIds.length === 0) return [];
 
@@ -44,7 +53,7 @@ export const useCreatorCourses = () => {
 
       // Calculate stats for each course
       const coursesWithStats: CreatorCourse[] =
-        courses?.map((course) => {
+        filteredCourses.map((course: any) => {
           const courseEnrollments = enrollments?.filter((e) => e.course_id === course.id) || [];
           const completedEnrollments = courseEnrollments.filter((e) => e.status === "completed");
           const scores = completedEnrollments.filter((e) => e.score !== null).map((e) => e.score as number);
