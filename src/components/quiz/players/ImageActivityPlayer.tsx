@@ -1,8 +1,8 @@
 import React, { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ImageActivityData } from "../types";
-import { Upload, FileCheck, ImageIcon } from "lucide-react";
-
+import { Upload, FileCheck, ImageIcon, Download } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 interface ImageActivityAnswer {
   file_name?: string;
   file_url?: string;
@@ -18,18 +18,36 @@ interface Props {
 
 export const ImageActivityPlayer: React.FC<Props> = ({ data, answer, onChange, showResults }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // Create a local URL for preview and store the file name
     const fileUrl = URL.createObjectURL(file);
     onChange({
       file_name: file.name,
       file_url: fileUrl,
       submitted: true,
     });
+  };
+
+  const handleDownloadImage = async () => {
+    if (!data.example_image_url) return;
+    try {
+      const response = await fetch(data.example_image_url);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const ext = data.example_image_url.split(".").pop()?.split("?")[0] || "png";
+      a.download = `imagen-actividad.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      toast({ title: "Error", description: "No se pudo descargar la imagen.", variant: "destructive" });
+    }
   };
 
   return (
@@ -43,9 +61,20 @@ export const ImageActivityPlayer: React.FC<Props> = ({ data, answer, onChange, s
 
       {data.example_image_url && (
         <div>
-          <p className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-1">
-            <ImageIcon className="w-4 h-4" /> Imagen de ejemplo:
-          </p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+              <ImageIcon className="w-4 h-4" /> Imagen de ejemplo:
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadImage}
+              className="gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Descargar imagen
+            </Button>
+          </div>
           <div className="rounded-lg border border-border overflow-hidden max-w-lg">
             <img
               src={data.example_image_url}
@@ -55,7 +84,6 @@ export const ImageActivityPlayer: React.FC<Props> = ({ data, answer, onChange, s
           </div>
         </div>
       )}
-
       <div className="space-y-2">
         <p className="text-sm font-medium text-muted-foreground">Adjunta tu archivo de respuesta:</p>
         <input
