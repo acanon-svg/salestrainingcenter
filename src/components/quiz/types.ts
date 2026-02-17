@@ -26,11 +26,22 @@ export interface MatchColumnsData {
   pairs: { id: string; left: string; right: string }[];
 }
 
+export type PuzzlePieceType = "rectangular" | "jigsaw" | "triangular" | "hexagonal" | "circular";
+
+export const puzzlePieceTypeLabels: Record<PuzzlePieceType, string> = {
+  rectangular: "Rectangular",
+  jigsaw: "Fichas de rompecabezas",
+  triangular: "Triángulos",
+  hexagonal: "Hexágonos",
+  circular: "Círculos",
+};
+
 export interface ImagePuzzleData {
   type: "image_puzzle";
   image_url: string;
   grid_cols: number;
   grid_rows: number;
+  piece_type: PuzzlePieceType;
 }
 
 export interface OpenAnswerData {
@@ -120,6 +131,7 @@ export function createDefaultOptions(type: QuizQuestionType): any {
         image_url: "",
         grid_cols: 3,
         grid_rows: 3,
+        piece_type: "rectangular",
       } as ImagePuzzleData;
     case "open_answer":
       return {

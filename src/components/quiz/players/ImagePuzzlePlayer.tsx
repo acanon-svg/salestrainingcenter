@@ -70,6 +70,17 @@ export const ImagePuzzlePlayer: React.FC<Props> = ({ data, answer, onChange, sho
                 : "border-2 border-destructive";
             }
 
+            const pieceType = (data as any).piece_type || "rectangular";
+            const clipPath = pieceType === "hexagonal"
+              ? "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)"
+              : pieceType === "circular"
+              ? "circle(45% at 50% 50%)"
+              : pieceType === "triangular"
+              ? ((posIndex % 2 === 0) ? "polygon(0% 100%, 50% 0%, 100% 100%)" : "polygon(0% 0%, 100% 0%, 50% 100%)")
+              : undefined;
+
+            const borderRadius = pieceType === "jigsaw" ? "6px" : pieceType === "circular" ? "50%" : undefined;
+
             return (
               <div
                 key={posIndex}
@@ -79,11 +90,18 @@ export const ImagePuzzlePlayer: React.FC<Props> = ({ data, answer, onChange, sho
                 onDrop={() => handleDrop(posIndex)}
                 className={`${borderStyle} cursor-grab active:cursor-grabbing relative overflow-hidden`}
                 style={{
-                  backgroundImage: `url(${data.image_url})`,
-                  backgroundSize: `${data.grid_cols * 100}% ${data.grid_rows * 100}%`,
-                  backgroundPosition: `${col * (100 / (data.grid_cols - 1 || 1))}% ${row * (100 / (data.grid_rows - 1 || 1))}%`,
+                  borderRadius,
                 }}
               >
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    backgroundImage: `url(${data.image_url})`,
+                    backgroundSize: `${data.grid_cols * 100}% ${data.grid_rows * 100}%`,
+                    backgroundPosition: `${col * (100 / (data.grid_cols - 1 || 1))}% ${row * (100 / (data.grid_rows - 1 || 1))}%`,
+                    clipPath,
+                  }}
+                />
                 {showResults && !isCorrect && (
                   <div className="absolute inset-0 bg-destructive/20 flex items-center justify-center">
                     <span className="text-destructive font-bold text-lg">✗</span>
