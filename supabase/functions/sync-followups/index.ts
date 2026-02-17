@@ -6,6 +6,23 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Input validation limits
+const MAX_CSV_ROWS = 10000;
+const MAX_FIELD_LENGTH = 2000;
+
+function sanitizeField(val: string | undefined, maxLen = MAX_FIELD_LENGTH): string {
+  if (!val) return '';
+  return val.slice(0, maxLen).replace(/[<>]/g, '');
+}
+
+function sanitizeEmail(val: string | undefined): string {
+  if (!val) return '';
+  const trimmed = val.toLowerCase().trim().slice(0, 255);
+  // Basic email format check
+  if (trimmed && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return '';
+  return trimmed;
+}
+
 const SHEET_URLS = {
   accompaniments: 'https://docs.google.com/spreadsheets/d/152_aEBvS0wl3n2petIKJcCEGZGZ-wITadqhdrURt69M/gviz/tq?tqx=out:csv&gid=411783362',
   universal_feedback: 'https://docs.google.com/spreadsheets/d/1GWoyyE663HVEZoe69mYyDIHpBY-rNzZ5lqo5vaF9uqc/gviz/tq?tqx=out:csv&gid=1529236555',
@@ -77,12 +94,19 @@ function extractCraftLevel(text: string): string {
 }
 
 async function fetchSheet(url: string): Promise<string[][]> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
   const res = await fetch(url, {
     headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)' },
     redirect: 'follow',
+    signal: controller.signal,
   });
+  clearTimeout(timeout);
   if (!res.ok) throw new Error(`Failed to fetch sheet: ${res.status}`);
   const csv = await res.text();
+  if (csv.length > 10 * 1024 * 1024) {
+    throw new Error('Sheet data exceeds 10MB limit');
+  }
   if (csv.startsWith('<!DOCTYPE') || csv.startsWith('<html')) {
     throw new Error('Sheet not accessible');
   }
@@ -92,6 +116,7 @@ async function fetchSheet(url: string): Promise<string[][]> {
 async function syncAccompaniments(supabase: any) {
   const rows = await fetchSheet(SHEET_URLS.accompaniments);
   if (rows.length < 2) return { synced: 0 };
+  if (rows.length > MAX_CSV_ROWS) throw new Error(`Sheet exceeds ${MAX_CSV_ROWS} row limit`);
 
   // Headers are row 0
   const dataRows = rows.slice(1);
@@ -106,8 +131,8 @@ async function syncAccompaniments(supabase: any) {
     const timestamp = parseDate(r[0]);
     if (!timestamp) continue;
     
-    const evaluatorEmail = (r[1] || '').toLowerCase().trim();
-    const regional = r[2] || '';
+    const evaluatorEmail = sanitizeEmail(r[1]);
+    const regional = sanitizeField(r[2]);
     
     // The sheet has up to 6 executive slots - find which one has data
     const execSlots = [
@@ -121,7 +146,7 @@ async function syncAccompaniments(supabase: any) {
     
     // Find the slot that has an email
     const exec = execSlots.find(s => s.email && s.email.trim());
-    if (!exec || !exec.email) continue;
+    if (!exec || !exec.email || !sanitizeEmail(exec.email)) continue;
     
     records.push({
       timestamp,
@@ -165,6 +190,7 @@ async function syncAccompaniments(supabase: any) {
 async function syncUniversalFeedback(supabase: any) {
   const rows = await fetchSheet(SHEET_URLS.universal_feedback);
   if (rows.length < 2) return { synced: 0 };
+  if (rows.length > MAX_CSV_ROWS) throw new Error(`Sheet exceeds ${MAX_CSV_ROWS} row limit`);
 
   const dataRows = rows.slice(1);
   await supabase.from('followup_universal_feedback').delete().neq('id', '00000000-0000-0000-0000-000000000000');
@@ -252,6 +278,7 @@ async function syncUniversalFeedback(supabase: any) {
 async function syncQualityEvaluations(supabase: any) {
   const rows = await fetchSheet(SHEET_URLS.quality);
   if (rows.length < 2) return { synced: 0 };
+  if (rows.length > MAX_CSV_ROWS) throw new Error(`Sheet exceeds ${MAX_CSV_ROWS} row limit`);
 
   const dataRows = rows.slice(1);
   await supabase.from('followup_quality_evaluations').delete().neq('id', '00000000-0000-0000-0000-000000000000');

@@ -5,6 +5,23 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Rate limiting: 5 deletions per hour per admin (in-memory)
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+const MAX_DELETIONS_PER_WINDOW = 5;
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(userId);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(userId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= MAX_DELETIONS_PER_WINDOW) return false;
+  entry.count++;
+  return true;
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -56,6 +73,14 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "Only admins can delete users" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Rate limit check
+    if (!checkRateLimit(callingUser.id)) {
+      return new Response(
+        JSON.stringify({ error: "Demasiados intentos de eliminación. Intenta de nuevo más tarde." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
