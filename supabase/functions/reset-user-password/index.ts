@@ -7,6 +7,23 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+// Rate limiting: 10 resets per hour per admin (in-memory)
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+const MAX_RESETS_PER_WINDOW = 10;
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(userId);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(userId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= MAX_RESETS_PER_WINDOW) return false;
+  entry.count++;
+  return true;
+}
+
 interface ResetPasswordRequest {
   userId: string;
   newPassword: string;
@@ -64,6 +81,14 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "No tienes permisos para realizar esta acción" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Rate limit check
+    if (!checkRateLimit(currentUser.id)) {
+      return new Response(
+        JSON.stringify({ error: "Demasiados intentos de restablecimiento. Intenta de nuevo más tarde." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 

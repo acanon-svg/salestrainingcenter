@@ -11,6 +11,23 @@ const MAX_MESSAGES = 20;
 const MAX_MESSAGE_LENGTH = 4000;
 const VALID_ROLES = ["user", "assistant"];
 
+// Rate limiting: 15 requests per minute per user (in-memory, resets on cold start)
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const MAX_REQUESTS_PER_WINDOW = 15;
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(userId);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(userId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= MAX_REQUESTS_PER_WINDOW) return false;
+  entry.count++;
+  return true;
+}
+
 interface ChatMessage {
   role: string;
   content: string;
@@ -427,6 +444,17 @@ serve(async (req) => {
         JSON.stringify({ error: "Token inválido. Por favor, inicia sesión nuevamente." }),
         {
           status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Rate limiting per user
+    if (!checkRateLimit(user.id)) {
+      return new Response(
+        JSON.stringify({ error: "Demasiadas solicitudes. Por favor, intenta de nuevo en un momento." }),
+        {
+          status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
