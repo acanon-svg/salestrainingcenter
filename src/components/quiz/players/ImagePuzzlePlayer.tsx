@@ -1,5 +1,8 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { ImagePuzzleData } from "../types";
+import { Maximize2, ExternalLink } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 
 interface Props {
   data: ImagePuzzleData;
@@ -115,11 +118,38 @@ export const ImagePuzzlePlayer: React.FC<Props> = ({ data, answer, onChange, sho
         {/* Reference image */}
         <div className="shrink-0">
           <p className="text-xs text-muted-foreground mb-1">Imagen de referencia:</p>
-          <img
-            src={data.image_url}
-            alt="Referencia"
-            className="w-32 h-32 object-cover rounded-lg border"
-          />
+          <div className="relative group">
+            <Dialog>
+              <DialogTrigger asChild>
+                <button className="relative cursor-pointer rounded-lg border overflow-hidden block">
+                  <img
+                    src={data.image_url}
+                    alt="Referencia"
+                    className="w-32 h-32 object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                    <Maximize2 className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                </button>
+              </DialogTrigger>
+              <DialogContent className="max-w-3xl p-2">
+                <img
+                  src={data.image_url}
+                  alt="Referencia ampliada"
+                  className="w-full h-auto object-contain rounded-lg"
+                />
+              </DialogContent>
+            </Dialog>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-background border shadow-sm"
+              onClick={() => window.open(data.image_url, '_blank')}
+              title="Abrir en nueva pestaña"
+            >
+              <ExternalLink className="h-3 w-3" />
+            </Button>
+          </div>
         </div>
       </div>
     </div>
