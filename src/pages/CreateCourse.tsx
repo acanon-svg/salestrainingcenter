@@ -726,6 +726,14 @@ const CreateCourse: React.FC = () => {
                     <Plus className="w-4 h-4 mr-2" />
                     Rompecabezas
                   </Button>
+                  <Button variant="outline" onClick={() => handleAddQuestion("open_answer")}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Respuesta Abierta
+                  </Button>
+                  <Button variant="outline" onClick={() => handleAddQuestion("image_activity")}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Actividad con Imagen
+                  </Button>
                 </div>
 
                 {quizQuestions.length > 0 && (

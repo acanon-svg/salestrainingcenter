@@ -14,6 +14,8 @@ import { MindMapPlayer } from "@/components/quiz/players/MindMapPlayer";
 import { FillBlanksPlayer } from "@/components/quiz/players/FillBlanksPlayer";
 import { MatchColumnsPlayer } from "@/components/quiz/players/MatchColumnsPlayer";
 import { ImagePuzzlePlayer } from "@/components/quiz/players/ImagePuzzlePlayer";
+import { OpenAnswerPlayer } from "@/components/quiz/players/OpenAnswerPlayer";
+import { ImageActivityPlayer } from "@/components/quiz/players/ImageActivityPlayer";
 import { generateDiploma } from "@/lib/generateDiploma";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -809,6 +811,26 @@ const CourseDetail: React.FC = () => {
                                 onChange={(val) => setQuizAnswers((prev) => ({ ...prev, [question.id]: val }))}
                                 showResults={showResultsForQ ? true : false}
                                 resultDetails={resultDetails}
+                              />
+                            )}
+
+                            {/* Open Answer */}
+                            {qType === "open_answer" && (
+                              <OpenAnswerPlayer
+                                data={question.options as any}
+                                answer={quizAnswers[question.id] || ""}
+                                onChange={(val) => setQuizAnswers((prev) => ({ ...prev, [question.id]: val }))}
+                                showResults={showResultsForQ ? true : false}
+                              />
+                            )}
+
+                            {/* Image Activity */}
+                            {qType === "image_activity" && (
+                              <ImageActivityPlayer
+                                data={question.options as any}
+                                answer={quizAnswers[question.id] || {}}
+                                onChange={(val) => setQuizAnswers((prev) => ({ ...prev, [question.id]: val }))}
+                                showResults={showResultsForQ ? true : false}
                               />
                             )}
                           </div>
