@@ -26,8 +26,8 @@ export const ImagePuzzleEditor: React.FC<Props> = ({ data, onChange }) => {
       toast({ title: "Error", description: "Selecciona un archivo de imagen válido.", variant: "destructive" });
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast({ title: "Error", description: "La imagen debe ser menor a 5MB.", variant: "destructive" });
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "Error", description: "La imagen debe ser menor a 10MB.", variant: "destructive" });
       return;
     }
 
@@ -81,7 +81,7 @@ export const ImagePuzzleEditor: React.FC<Props> = ({ data, onChange }) => {
             {isUploading ? "Subiendo..." : "Subir imagen"}
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground mt-1">Sube una imagen o pega la URL</p>
+        <p className="text-xs text-muted-foreground mt-1">Sube una imagen de alta resolución (máx 10MB) o pega la URL</p>
       </div>
 
       {/* Grid and piece type config */}
