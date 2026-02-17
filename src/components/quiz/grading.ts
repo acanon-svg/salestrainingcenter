@@ -1,4 +1,4 @@
-import { QuizQuestionType, MindMapData, FillBlanksData, MatchColumnsData, ImagePuzzleData } from "./types";
+import { QuizQuestionType, MindMapData, FillBlanksData, MatchColumnsData, ImagePuzzleData, OpenAnswerData, ImageActivityData } from "./types";
 
 export interface GradeResult {
   correct: boolean;
@@ -65,6 +65,18 @@ export function gradeQuestion(
         if (!isCorrect) allCorrect = false;
       }
       return { correct: allCorrect, details };
+    }
+    case "open_answer": {
+      // Open answer is always "correct" (manually graded) if text is provided
+      const text = (answer || "") as string;
+      const data = options as OpenAnswerData;
+      const meetsMin = !data.min_length || text.length >= data.min_length;
+      return { correct: meetsMin && text.trim().length > 0, details: {} };
+    }
+    case "image_activity": {
+      // Image activity is always "correct" if a file was submitted
+      const submission = answer as { submitted?: boolean } | null;
+      return { correct: !!submission?.submitted, details: {} };
     }
     default:
       return { correct: false, details: {} };

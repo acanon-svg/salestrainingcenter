@@ -9,6 +9,8 @@ import { MindMapEditor } from "./editors/MindMapEditor";
 import { FillBlanksEditor } from "./editors/FillBlanksEditor";
 import { MatchColumnsEditor } from "./editors/MatchColumnsEditor";
 import { ImagePuzzleEditor } from "./editors/ImagePuzzleEditor";
+import { OpenAnswerEditor } from "./editors/OpenAnswerEditor";
+import { ImageActivityEditor } from "./editors/ImageActivityEditor";
 
 interface Props {
   question: QuizQuestionState;
@@ -108,6 +110,18 @@ export const QuestionEditor: React.FC<Props> = ({ question, index, onUpdate, onD
           )}
           {question.question_type === "image_puzzle" && (
             <ImagePuzzleEditor
+              data={question.options}
+              onChange={options => onUpdate({ ...question, options })}
+            />
+          )}
+          {question.question_type === "open_answer" && (
+            <OpenAnswerEditor
+              data={question.options}
+              onChange={options => onUpdate({ ...question, options })}
+            />
+          )}
+          {question.question_type === "image_activity" && (
+            <ImageActivityEditor
               data={question.options}
               onChange={options => onUpdate({ ...question, options })}
             />

@@ -4,7 +4,9 @@ export type QuizQuestionType =
   | "mind_map" 
   | "fill_blanks" 
   | "match_columns" 
-  | "image_puzzle";
+  | "image_puzzle"
+  | "open_answer"
+  | "image_activity";
 
 export interface MindMapData {
   type: "mind_map";
@@ -31,7 +33,19 @@ export interface ImagePuzzleData {
   grid_rows: number;
 }
 
-export type AdvancedQuizOptions = MindMapData | FillBlanksData | MatchColumnsData | ImagePuzzleData;
+export interface OpenAnswerData {
+  type: "open_answer";
+  instruction: string;
+  min_length?: number;
+}
+
+export interface ImageActivityData {
+  type: "image_activity";
+  instruction: string;
+  example_image_url: string;
+}
+
+export type AdvancedQuizOptions = MindMapData | FillBlanksData | MatchColumnsData | ImagePuzzleData | OpenAnswerData | ImageActivityData;
 
 export interface QuizQuestionState {
   id: string;
@@ -48,10 +62,12 @@ export const questionTypeLabels: Record<QuizQuestionType, string> = {
   fill_blanks: "Completar frases",
   match_columns: "Unir columnas",
   image_puzzle: "Rompecabezas",
+  open_answer: "Respuesta abierta",
+  image_activity: "Actividad con imagen",
 };
 
 export function isAdvancedType(type: QuizQuestionType): boolean {
-  return ["mind_map", "fill_blanks", "match_columns", "image_puzzle"].includes(type);
+  return ["mind_map", "fill_blanks", "match_columns", "image_puzzle", "open_answer", "image_activity"].includes(type);
 }
 
 export function createDefaultOptions(type: QuizQuestionType): any {
@@ -105,6 +121,18 @@ export function createDefaultOptions(type: QuizQuestionType): any {
         grid_cols: 3,
         grid_rows: 3,
       } as ImagePuzzleData;
+    case "open_answer":
+      return {
+        type: "open_answer",
+        instruction: "",
+        min_length: 10,
+      } as OpenAnswerData;
+    case "image_activity":
+      return {
+        type: "image_activity",
+        instruction: "",
+        example_image_url: "",
+      } as ImageActivityData;
     default:
       return [];
   }
