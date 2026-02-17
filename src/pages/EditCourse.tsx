@@ -364,32 +364,22 @@ const EditCourse: React.FC = () => {
         }
       }
 
-      // 3. Update quiz - delete existing quiz and questions, then recreate
-      if (quizzes && quizzes.length > 0) {
-        const quizId = quizzes[0].id;
-        
+      // 3. Update quiz - reuse existing quiz ID to avoid FK violations on quiz_attempts
+      const existingQuizId = quizzes && quizzes.length > 0 ? quizzes[0].id : null;
+
+      // Delete existing questions (but keep the quiz row to preserve its ID)
+      if (existingQuizId) {
         const { error: deleteQuestionsError } = await supabase
           .from("quiz_questions")
           .delete()
-          .eq("quiz_id", quizId);
+          .eq("quiz_id", existingQuizId);
         
         if (deleteQuestionsError) {
           console.error("Error deleting quiz questions:", deleteQuestionsError);
           throw deleteQuestionsError;
         }
-        
-        const { error: deleteQuizError } = await supabase
-          .from("quizzes")
-          .delete()
-          .eq("id", quizId);
-        
-        if (deleteQuizError) {
-          console.error("Error deleting quiz:", deleteQuizError);
-          throw deleteQuizError;
-        }
       }
 
-      // Create new quiz if there are questions
       const validQuestions = quizQuestions.filter(
         q => {
           if (!q.question) return false;
@@ -402,26 +392,46 @@ const EditCourse: React.FC = () => {
       );
 
       if (validQuestions.length > 0) {
-        const { data: newQuiz, error: quizError } = await supabase
-          .from("quizzes")
-          .insert({
-            course_id: id,
-            title: `Quiz: ${courseData.title}`,
-            description: "Evaluación del curso",
-            passing_score: 70,
-            order_index: 0,
-          })
-          .select()
-          .single();
+        let quizIdToUse = existingQuizId;
 
-        if (quizError) {
-          console.error("Error creating quiz:", quizError);
-          throw quizError;
+        if (existingQuizId) {
+          // Update existing quiz metadata instead of deleting/recreating
+          const { error: updateQuizError } = await supabase
+            .from("quizzes")
+            .update({
+              title: `Quiz: ${courseData.title}`,
+              description: "Evaluación del curso",
+            })
+            .eq("id", existingQuizId);
+
+          if (updateQuizError) {
+            console.error("Error updating quiz:", updateQuizError);
+            throw updateQuizError;
+          }
+        } else {
+          // Create new quiz only if none existed before
+          const { data: newQuiz, error: quizError } = await supabase
+            .from("quizzes")
+            .insert({
+              course_id: id,
+              title: `Quiz: ${courseData.title}`,
+              description: "Evaluación del curso",
+              passing_score: 70,
+              order_index: 0,
+            })
+            .select()
+            .single();
+
+          if (quizError) {
+            console.error("Error creating quiz:", quizError);
+            throw quizError;
+          }
+          quizIdToUse = newQuiz.id;
         }
 
-        if (newQuiz) {
+        if (quizIdToUse) {
           const questionsToInsert = validQuestions.map((q, index) => ({
-            quiz_id: newQuiz.id,
+            quiz_id: quizIdToUse!,
             question: q.question,
             question_type: q.question_type || "multiple_choice",
             options: ["multiple_choice", "true_false"].includes(q.question_type || "multiple_choice")
@@ -439,6 +449,16 @@ const EditCourse: React.FC = () => {
             console.error("Error inserting quiz questions:", insertQuestionsError);
             throw insertQuestionsError;
           }
+        }
+      } else if (existingQuizId) {
+        // No valid questions remain, delete the quiz
+        const { error: deleteQuizError } = await supabase
+          .from("quizzes")
+          .delete()
+          .eq("id", existingQuizId);
+        
+        if (deleteQuizError) {
+          console.error("Error deleting empty quiz:", deleteQuizError);
         }
       }
 
