@@ -16,6 +16,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   GripVertical,
   Eye,
   Edit,
@@ -31,11 +38,14 @@ import {
   Archive,
   Calendar,
   AlertTriangle,
+  FolderInput,
+  FolderX,
 } from "lucide-react";
 import { statusLabels, dimensionLabels } from "@/lib/types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { CreatorCourse } from "@/hooks/useCreatorCourses";
+import { CourseFolder, useMoveCourseToFolder } from "@/hooks/useCourseFolders";
 
 interface SortableCourseItemProps {
   course: CreatorCourse;
@@ -45,6 +55,7 @@ interface SortableCourseItemProps {
   deletingId: string | null;
   publishingId: string | null;
   archivingId: string | null;
+  folders?: CourseFolder[];
 }
 
 const getStatusBadge = (status: string, scheduled_at?: string | null) => {
@@ -95,7 +106,10 @@ export const SortableCourseItem: React.FC<SortableCourseItemProps> = ({
   deletingId,
   publishingId,
   archivingId,
+  folders = [],
 }) => {
+  const moveCourse = useMoveCourseToFolder();
+  const currentFolder = folders.find((f) => f.id === course.folder_id);
   const {
     attributes,
     listeners,
@@ -132,10 +146,16 @@ export const SortableCourseItem: React.FC<SortableCourseItemProps> = ({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-3 mb-1 flex-wrap">
           <h3 className="font-medium truncate">{course.title}</h3>
-          {getStatusBadge(course.status, course.scheduled_at)}
+           {getStatusBadge(course.status, course.scheduled_at)}
           <Badge variant="outline" className="text-xs">
             {dimensionLabels[course.dimension as keyof typeof dimensionLabels] || course.dimension}
           </Badge>
+          {currentFolder && (
+            <Badge variant="secondary" className="text-xs gap-1">
+              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: currentFolder.color }} />
+              {currentFolder.name}
+            </Badge>
+          )}
         </div>
         <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
           <span>
@@ -254,6 +274,38 @@ export const SortableCourseItem: React.FC<SortableCourseItemProps> = ({
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+        )}
+
+        {/* Move to folder */}
+        {folders.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" title="Mover a carpeta">
+                <FolderInput className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {folders.map((folder) => (
+                <DropdownMenuItem
+                  key={folder.id}
+                  onClick={() => moveCourse.mutate({ courseId: course.id, folderId: folder.id })}
+                  className={course.folder_id === folder.id ? "bg-muted" : ""}
+                >
+                  <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: folder.color }} />
+                  {folder.name}
+                </DropdownMenuItem>
+              ))}
+              {course.folder_id && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => moveCourse.mutate({ courseId: course.id, folderId: null })}>
+                    <FolderX className="w-3 h-3 mr-2" />
+                    Quitar de carpeta
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
 
         <Link to={`/courses/${course.id}`}>

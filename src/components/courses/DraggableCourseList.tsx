@@ -18,6 +18,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BookOpen } from "lucide-react";
 import { CreatorCourse } from "@/hooks/useCreatorCourses";
+import { CourseFolder } from "@/hooks/useCourseFolders";
 import { SortableCourseItem } from "./SortableCourseItem";
 
 interface DraggableCourseListProps {
@@ -30,6 +31,7 @@ interface DraggableCourseListProps {
   deletingId: string | null;
   publishingId: string | null;
   archivingId: string | null;
+  folders?: CourseFolder[];
 }
 
 export const DraggableCourseList: React.FC<DraggableCourseListProps> = ({
@@ -42,6 +44,7 @@ export const DraggableCourseList: React.FC<DraggableCourseListProps> = ({
   deletingId,
   publishingId,
   archivingId,
+  folders = [],
 }) => {
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -119,6 +122,7 @@ export const DraggableCourseList: React.FC<DraggableCourseListProps> = ({
                 deletingId={deletingId}
                 publishingId={publishingId}
                 archivingId={archivingId}
+                folders={folders}
               />
             ))}
           </SortableContext>
