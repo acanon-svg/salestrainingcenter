@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BookOpen, Plus, Users, BarChart, CheckCircle, Timer } from "lucide-react";
+import { BookOpen, Plus, Users, BarChart, CheckCircle, Timer, Folder } from "lucide-react";
 import {
   useCreatorCourses,
   useDeleteCourse,
@@ -15,11 +15,15 @@ import {
   useArchiveCourse,
   CreatorCourse,
 } from "@/hooks/useCreatorCourses";
+import { useCourseFolders } from "@/hooks/useCourseFolders";
 import { DraggableCourseList } from "@/components/courses/DraggableCourseList";
+import { CourseFolderManager } from "@/components/courses/CourseFolderManager";
+import { MyCoursesStats } from "@/components/courses/MyCoursesStats";
 
 const MyCourses: React.FC = () => {
   const { profile } = useAuth();
   const { data: myCourses = [], isLoading } = useCreatorCourses();
+  const { data: folders = [] } = useCourseFolders();
   const deleteCourse = useDeleteCourse();
   const bulkUpdateOrder = useBulkUpdateCourseOrder();
   const publishCourse = usePublishCourse();
@@ -27,58 +31,66 @@ const MyCourses: React.FC = () => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [publishingId, setPublishingId] = useState<string | null>(null);
   const [archivingId, setArchivingId] = useState<string | null>(null);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
 
   const handleDelete = async (courseId: string) => {
     setDeletingId(courseId);
-    try {
-      await deleteCourse.mutateAsync(courseId);
-    } finally {
-      setDeletingId(null);
-    }
+    try { await deleteCourse.mutateAsync(courseId); } finally { setDeletingId(null); }
   };
 
   const handlePublish = async (courseId: string) => {
     setPublishingId(courseId);
-    try {
-      await publishCourse.mutateAsync(courseId);
-    } finally {
-      setPublishingId(null);
-    }
+    try { await publishCourse.mutateAsync(courseId); } finally { setPublishingId(null); }
   };
 
   const handleArchive = async (courseId: string) => {
     setArchivingId(courseId);
-    try {
-      await archiveCourse.mutateAsync(courseId);
-    } finally {
-      setArchivingId(null);
-    }
+    try { await archiveCourse.mutateAsync(courseId); } finally { setArchivingId(null); }
   };
 
   const handleReorder = async (reorderedCourses: CreatorCourse[]) => {
-    // Assign new order indices based on position (reverse because highest = first)
     const updates = reorderedCourses.map((course, index) => ({
       id: course.id,
-      order_index: reorderedCourses.length - index, // First item gets highest index
+      order_index: reorderedCourses.length - index,
     }));
     await bulkUpdateOrder.mutateAsync(updates);
   };
 
+  // Filter by folder
+  const filteredByFolder = selectedFolderId === "none"
+    ? myCourses.filter((c) => !c.folder_id)
+    : selectedFolderId
+      ? myCourses.filter((c) => c.folder_id === selectedFolderId)
+      : myCourses;
+
   // Filter courses by status
-  const publishedCourses = myCourses.filter((c) => c.status === "published");
-  const draftCourses = myCourses.filter((c) => c.status === "draft" && !c.scheduled_at);
-  const scheduledCourses = myCourses.filter(
+  const publishedCourses = filteredByFolder.filter((c) => c.status === "published");
+  const draftCourses = filteredByFolder.filter((c) => c.status === "draft" && !c.scheduled_at);
+  const scheduledCourses = filteredByFolder.filter(
     (c) => c.status === "draft" && c.scheduled_at && new Date(c.scheduled_at) > new Date()
   );
-  const archivedCourses = myCourses.filter((c) => c.status === "archived");
+  const archivedCourses = filteredByFolder.filter((c) => c.status === "archived");
 
-  // Stats
+  // Stats (all courses, not filtered)
   const totalEnrolled = myCourses.reduce((sum, c) => sum + c.enrolled_count, 0);
   const coursesWithScore = myCourses.filter((c) => c.avg_score !== null);
   const avgScore =
     coursesWithScore.length > 0
       ? coursesWithScore.reduce((sum, c) => sum + (c.avg_score || 0), 0) / coursesWithScore.length
       : 0;
+  const publishedAll = myCourses.filter((c) => c.status === "published");
+
+  const listProps = {
+    isLoading,
+    onReorder: handleReorder,
+    onDelete: handleDelete,
+    onPublish: handlePublish,
+    onArchive: handleArchive,
+    deletingId,
+    publishingId,
+    archivingId,
+    folders,
+  };
 
   return (
     <DashboardLayout>
@@ -94,7 +106,6 @@ const MyCourses: React.FC = () => {
               Gestiona los cursos que has creado • Arrastra para reordenar
             </p>
           </div>
-
           <Link to="/courses/create">
             <Button className="gap-2">
               <Plus className="w-4 h-4" />
@@ -104,81 +115,60 @@ const MyCourses: React.FC = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card className="border-border/50">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-lg bg-primary/10">
-                  <BookOpen className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  {isLoading ? (
-                    <Skeleton className="h-8 w-12" />
-                  ) : (
-                    <p className="text-2xl font-bold">{myCourses.length}</p>
-                  )}
-                  <p className="text-sm text-muted-foreground">Cursos creados</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-border/50">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-lg bg-success/10">
-                  <CheckCircle className="w-6 h-6 text-success" />
-                </div>
-                <div>
-                  {isLoading ? (
-                    <Skeleton className="h-8 w-12" />
-                  ) : (
-                    <p className="text-2xl font-bold">{publishedCourses.length}</p>
-                  )}
-                  <p className="text-sm text-muted-foreground">Publicados</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-border/50">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-lg bg-addi-yellow/10">
-                  <Users className="w-6 h-6 text-addi-yellow" />
-                </div>
-                <div>
-                  {isLoading ? (
-                    <Skeleton className="h-8 w-12" />
-                  ) : (
-                    <p className="text-2xl font-bold">{totalEnrolled}</p>
-                  )}
-                  <p className="text-sm text-muted-foreground">Inscripciones</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-border/50">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-lg bg-primary/10">
-                  <BarChart className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  {isLoading ? (
-                    <Skeleton className="h-8 w-12" />
-                  ) : (
-                    <p className="text-2xl font-bold">{avgScore.toFixed(0)}%</p>
-                  )}
-                  <p className="text-sm text-muted-foreground">Promedio</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <MyCoursesStats
+          totalCourses={myCourses.length}
+          publishedCount={publishedAll.length}
+          totalEnrolled={totalEnrolled}
+          avgScore={avgScore}
+          isLoading={isLoading}
+        />
+
+        {/* Folder Management */}
+        <div className="space-y-3">
+          <CourseFolderManager folders={folders} />
+
+          {/* Folder filter pills */}
+          {folders.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                variant={selectedFolderId === null ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedFolderId(null)}
+              >
+                Todos ({myCourses.length})
+              </Button>
+              {folders.map((folder) => {
+                const count = myCourses.filter((c) => c.folder_id === folder.id).length;
+                return (
+                  <Button
+                    key={folder.id}
+                    variant={selectedFolderId === folder.id ? "default" : "outline"}
+                    size="sm"
+                    className="gap-1"
+                    onClick={() => setSelectedFolderId(folder.id)}
+                  >
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: folder.color }} />
+                    {folder.name} ({count})
+                  </Button>
+                );
+              })}
+              <Button
+                variant={selectedFolderId === "none" ? "default" : "outline"}
+                size="sm"
+                className="gap-1"
+                onClick={() => setSelectedFolderId(selectedFolderId === "none" ? null : "none")}
+              >
+                <Folder className="w-3 h-3" />
+                Sin carpeta ({myCourses.filter((c) => !c.folder_id).length})
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Tabs */}
         <Tabs defaultValue="all" className="w-full">
           <TabsList>
-            <TabsTrigger value="all">Todos ({myCourses.length})</TabsTrigger>
+            <TabsTrigger value="all">Todos ({filteredByFolder.length})</TabsTrigger>
             <TabsTrigger value="published">Publicados ({publishedCourses.length})</TabsTrigger>
             <TabsTrigger value="scheduled">
               <Timer className="w-3 h-3 mr-1" />
@@ -189,73 +179,19 @@ const MyCourses: React.FC = () => {
           </TabsList>
 
           <TabsContent value="all" className="mt-6">
-            <DraggableCourseList
-              courses={myCourses}
-              isLoading={isLoading}
-              onReorder={handleReorder}
-              onDelete={handleDelete}
-              onPublish={handlePublish}
-              onArchive={handleArchive}
-              deletingId={deletingId}
-              publishingId={publishingId}
-              archivingId={archivingId}
-            />
+            <DraggableCourseList courses={filteredByFolder} {...listProps} />
           </TabsContent>
-
           <TabsContent value="published" className="mt-6">
-            <DraggableCourseList
-              courses={publishedCourses}
-              isLoading={isLoading}
-              onReorder={handleReorder}
-              onDelete={handleDelete}
-              onPublish={handlePublish}
-              onArchive={handleArchive}
-              deletingId={deletingId}
-              publishingId={publishingId}
-              archivingId={archivingId}
-            />
+            <DraggableCourseList courses={publishedCourses} {...listProps} />
           </TabsContent>
-
           <TabsContent value="scheduled" className="mt-6">
-            <DraggableCourseList
-              courses={scheduledCourses}
-              isLoading={isLoading}
-              onReorder={handleReorder}
-              onDelete={handleDelete}
-              onPublish={handlePublish}
-              onArchive={handleArchive}
-              deletingId={deletingId}
-              publishingId={publishingId}
-              archivingId={archivingId}
-            />
+            <DraggableCourseList courses={scheduledCourses} {...listProps} />
           </TabsContent>
-
           <TabsContent value="draft" className="mt-6">
-            <DraggableCourseList
-              courses={draftCourses}
-              isLoading={isLoading}
-              onReorder={handleReorder}
-              onDelete={handleDelete}
-              onPublish={handlePublish}
-              onArchive={handleArchive}
-              deletingId={deletingId}
-              publishingId={publishingId}
-              archivingId={archivingId}
-            />
+            <DraggableCourseList courses={draftCourses} {...listProps} />
           </TabsContent>
-
           <TabsContent value="archived" className="mt-6">
-            <DraggableCourseList
-              courses={archivedCourses}
-              isLoading={isLoading}
-              onReorder={handleReorder}
-              onDelete={handleDelete}
-              onPublish={handlePublish}
-              onArchive={handleArchive}
-              deletingId={deletingId}
-              publishingId={publishingId}
-              archivingId={archivingId}
-            />
+            <DraggableCourseList courses={archivedCourses} {...listProps} />
           </TabsContent>
         </Tabs>
       </div>

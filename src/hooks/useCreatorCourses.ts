@@ -15,6 +15,7 @@ export interface CreatorCourse {
   enrolled_count: number;
   avg_score: number | null;
   order_index: number;
+  folder_id: string | null;
 }
 
 export const useCreatorCourses = () => {
@@ -26,7 +27,7 @@ export const useCreatorCourses = () => {
       // Get courses created by this user
       const { data: courses, error } = await supabase
         .from("courses")
-        .select("id, title, status, dimension, created_at, published_at, scheduled_at, expires_at, order_index, target_teams")
+        .select("id, title, status, dimension, created_at, published_at, scheduled_at, expires_at, order_index, target_teams, folder_id")
         .eq("created_by", user?.id)
         .order("order_index", { ascending: false })
         .order("created_at", { ascending: false });

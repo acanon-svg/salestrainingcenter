@@ -658,6 +658,39 @@ export type Database = {
           },
         ]
       }
+      course_folders: {
+        Row: {
+          color: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          name: string
+          order_index: number | null
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          name: string
+          order_index?: number | null
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          name?: string
+          order_index?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       course_materials: {
         Row: {
           content_text: string | null
@@ -813,6 +846,7 @@ export type Database = {
           dimension: Database["public"]["Enums"]["training_dimension"]
           estimated_duration_minutes: number | null
           expires_at: string | null
+          folder_id: string | null
           id: string
           language: string
           objectives: string[] | null
@@ -840,6 +874,7 @@ export type Database = {
           dimension?: Database["public"]["Enums"]["training_dimension"]
           estimated_duration_minutes?: number | null
           expires_at?: string | null
+          folder_id?: string | null
           id?: string
           language?: string
           objectives?: string[] | null
@@ -867,6 +902,7 @@ export type Database = {
           dimension?: Database["public"]["Enums"]["training_dimension"]
           estimated_duration_minutes?: number | null
           expires_at?: string | null
+          folder_id?: string | null
           id?: string
           language?: string
           objectives?: string[] | null
@@ -886,6 +922,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "courses_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "course_folders"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "courses_process_id_fkey"
             columns: ["process_id"]
