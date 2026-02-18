@@ -19,24 +19,30 @@ export interface CreatorCourse {
 }
 
 export const useCreatorCourses = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, hasRole } = useAuth();
+  const isAdmin = hasRole("admin");
 
   return useQuery({
-    queryKey: ["creator-courses", user?.id, profile?.team],
+    queryKey: ["creator-courses", user?.id, profile?.team, isAdmin],
     queryFn: async () => {
-      // Get courses created by this user
-      const { data: courses, error } = await supabase
+      // Admins see ALL courses; creators see only their own
+      let query = supabase
         .from("courses")
         .select("id, title, status, dimension, created_at, published_at, scheduled_at, expires_at, order_index, target_teams, folder_id")
-        .eq("created_by", user?.id)
         .order("order_index", { ascending: false })
         .order("created_at", { ascending: false });
 
+      if (!isAdmin) {
+        query = query.eq("created_by", user?.id);
+      }
+
+      const { data: courses, error } = await query;
+
       if (error) throw error;
 
-      // Filter by creator's team - only show courses targeted to their team
+      // Filter by creator's team - skip for admins (they see all teams)
       let filteredCourses = courses || [];
-      if (profile?.team) {
+      if (!isAdmin && profile?.team) {
         filteredCourses = filteredCourses.filter((c: any) => {
           const targetTeams = c.target_teams || [];
           return targetTeams.length === 0 || targetTeams.includes(profile.team);
