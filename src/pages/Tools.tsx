@@ -33,8 +33,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { TeamSelector } from "@/components/tools/TeamSelector";
 import { SalesCommissionCalculator } from "@/components/tools/SalesCommissionCalculator";
 import { CommissionConfigManager } from "@/components/tools/CommissionConfigManager";
-import { useMyCommissionConfig } from "@/hooks/useCommissionCalculatorConfig";
+import { useMyCommissionConfig, CommissionCalculatorConfig } from "@/hooks/useCommissionCalculatorConfig";
 import { FieldSalesCommissions } from "@/components/tools/FieldSalesCommissions";
+import { DemoFieldSalesCommissions } from "@/components/demo/DemoFieldSalesCommissions";
 import { CommissionReportSection } from "@/components/tools/CommissionReportSection";
 import { RejectedCommissionsView } from "@/components/tools/RejectedCommissionsView";
 import { AddiPlansCalculator } from "@/components/tools/AddiPlansCalculator";
@@ -177,12 +178,31 @@ const PrebuiltToolCard: React.FC<{
   );
 };
 
+const DEMO_COMMISSION_CONFIG: CommissionCalculatorConfig = {
+  id: "demo-config",
+  tool_id: "demo-tool",
+  name: "Configuración Demo - Field Sales",
+  description: "Datos de ejemplo para demostración",
+  meta_firmas: 120,
+  meta_originaciones: 85000000,
+  meta_gmv_usd: 45000,
+  base_comisional: 1500000,
+  target_users: null,
+  target_teams: ["Field Sales"],
+  is_default: true,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  created_by: null,
+};
+
 const ToolViewer: React.FC<{
   tool: Tool;
   userId: string | undefined;
   userTeam: string | null | undefined;
   userRole: "student" | "lider" | "admin" | "creator";
 }> = ({ tool, userId, userTeam, userRole }) => {
+  const { demoMode } = useAuth();
+
   // For Addi Plans calculator, no config needed
   if (tool.type === "addi_plans_calculator") {
     return <AddiPlansCalculator />;
@@ -191,7 +211,7 @@ const ToolViewer: React.FC<{
   // For commission calculator, use config
   const { data: config, isLoading } = useMyCommissionConfig(tool.id, userId, userTeam);
 
-  if (isLoading) {
+  if (isLoading && !demoMode) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -199,7 +219,9 @@ const ToolViewer: React.FC<{
     );
   }
 
-  if (!config) {
+  const effectiveConfig = config || (demoMode ? DEMO_COMMISSION_CONFIG : null);
+
+  if (!effectiveConfig) {
     return (
       <Card>
         <CardContent className="py-12 text-center">
@@ -212,11 +234,11 @@ const ToolViewer: React.FC<{
     );
   }
 
-  return <SalesCommissionCalculator config={config} userRole={userRole} />;
+  return <SalesCommissionCalculator config={effectiveConfig} userRole={userRole} />;
 };
 
 const Tools: React.FC = () => {
-  const { hasRole, profile, user } = useAuth();
+  const { hasRole, profile, user, demoMode, demoActiveRole } = useAuth();
   const { tools, isLoading, createTool, updateTool } = useTools();
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -229,7 +251,9 @@ const Tools: React.FC = () => {
   const isRejectedCommissionsView = searchParams.get("view") === "rejected-commissions";
   const effectiveMode = isRejectedCommissionsView ? "rejected-commissions" : mode;
   const isLeader = hasRole("lider");
-  const isFieldSalesLeader = isLeader && profile?.team?.toLowerCase().includes("field sales");
+  const isFieldSalesLeader = demoMode && demoActiveRole === "lider"
+    ? true
+    : isLeader && profile?.team?.toLowerCase().includes("field sales");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [teamsDialogOpen, setTeamsDialogOpen] = useState(false);
   const [newToolName, setNewToolName] = useState("");
@@ -405,7 +429,7 @@ const Tools: React.FC = () => {
               <p className="text-muted-foreground">Gestión y aprobación de comisiones del equipo</p>
             </div>
           </div>
-          <FieldSalesCommissions />
+          {demoMode ? <DemoFieldSalesCommissions /> : <FieldSalesCommissions />}
         </div>
       </DashboardLayout>
     );
