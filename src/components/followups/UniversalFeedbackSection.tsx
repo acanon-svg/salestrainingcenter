@@ -2,11 +2,13 @@ import React, { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUniversalFeedback, FollowupUniversalFeedback } from "@/hooks/useFollowups";
 import { useLeaderTeamEmails } from "@/hooks/useLeaderTeamEmails";
-import { Loader2, FileText, Target, TrendingUp, CheckCircle, AlertTriangle } from "lucide-react";
+import { Loader2, FileText, Target, TrendingUp, CheckCircle, AlertTriangle, GraduationCap } from "lucide-react";
+import { RecommendCourseDialog } from "./RecommendCourseDialog";
 
 const FEEDBACK_TYPES = ["Feedback 1-1", "Feedback Recurrente", "Feedback de Oportunidad", "PDP Inicial", "Seguimiento al PDP", "Resultado del PDP"];
 
@@ -126,6 +128,7 @@ export const UniversalFeedbackSection: React.FC = () => {
   const { data: teamEmails } = useLeaderTeamEmails();
   const [selectedRegional, setSelectedRegional] = useState<string>("all");
   const [selectedExec, setSelectedExec] = useState<string>("all");
+  const [recommendOpen, setRecommendOpen] = useState(false);
 
   const isLeaderOrAbove = hasRole("lider") || hasRole("creator") || hasRole("admin");
   const isCreatorOrAdmin = hasRole("creator") || hasRole("admin");
@@ -254,7 +257,21 @@ export const UniversalFeedbackSection: React.FC = () => {
         </Select>
       </div>
       {selectedExec !== "all" ? (
-        <StudentFeedbackView data={finalData} />
+        <>
+          <div className="flex justify-end">
+            <Button variant="outline" size="sm" onClick={() => setRecommendOpen(true)}>
+              <GraduationCap className="h-4 w-4 mr-2" />
+              Recomendar Curso
+            </Button>
+            <RecommendCourseDialog
+              open={recommendOpen}
+              onOpenChange={setRecommendOpen}
+              executiveEmail={selectedExec.split("|")[1]}
+              executiveName={selectedExec.split("|")[0]}
+            />
+          </div>
+          <StudentFeedbackView data={finalData} />
+        </>
       ) : (
         <Card>
           <CardHeader><CardTitle className="text-lg">Ejecutivos</CardTitle></CardHeader>
