@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.sync-team-results]
 verify_jwt = false
+
+[functions.send-commission-approval]
+verify_jwt = false

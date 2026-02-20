@@ -12,9 +12,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Download, FileSpreadsheet, AlertCircle, ArrowUp, ArrowDown, ArrowUpDown, Clock, CheckCircle2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Download, FileSpreadsheet, AlertCircle, ArrowUp, ArrowDown, ArrowUpDown, Clock, CheckCircle2, Send } from "lucide-react";
 import { MonthSelector } from "./MonthSelector";
 import { useApprovedCommissions, useNotApprovedCommissions, CommissionReview } from "@/hooks/useCommissionReviews";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
 const formatCOP = (value: number) =>
@@ -168,6 +184,10 @@ export const CommissionReportSection: React.FC = () => {
   const { data: approved, isLoading: loadingApproved } = useApprovedCommissions(selectedMonth, selectedYear);
   const { data: notApproved, isLoading: loadingNotApproved } = useNotApprovedCommissions(selectedMonth, selectedYear);
 
+  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+  const [approvalMonth, setApprovalMonth] = useState(`${String(now.getMonth() + 1).padStart(2, "0")}-${now.getFullYear()}`);
+  const [isSendingApproval, setIsSendingApproval] = useState(false);
+
   const handleSortApproved = (key: SortKey) => {
     if (sortKeyApproved === key) setSortDirApproved(d => d === "desc" ? "asc" : "desc");
     else { setSortKeyApproved(key); setSortDirApproved("desc"); }
@@ -176,6 +196,52 @@ export const CommissionReportSection: React.FC = () => {
     if (sortKeyNotApproved === key) setSortDirNotApproved(d => d === "desc" ? "asc" : "desc");
     else { setSortKeyNotApproved(key); setSortDirNotApproved("desc"); }
   };
+
+  const handleSendApproval = async () => {
+    if (!approved || approved.length === 0) return;
+    setIsSendingApproval(true);
+    try {
+      const BASE = 1500000;
+      const rows = approved.map((c) => {
+        const totalWeighted = c.originaciones_weighted + c.gmv_weighted;
+        const cumplimiento = c.total_commission / BASE;
+        return {
+          allyCluster: "SMB",
+          email: c.user_email,
+          managerEmail: "staborda@addi.com",
+          targetAccomplishmentPercentage: `${(cumplimiento * 100).toFixed(1)}%`,
+          AccomplishmentPercentage: `${totalWeighted.toFixed(1)}%`,
+          date: approvalMonth,
+        };
+      });
+
+      const { data, error } = await supabase.functions.invoke("send-commission-approval", {
+        body: { rows },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast.success(`${rows.length} comisiones enviadas al Sheet exitosamente`);
+      setShowApprovalDialog(false);
+    } catch (err: any) {
+      console.error("Error sending approval:", err);
+      toast.error(`Error al enviar: ${err.message || "Error desconocido"}`);
+    } finally {
+      setIsSendingApproval(false);
+    }
+  };
+
+  const monthOptions = Array.from({ length: 12 }, (_, i) => {
+    const m = String(i + 1).padStart(2, "0");
+    const names = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+    return { value: m, label: names[i] };
+  });
+
+  const yearOptions = Array.from({ length: 5 }, (_, i) => {
+    const y = now.getFullYear() - 2 + i;
+    return { value: String(y), label: String(y) };
+  });
 
   const handleDownloadExcel = () => {
     if (!approved || approved.length === 0) return;
@@ -289,10 +355,19 @@ export const CommissionReportSection: React.FC = () => {
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="pt-4 flex items-center justify-center">
+              <CardContent className="pt-4 flex items-center justify-center gap-2 flex-wrap">
                 <Button onClick={handleDownloadExcel} disabled={!approved || approved.length === 0} className="gap-2">
                   <Download className="h-4 w-4" />
                   Descargar Excel
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowApprovalDialog(true)}
+                  disabled={!approved || approved.length === 0}
+                  className="gap-2"
+                >
+                  <Send className="h-4 w-4" />
+                  Aprobación
                 </Button>
               </CardContent>
             </Card>
@@ -317,6 +392,63 @@ export const CommissionReportSection: React.FC = () => {
           )}
         </TabsContent>
       </Tabs>
+
+      <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirme el mes de comisión</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Se enviarán <strong>{approved?.length || 0}</strong> comisiones aprobadas al Google Sheet.
+          </p>
+          <div className="flex gap-3 items-end">
+            <div className="flex-1">
+              <label className="text-sm font-medium mb-1 block">Mes</label>
+              <Select
+                value={approvalMonth.split("-")[0]}
+                onValueChange={(m) => setApprovalMonth(`${m}-${approvalMonth.split("-")[1]}`)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {monthOptions.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex-1">
+              <label className="text-sm font-medium mb-1 block">Año</label>
+              <Select
+                value={approvalMonth.split("-")[1]}
+                onValueChange={(y) => setApprovalMonth(`${approvalMonth.split("-")[0]}-${y}`)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {yearOptions.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Fecha seleccionada: <strong>{approvalMonth}</strong>
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowApprovalDialog(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSendApproval} disabled={isSendingApproval} className="gap-2">
+              <Send className="h-4 w-4" />
+              {isSendingApproval ? "Enviando..." : "Confirmar y enviar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
