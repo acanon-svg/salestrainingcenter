@@ -3,10 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAccompaniments, FollowupAccompaniment } from "@/hooks/useFollowups";
 import { useLeaderTeamEmails } from "@/hooks/useLeaderTeamEmails";
-import { Loader2 } from "lucide-react";
+import { Loader2, GraduationCap } from "lucide-react";
+import { RecommendCourseDialog } from "./RecommendCourseDialog";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Legend } from "recharts";
 
@@ -174,6 +176,25 @@ export const AccompanimentsSection: React.FC = () => {
   const { data: teamEmails } = useLeaderTeamEmails();
   const [selectedRegional, setSelectedRegional] = useState<string>("all");
   const [selectedExec, setSelectedExec] = useState<string>("all");
+  const [recommendOpen, setRecommendOpen] = useState(false);
+
+  const RecommendCourseButton: React.FC<{ execKey: string }> = ({ execKey }) => {
+    const [name, email] = execKey.split("|");
+    return (
+      <>
+        <Button variant="outline" size="sm" onClick={() => setRecommendOpen(true)}>
+          <GraduationCap className="h-4 w-4 mr-2" />
+          Recomendar Curso
+        </Button>
+        <RecommendCourseDialog
+          open={recommendOpen}
+          onOpenChange={setRecommendOpen}
+          executiveEmail={email}
+          executiveName={name}
+        />
+      </>
+    );
+  };
 
   const isLeaderOrAbove = hasRole("lider") || hasRole("creator") || hasRole("admin");
   const isCreatorOrAdmin = hasRole("creator") || hasRole("admin");
@@ -305,7 +326,12 @@ export const AccompanimentsSection: React.FC = () => {
       </div>
 
       {selectedExec !== "all" ? (
-        <StudentAccompanimentView data={finalData} />
+        <>
+          <div className="flex justify-end">
+            <RecommendCourseButton execKey={selectedExec} />
+          </div>
+          <StudentAccompanimentView data={finalData} />
+        </>
       ) : (
         <Card>
           <CardHeader><CardTitle className="text-lg">Selecciona un ejecutivo</CardTitle></CardHeader>
