@@ -37,6 +37,10 @@ interface AuthContextType {
   hasRole: (role: AppRole) => boolean;
   markPasswordChanged: () => void;
   refreshProfile: () => Promise<void>;
+  demoMode: boolean;
+  demoActiveRole: AppRole | null;
+  toggleDemoMode: () => void;
+  setDemoActiveRole: (role: AppRole | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -59,6 +63,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [requiresPasswordChange, setRequiresPasswordChange] = useState(false);
+  const [demoMode, setDemoMode] = useState(false);
+  const [demoActiveRole, setDemoActiveRole] = useState<AppRole | null>(null);
   const { toast } = useToast();
 
   const validateEmailDomain = (email: string): boolean => {
@@ -349,7 +355,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const hasRole = (role: AppRole): boolean => {
+    if (demoMode && demoActiveRole !== null) {
+      return role === demoActiveRole;
+    }
     return roles.includes(role);
+  };
+
+  const toggleDemoMode = () => {
+    setDemoMode((prev) => {
+      if (prev) setDemoActiveRole(null);
+      return !prev;
+    });
   };
 
   return (
@@ -368,6 +384,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         hasRole,
         markPasswordChanged,
         refreshProfile,
+        demoMode,
+        demoActiveRole,
+        toggleDemoMode,
+        setDemoActiveRole,
       }}
     >
       {children}

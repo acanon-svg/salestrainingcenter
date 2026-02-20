@@ -20,6 +20,7 @@ import {
   TrendingUp,
   DollarSign,
   ClipboardCheck,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -85,7 +86,7 @@ const adminItems: NavItem[] = [
 ];
 
 export const SidebarContent: React.FC<SidebarContentProps> = ({ onNavigate }) => {
-  const { profile, roles, signOut, hasRole, user } = useAuth();
+  const { profile, roles, signOut, hasRole, user, demoMode, toggleDemoMode } = useAuth();
   const location = useLocation();
   const { configs, isSectionVisibleForUser } = usePortalSectionConfigs();
   const { data: unreadFeedbackCount = 0 } = useUnreadCourseFeedbackCount();
@@ -258,6 +259,20 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({ onNavigate }) =>
               Mi Perfil
             </Button>
           </Link>
+          {roles.includes("admin") && (
+            <Button
+              variant={demoMode ? "default" : "ghost"}
+              size="icon"
+              className={cn(
+                "text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent",
+                demoMode && "bg-primary text-primary-foreground hover:bg-primary/90"
+              )}
+              onClick={toggleDemoMode}
+              title={demoMode ? "Desactivar Modo Demo" : "Activar Modo Demo"}
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
