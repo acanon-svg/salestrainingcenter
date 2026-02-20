@@ -20,23 +20,44 @@ import { LevelBadge } from "@/components/gamification/LevelBadge";
 const Ranking: React.FC = () => {
   const { profile, hasRole } = useAuth();
   const [activeTab, setActiveTab] = useState<"students" | "leaders">("students");
-  const [teamFilter, setTeamFilter] = useState<string>("all");
-
+  
   // Check if user can see team filter (admin, creator, analista)
   const canFilterByTeam = hasRole("admin") || hasRole("creator") || hasRole("analista");
 
   // Get available teams for filter
   const { data: availableTeams } = useAvailableTeamsForRanking();
 
-  // Fetch rankings based on active tab and team filter
+  // Default team filter to user's team, or first available team for admins
+  const [teamFilter, setTeamFilter] = useState<string>(() => {
+    if (canFilterByTeam) return "all";
+    return profile?.team || "all";
+  });
+
+  // For students tab, always filter by team (except "all" shows grouped by team)
   const { data: studentsRanking, isLoading: studentsLoading } = useRankingByRoleType(
     "students_only",
-    canFilterByTeam ? teamFilter : undefined
+    teamFilter !== "all" ? teamFilter : undefined
   );
   const { data: leadersRanking, isLoading: leadersLoading } = useRankingByRoleType(
     "leaders",
     canFilterByTeam ? teamFilter : undefined
   );
+
+  // Group students by team when showing "all"
+  const studentsByTeam = React.useMemo(() => {
+    if (!studentsRanking || teamFilter !== "all") return null;
+    const grouped: Record<string, RankingUser[]> = {};
+    studentsRanking.forEach((user) => {
+      const team = user.team || "Sin equipo";
+      if (!grouped[team]) grouped[team] = [];
+      grouped[team].push(user);
+    });
+    // Sort each team's users by points descending
+    Object.values(grouped).forEach((users) =>
+      users.sort((a, b) => b.points - a.points)
+    );
+    return grouped;
+  }, [studentsRanking, teamFilter]);
 
   const currentRanking = activeTab === "students" ? studentsRanking : leadersRanking;
   const isLoading = activeTab === "students" ? studentsLoading : leadersLoading;
@@ -280,7 +301,6 @@ const Ranking: React.FC = () => {
           </TabsList>
 
           <TabsContent value="students" className="space-y-6 mt-6">
-            {/* Top 3 Podium */}
             {studentsLoading ? (
               <div className="grid gap-4 md:grid-cols-3">
                 {[1, 2, 3].map((i) => (
@@ -293,35 +313,51 @@ const Ranking: React.FC = () => {
                   </Card>
                 ))}
               </div>
+            ) : teamFilter !== "all" ? (
+              <>
+                {renderPodium(studentsRanking)}
+                <Card className="border-border/50">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp className="w-5 h-5 text-primary" />
+                      Ranking - {teamFilter}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {renderRankingTable(studentsRanking)}
+                  </CardContent>
+                </Card>
+              </>
+            ) : studentsByTeam ? (
+              Object.entries(studentsByTeam)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([team, users]) => (
+                  <Card key={team} className="border-border/50">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Users className="w-5 h-5 text-primary" />
+                        {team}
+                        <Badge variant="secondary" className="ml-2">
+                          {users.length} estudiantes
+                        </Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {renderPodium(users)}
+                      <div className="mt-4">
+                        {renderRankingTable(users)}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
             ) : (
-              renderPodium(studentsRanking)
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Trophy className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
+                  <p className="text-muted-foreground">No hay datos disponibles</p>
+                </CardContent>
+              </Card>
             )}
-
-            {/* Full Ranking Table */}
-            <Card className="border-border/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-primary" />
-                  Ranking de Estudiantes
-                  {teamFilter !== "all" && (
-                    <Badge variant="secondary" className="ml-2">
-                      {teamFilter}
-                    </Badge>
-                  )}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {studentsLoading ? (
-                  <div className="space-y-3">
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <Skeleton key={i} className="h-16 w-full" />
-                    ))}
-                  </div>
-                ) : (
-                  renderRankingTable(studentsRanking)
-                )}
-              </CardContent>
-            </Card>
           </TabsContent>
 
           <TabsContent value="leaders" className="space-y-6 mt-6">
