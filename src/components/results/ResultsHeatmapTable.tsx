@@ -27,8 +27,13 @@ export const ResultsHeatmapTable: React.FC<Props> = ({ data, indicator, selected
   const tableData = useMemo(() => {
     const userMap = new Map<string, { real: number; meta: number; expected: number; email: string }>();
 
+    const EXCLUDED = ["total", "hunter", "no info"];
     const grouped = new Map<string, TeamResult[]>();
-    data.forEach((r) => {
+    data.filter((r) => {
+      if (EXCLUDED.includes(r.user_email.toLowerCase().trim())) return false;
+      if (Number(r.firmas_real) === 0 && Number(r.firmas_meta) === 0 && Number(r.originaciones_real) === 0 && Number(r.originaciones_meta) === 0 && Number(r.gmv_real) === 0 && Number(r.gmv_meta) === 0) return false;
+      return true;
+    }).forEach((r) => {
       const list = grouped.get(r.user_email) || [];
       list.push(r);
       grouped.set(r.user_email, list);
