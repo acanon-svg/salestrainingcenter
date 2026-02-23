@@ -33,7 +33,12 @@ export const ResultsBarLineChart: React.FC<Props> = ({ data, indicator, selected
 
     const EXCLUDED = ["total", "hunter", "no info"];
     const grouped = new Map<string, TeamResult[]>();
-    data.filter((r) => !EXCLUDED.includes(r.user_email.toLowerCase().trim())).forEach((r) => {
+    data.filter((r) => {
+      if (EXCLUDED.includes(r.user_email.toLowerCase().trim())) return false;
+      // Skip rows with no data at all
+      if (Number(r.firmas_real) === 0 && Number(r.firmas_meta) === 0 && Number(r.originaciones_real) === 0 && Number(r.originaciones_meta) === 0 && Number(r.gmv_real) === 0 && Number(r.gmv_meta) === 0) return false;
+      return true;
+    }).forEach((r) => {
       const list = grouped.get(r.user_email) || [];
       list.push(r);
       grouped.set(r.user_email, list);
