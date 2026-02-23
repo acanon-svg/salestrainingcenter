@@ -6,7 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// Fixed UUID for auto-sync batch (deterministic, won't conflict with random UUIDs)
 const BATCH_ID = '00000000-0000-0000-0000-000000000001';
 
 function normalizeHeader(h: string): string {
@@ -35,56 +34,130 @@ interface ParsedRow {
   batch_id: string;
 }
 
-function parseCSV(csvText: string): { headers: string[]; rows: Record<string, string>[] } {
-  const lines = csvText.split('\n').filter(l => l.trim());
-  if (lines.length === 0) return { headers: [], rows: [] };
-
-  // Parse CSV respecting quoted fields
-  const parseLine = (line: string): string[] => {
-    const result: string[] = [];
-    let current = '';
-    let inQuotes = false;
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (ch === '"') {
-        if (inQuotes && line[i + 1] === '"') {
-          current += '"';
-          i++;
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (ch === ',' && !inQuotes) {
-        result.push(current.trim());
-        current = '';
+function parseLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
       } else {
-        current += ch;
+        inQuotes = !inQuotes;
       }
+    } else if (ch === ',' && !inQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += ch;
     }
-    result.push(current.trim());
-    return result;
-  };
+  }
+  result.push(current.trim());
+  return result;
+}
+
+function parseCSV(csvText: string): { headers: string[]; rawRows: string[][] } {
+  const lines = csvText.split('\n').filter(l => l.trim());
+  if (lines.length === 0) return { headers: [], rawRows: [] };
 
   const headers = parseLine(lines[0]).map(h => normalizeHeader(h));
-  const rows: Record<string, string>[] = [];
+  const rawRows: string[][] = [];
 
   for (let i = 1; i < lines.length; i++) {
     const values = parseLine(lines[i]);
-    if (values.every(v => !v)) continue; // skip empty rows
-    const row: Record<string, string> = {};
-    headers.forEach((h, idx) => {
-      row[h] = (values[idx] || '').replace(/^"|"$/g, '');
-    });
-    rows.push(row);
+    if (values.every(v => !v)) continue;
+    rawRows.push(values.map(v => v.replace(/^"|"$/g, '')));
   }
 
-  return { headers, rows };
+  return { headers, rawRows };
 }
 
-function parseRows(rows: Record<string, string>[]): { data: ParsedRow[]; errors: string[] } {
+function isResumeFormat(headers: string[]): boolean {
+  return !headers.some(h =>
+    h.includes('correo') || h.includes('email') || h.includes('user_email')
+  );
+}
+
+function parseNum(val: string | undefined): number {
+  if (!val) return 0;
+  return Number(val.replace(/%/g, '').replace(/,/g, '').replace(/\$/g, '').trim()) || 0;
+}
+
+/**
+ * Parse Resume sheet format: fixed column positions
+ * B(1)=Name, C(2)=Dia Meta, D(3)=Firmas Real, E(4)=Firmas Meta MtD, F(5)=Firmas Meta Mes,
+ * G(6)=Cumpl MtD, H(7)=Cumpl Esperado,
+ * (I=8 separator)
+ * J(9)=Orig Real, K(10)=Orig Meta MtD, L(11)=Orig Meta Mes, M(12)=Cumpl MtD, N(13)=Cumpl Esperado,
+ * (O=14 separator)
+ * P(15)=GMV Real, Q(16)=GMV Meta MtD, R(17)=GMV Meta Mes, S(18)=Cumpl MtD, T(19)=Cumpl Esperado
+ */
+function parseResumeRows(rawRows: string[][]): { data: ParsedRow[]; errors: string[] } {
+  const data: ParsedRow[] = [];
+  const errors: string[] = [];
+  const now = new Date();
+  const periodDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+
+  for (let i = 0; i < rawRows.length; i++) {
+    const cols = rawRows[i];
+    const name = (cols[1] || '').trim(); // Column B
+    if (!name) continue;
+
+    const firmasReal = parseNum(cols[3]);      // D
+    const firmasMetaMtd = parseNum(cols[4]);   // E
+    const firmasMetaMes = parseNum(cols[5]);   // F
+
+    const origReal = parseNum(cols[9]);        // J
+    const origMetaMtd = parseNum(cols[10]);    // K
+    const origMetaMes = parseNum(cols[11]);    // L
+
+    const gmvReal = parseNum(cols[15]);        // P
+    const gmvMetaMtd = parseNum(cols[16]);     // Q
+    const gmvMetaMes = parseNum(cols[17]);     // R
+
+    // Back-calculate dias fraction from Meta MtD / Meta Mes
+    let diasFraction = 0;
+    if (firmasMetaMes > 0 && firmasMetaMtd > 0) {
+      diasFraction = Math.min(firmasMetaMtd / firmasMetaMes, 1);
+    } else if (origMetaMes > 0 && origMetaMtd > 0) {
+      diasFraction = Math.min(origMetaMtd / origMetaMes, 1);
+    } else if (gmvMetaMes > 0 && gmvMetaMtd > 0) {
+      diasFraction = Math.min(gmvMetaMtd / gmvMetaMes, 1);
+    }
+
+    const diasHabilesMes = 20;
+    const diasHabilesTranscurridos = Math.round(diasFraction * diasHabilesMes);
+
+    data.push({
+      user_email: name.toLowerCase().trim(),
+      firmas_real: firmasReal,
+      firmas_meta: firmasMetaMes,
+      originaciones_real: origReal,
+      originaciones_meta: origMetaMes,
+      gmv_real: gmvReal,
+      gmv_meta: gmvMetaMes,
+      period_date: periodDate,
+      weeks_in_month: 4,
+      dias_habiles_transcurridos: diasHabilesTranscurridos,
+      dias_habiles_mes: diasHabilesMes,
+      batch_id: BATCH_ID,
+    });
+  }
+
+  return { data, errors };
+}
+
+/** Parse legacy format with named headers */
+function parseLegacyRows(rawRows: string[][], headers: string[]): { data: ParsedRow[]; errors: string[] } {
   const data: ParsedRow[] = [];
   const errors: string[] = [];
 
-  rows.forEach((row, idx) => {
+  rawRows.forEach((values, idx) => {
+    const row: Record<string, string> = {};
+    headers.forEach((h, i) => { row[h] = values[i] || ''; });
+
     const email = row.correo || row.email || row.user_email;
     if (!email) {
       errors.push(`Fila ${idx + 2}: Falta correo`);
@@ -123,7 +196,6 @@ function parseRows(rows: Record<string, string>[]): { data: ParsedRow[]; errors:
 
     const weeksRaw = row.semanas || row.weeks || row.weeks_in_month;
     const weeksInMonth = weeksRaw ? Number(weeksRaw) : 4;
-
     const diasTranscurridos = Number(row.dias_habiles_transcurridos) || 0;
     const diasMes = Number(row.dias_habiles_mes) || 0;
 
@@ -158,7 +230,6 @@ async function fetchGoogleSheet(sheetId: string, sheetName: string): Promise<str
   });
 
   if (!response.ok) {
-    // Try pub fallback
     const pubUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/pub?output=csv&sheet=${encodeURIComponent(sheetName)}`;
     const pubResponse = await fetch(pubUrl, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)' },
@@ -188,12 +259,10 @@ serve(async (req) => {
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Authentication: verify caller is authorized
     let forceSync = false;
     const authHeader = req.headers.get('Authorization');
 
     if (authHeader?.startsWith('Bearer ')) {
-      // Manual call - verify JWT and require admin/creator role
       const userClient = createClient(supabaseUrl, anonKey, {
         global: { headers: { Authorization: authHeader } },
       });
@@ -207,7 +276,6 @@ serve(async (req) => {
         );
       }
 
-      // Check roles
       const { data: roles } = await supabase
         .from('user_roles')
         .select('role')
@@ -223,7 +291,6 @@ serve(async (req) => {
         );
       }
 
-      // Parse body for force flag
       try {
         const body = await req.json();
         forceSync = body?.force === true;
@@ -231,25 +298,20 @@ serve(async (req) => {
         // No body
       }
     } else {
-      // No auth header - only allow if called with the service role key (cron/internal)
-      // Cron jobs use the anon key in the Authorization header, so reaching here
-      // means no valid auth was provided. Reject the request.
       return new Response(
         JSON.stringify({ error: 'Se requiere autenticación' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Read sync config from app_settings
+    // Read sync config
     const { data: configRow, error: configError } = await supabase
       .from('app_settings')
       .select('*')
       .eq('key', 'results_sync_config')
       .maybeSingle();
 
-    if (configError) {
-      throw new Error(`Error reading config: ${configError.message}`);
-    }
+    if (configError) throw new Error(`Error reading config: ${configError.message}`);
 
     if (!configRow) {
       return new Response(
@@ -274,7 +336,6 @@ serve(async (req) => {
       );
     }
 
-    // Extract sheet ID
     const idMatch = config.sheet_url.match(/\/d\/([a-zA-Z0-9_-]+)/);
     if (!idMatch) {
       await updateSyncStatus(supabase, configRow.id, config, 'error', 0, 'Invalid sheet URL');
@@ -285,16 +346,27 @@ serve(async (req) => {
     }
 
     const sheetId = idMatch[1];
-    const sheetName = config.sheet_name || 'Resultados';
+    const sheetName = config.sheet_name || 'Resume';
 
-    // Fetch the sheet
     const csvText = await fetchGoogleSheet(sheetId, sheetName);
+    const { headers, rawRows } = parseCSV(csvText);
+    console.log(`[sync] Parsed ${rawRows.length} rows with headers: ${headers.join(', ')}`);
 
-    // Parse CSV
-    const { headers, rows } = parseCSV(csvText);
-    console.log(`[sync] Parsed ${rows.length} rows with headers: ${headers.join(', ')}`);
+    // Auto-detect format
+    let parsedData: ParsedRow[];
+    let errors: string[];
 
-    const { data: parsedData, errors } = parseRows(rows);
+    if (isResumeFormat(headers)) {
+      console.log('[sync] Detected Resume format, using position-based parsing');
+      const result = parseResumeRows(rawRows);
+      parsedData = result.data;
+      errors = result.errors;
+    } else {
+      console.log('[sync] Detected legacy format, using header-based parsing');
+      const result = parseLegacyRows(rawRows, headers);
+      parsedData = result.data;
+      errors = result.errors;
+    }
 
     if (errors.length > 0) {
       console.warn(`[sync] Parse warnings: ${errors.join('; ')}`);
@@ -308,7 +380,7 @@ serve(async (req) => {
       );
     }
 
-    // Upsert data in chunks (uses unique index on user_email + period_date)
+    // Upsert data in chunks
     const chunkSize = 500;
     let totalInserted = 0;
     for (let i = 0; i < parsedData.length; i += chunkSize) {
@@ -324,17 +396,11 @@ serve(async (req) => {
       totalInserted += chunk.length;
     }
 
-    // Update sync status
     await updateSyncStatus(supabase, configRow.id, config, 'success', totalInserted);
-
     console.log(`[sync] Successfully synced ${totalInserted} records`);
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        count: totalInserted,
-        parse_errors: errors,
-      }),
+      JSON.stringify({ success: true, count: totalInserted, parse_errors: errors }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
