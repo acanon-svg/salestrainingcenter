@@ -1,4 +1,6 @@
 import React, { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer } from "@/components/ui/chart";
 import {
@@ -28,6 +30,22 @@ const INDICATOR_LABELS: Record<string, string> = {
 };
 
 export const ResultsBarLineChart: React.FC<Props> = ({ data, indicator, selectedMonth, selectedYear }) => {
+  const { data: profilesList } = useQuery({
+    queryKey: ["profiles-names"],
+    queryFn: async () => {
+      const { data } = await supabase.from("profiles").select("email, full_name");
+      return data || [];
+    },
+  });
+
+  const profileNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    (profilesList || []).forEach((p: any) => {
+      if (p.email && p.full_name) map.set(p.email.toLowerCase(), p.full_name);
+    });
+    return map;
+  }, [profilesList]);
+
   const chartData = useMemo(() => {
     const userMap = new Map<string, { real: number; meta: number; expected: number; email: string }>();
 
@@ -90,7 +108,7 @@ export const ResultsBarLineChart: React.FC<Props> = ({ data, indicator, selected
         }
       });
 
-      const name = email.split("@")[0].replace(/\./g, " ");
+      const name = profileNameMap.get(email.toLowerCase()) || email.split("@")[0].replace(/\./g, " ");
       userMap.set(email, { real: totalReal, meta: totalMeta, expected: totalExpected, email: name });
     });
 
@@ -102,7 +120,7 @@ export const ResultsBarLineChart: React.FC<Props> = ({ data, indicator, selected
         expected: u.expected,
         meta: u.meta,
       }));
-  }, [data, indicator]);
+  }, [data, indicator, profileNameMap]);
 
   const chartConfig = {
     real: { label: "Resultado Real", color: "hsl(var(--primary))" },
