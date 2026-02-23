@@ -94,6 +94,8 @@ function parseNum(val: string | undefined): number {
  * (O=14 separator)
  * P(15)=GMV Real, Q(16)=GMV Meta MtD, R(17)=GMV Meta Mes, S(18)=Cumpl MtD, T(19)=Cumpl Esperado
  */
+const EXCLUDED_NAMES = ['total', 'hunter', 'no info', ''];
+
 function parseResumeRows(rawRows: string[][]): { data: ParsedRow[]; errors: string[] } {
   const data: ParsedRow[] = [];
   const errors: string[] = [];
@@ -104,6 +106,9 @@ function parseResumeRows(rawRows: string[][]): { data: ParsedRow[]; errors: stri
     const cols = rawRows[i];
     const name = (cols[1] || '').trim(); // Column B
     if (!name) continue;
+
+    // Skip aggregate/invalid rows
+    if (EXCLUDED_NAMES.includes(name.toLowerCase())) continue;
 
     const firmasReal = parseNum(cols[3]);      // D
     const firmasMetaMtd = parseNum(cols[4]);   // E

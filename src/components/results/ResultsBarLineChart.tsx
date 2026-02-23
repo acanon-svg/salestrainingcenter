@@ -31,8 +31,9 @@ export const ResultsBarLineChart: React.FC<Props> = ({ data, indicator, selected
   const chartData = useMemo(() => {
     const userMap = new Map<string, { real: number; meta: number; expected: number; email: string }>();
 
+    const EXCLUDED = ["total", "hunter", "no info"];
     const grouped = new Map<string, TeamResult[]>();
-    data.filter((r) => !r.user_email.toLowerCase().includes("total")).forEach((r) => {
+    data.filter((r) => !EXCLUDED.includes(r.user_email.toLowerCase().trim())).forEach((r) => {
       const list = grouped.get(r.user_email) || [];
       list.push(r);
       grouped.set(r.user_email, list);
