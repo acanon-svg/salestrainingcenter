@@ -50,11 +50,33 @@ export const useTeamResults = (filters?: { regional?: string; email?: string }) 
   return useQuery({
     queryKey: ["team-results", filters, profile?.email, profile?.regional, isCreatorOrAdmin],
     queryFn: async () => {
+      // Fetch all profiles for name/email resolution and regional matching
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("email, full_name, regional, team");
+
+      // Build lookup maps
+      const emailToRegional = new Map<string, string>();
+      const nameToRegional = new Map<string, string>();
+      const registeredEmails = new Set<string>();
+      const registeredNames = new Set<string>();
+
+      (profiles || []).forEach((p: any) => {
+        const email = (p.email || "").toLowerCase().trim();
+        const name = (p.full_name || "").toLowerCase().trim();
+        if (email) {
+          registeredEmails.add(email);
+          if (p.regional) emailToRegional.set(email, p.regional);
+        }
+        if (name) {
+          registeredNames.add(name);
+          if (p.regional) nameToRegional.set(name, p.regional);
+        }
+      });
+
+      // Fetch team results - don't filter by regional at DB level since it's often null
       let query = db().from("team_results").select("*").order("period_date", { ascending: true });
 
-      if (filters?.regional) {
-        query = query.eq("regional", filters.regional);
-      }
       if (filters?.email) {
         query = query.eq("user_email", filters.email);
       }
@@ -62,31 +84,34 @@ export const useTeamResults = (filters?: { regional?: string; email?: string }) 
       const { data, error } = await query;
       if (error) throw error;
 
-      // Admins/creators see ALL records without filtering
-      if (isCreatorOrAdmin) {
-        return (data || []) as TeamResult[];
+      let results = (data || []) as TeamResult[];
+
+      // For admins/creators: return all results without filtering
+      if (isCreatorOrAdmin && !filters?.regional) {
+        return results;
       }
 
-      // For leaders and students, filter to only registered users
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("email, full_name");
+      // Apply regional filter by looking up user's regional from profiles
+      if (filters?.regional) {
+        results = results.filter((r) => {
+          const key = r.user_email.toLowerCase().trim();
+          // Check if this record's regional matches directly
+          if (r.regional && r.regional === filters.regional) return true;
+          // Otherwise, look up the user's regional from profiles
+          const userRegional = emailToRegional.get(key) || nameToRegional.get(key);
+          return userRegional === filters.regional;
+        });
+      }
 
-      const registeredEmails = new Set(
-        (profiles || [])
-          .map((p: any) => (p.email || "").toLowerCase().trim())
-          .filter(Boolean)
-      );
-      const registeredNames = new Set(
-        (profiles || [])
-          .map((p: any) => (p.full_name || "").toLowerCase().trim())
-          .filter(Boolean)
-      );
+      // For non-admin users, also filter to only registered users
+      if (!isCreatorOrAdmin) {
+        results = results.filter((r) => {
+          const key = r.user_email.toLowerCase().trim();
+          return registeredEmails.has(key) || registeredNames.has(key);
+        });
+      }
 
-      return ((data || []) as TeamResult[]).filter((r) => {
-        const key = r.user_email.toLowerCase().trim();
-        return registeredEmails.has(key) || registeredNames.has(key);
-      });
+      return results;
     },
     enabled: !!profile,
   });
