@@ -109,16 +109,20 @@ export const ResultsHeatmapTable: React.FC<Props> = ({ data, indicator, selected
               <TableRow>
                 <TableHead>Ejecutivo</TableHead>
                 <TableHead className="text-right">Real</TableHead>
-                <TableHead className="text-right">Debería llevar</TableHead>
-                <TableHead className="text-right">Meta Total</TableHead>
-                <TableHead className="text-right">% Cumpl. Real</TableHead>
-                <TableHead className="text-right">% vs Esperado</TableHead>
+                <TableHead className="text-right">Meta MtD</TableHead>
+                <TableHead className="text-right">Meta Mes</TableHead>
+                <TableHead className="text-right">Cumpl. MtD</TableHead>
+                <TableHead className="text-right">Cierre Proyectado</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {tableData.map((row) => {
+                const cumplMtd = row.expected > 0 ? (row.real / row.expected) * 100 : 0;
                 const cumplReal = row.meta > 0 ? (row.real / row.meta) * 100 : 0;
-                const ratioVsExpected = row.expected > 0 ? row.real / row.expected : 0;
+                // Projected close: extrapolate real performance to full month
+                const fraction = row.meta > 0 && row.expected > 0 ? row.expected / row.meta : 0;
+                const projected = fraction > 0 ? (row.real / fraction) : 0;
+                const proyectadoPct = row.meta > 0 ? (projected / row.meta) * 100 : 0;
 
                 return (
                   <TableRow key={row.email}>
@@ -127,13 +131,13 @@ export const ResultsHeatmapTable: React.FC<Props> = ({ data, indicator, selected
                     <TableCell className="text-right tabular-nums">{row.expected.toLocaleString("es-CO")}</TableCell>
                     <TableCell className="text-right tabular-nums">{row.meta.toLocaleString("es-CO")}</TableCell>
                     <TableCell className="text-right">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${getHeatmapColor(cumplReal / 100)}`}>
-                        {cumplReal.toFixed(1)}%
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${getHeatmapColor(cumplMtd / 100)}`}>
+                        {cumplMtd.toFixed(1)}%
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${getHeatmapColor(ratioVsExpected)}`}>
-                        {(ratioVsExpected * 100).toFixed(1)}%
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${getHeatmapColor(proyectadoPct / 100)}`}>
+                        {proyectadoPct.toFixed(1)}%
                       </span>
                     </TableCell>
                   </TableRow>

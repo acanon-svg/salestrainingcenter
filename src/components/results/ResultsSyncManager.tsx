@@ -14,13 +14,13 @@ export const ResultsSyncManager: React.FC = () => {
   const triggerMutation = useTriggerSync();
 
   const [sheetUrl, setSheetUrl] = useState("");
-  const [sheetName, setSheetName] = useState("Resultados");
+  const [sheetName, setSheetName] = useState("Resume");
   const [enabled, setEnabled] = useState(false);
 
   useEffect(() => {
     if (syncData?.config) {
       setSheetUrl(syncData.config.sheet_url || "");
-      setSheetName(syncData.config.sheet_name || "Resultados");
+      setSheetName(syncData.config.sheet_name || "Resume");
       setEnabled(syncData.config.enabled || false);
     }
   }, [syncData]);
@@ -35,7 +35,7 @@ export const ResultsSyncManager: React.FC = () => {
       }),
       enabled,
       sheet_url: sheetUrl.trim(),
-      sheet_name: sheetName.trim() || "Resultados",
+      sheet_name: sheetName.trim() || "Resume",
     };
 
     saveMutation.mutate({ id: syncData?.id || null, config });
@@ -49,7 +49,7 @@ export const ResultsSyncManager: React.FC = () => {
   const hasChanges =
     config &&
     (sheetUrl.trim() !== (config.sheet_url || "") ||
-      sheetName.trim() !== (config.sheet_name || "Resultados") ||
+      sheetName.trim() !== (config.sheet_name || "Resume") ||
       enabled !== (config.enabled || false));
 
   if (isLoading) {

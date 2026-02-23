@@ -15,7 +15,7 @@ export interface ResultsSyncConfig {
 const DEFAULT_CONFIG: ResultsSyncConfig = {
   enabled: false,
   sheet_url: "",
-  sheet_name: "Resultados",
+  sheet_name: "Resume",
   last_sync_at: null,
   last_sync_status: null,
   last_sync_count: null,

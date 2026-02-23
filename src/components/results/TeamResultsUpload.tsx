@@ -55,7 +55,70 @@ const normalizeHeader = (h: string): string => {
     .replace(/\s+/g, "_");
 };
 
-const parseRows = (rows: Record<string, any>[]): { data: TeamResultInsert[]; errors: string[] } => {
+const parseNumVal = (val: any): number => {
+  if (val == null) return 0;
+  if (typeof val === "number") return val;
+  return Number(String(val).replace(/%/g, "").replace(/,/g, "").replace(/\$/g, "").trim()) || 0;
+};
+
+const isResumeFormat = (headers: string[]): boolean => {
+  const normalized = headers.map(h => normalizeHeader(h));
+  return !normalized.some(h => h.includes("correo") || h.includes("email") || h.includes("user_email"));
+};
+
+/** Parse Resume sheet by column position (B=1, D=3, E=4, F=5, J=9, K=10, L=11, P=15, Q=16, R=17) */
+const parseResumeRows = (rawRows: any[][]): { data: TeamResultInsert[]; errors: string[] } => {
+  const data: TeamResultInsert[] = [];
+  const errors: string[] = [];
+  const now = new Date();
+  const periodDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+
+  for (let i = 0; i < rawRows.length; i++) {
+    const cols = rawRows[i];
+    const name = String(cols[1] || "").trim();
+    if (!name) continue;
+
+    const firmasReal = parseNumVal(cols[3]);
+    const firmasMetaMtd = parseNumVal(cols[4]);
+    const firmasMetaMes = parseNumVal(cols[5]);
+    const origReal = parseNumVal(cols[9]);
+    const origMetaMtd = parseNumVal(cols[10]);
+    const origMetaMes = parseNumVal(cols[11]);
+    const gmvReal = parseNumVal(cols[15]);
+    const gmvMetaMtd = parseNumVal(cols[16]);
+    const gmvMetaMes = parseNumVal(cols[17]);
+
+    let diasFraction = 0;
+    if (firmasMetaMes > 0 && firmasMetaMtd > 0) {
+      diasFraction = Math.min(firmasMetaMtd / firmasMetaMes, 1);
+    } else if (origMetaMes > 0 && origMetaMtd > 0) {
+      diasFraction = Math.min(origMetaMtd / origMetaMes, 1);
+    } else if (gmvMetaMes > 0 && gmvMetaMtd > 0) {
+      diasFraction = Math.min(gmvMetaMtd / gmvMetaMes, 1);
+    }
+
+    const diasHabilesMes = 20;
+    const diasHabilesTranscurridos = Math.round(diasFraction * diasHabilesMes);
+
+    data.push({
+      user_email: name.toLowerCase().trim(),
+      firmas_real: firmasReal,
+      firmas_meta: firmasMetaMes,
+      originaciones_real: origReal,
+      originaciones_meta: origMetaMes,
+      gmv_real: gmvReal,
+      gmv_meta: gmvMetaMes,
+      period_date: periodDate,
+      weeks_in_month: 4,
+      dias_habiles_transcurridos: diasHabilesTranscurridos,
+      dias_habiles_mes: diasHabilesMes,
+    });
+  }
+
+  return { data, errors };
+};
+
+const parseLegacyRows = (rows: Record<string, any>[]): { data: TeamResultInsert[]; errors: string[] } => {
   const data: TeamResultInsert[] = [];
   const errors: string[] = [];
 
@@ -71,9 +134,7 @@ const parseRows = (rows: Record<string, any>[]): { data: TeamResultInsert[]; err
       return;
     }
 
-    // Determine period_date from mes+año or from fecha
     let periodDate: string;
-
     const mes = normalized.mes || normalized.month;
     const ano = normalized.ano || normalized.año || normalized.year;
 
@@ -90,7 +151,6 @@ const parseRows = (rows: Record<string, any>[]): { data: TeamResultInsert[]; err
       }
       periodDate = `${yearNum}-${String(monthNum).padStart(2, "0")}-01`;
     } else {
-      // Fallback: try fecha/date column
       const dateVal = normalized.fecha || normalized.date || normalized.period_date;
       if (dateVal instanceof Date) {
         periodDate = dateVal.toISOString().split("T")[0];
@@ -138,6 +198,22 @@ const parseRows = (rows: Record<string, any>[]): { data: TeamResultInsert[]; err
   });
 
   return { data, errors };
+};
+
+/** Auto-detect format and parse accordingly */
+const parseRows = (rows: Record<string, any>[]): { data: TeamResultInsert[]; errors: string[] } => {
+  if (rows.length === 0) return { data: [], errors: [] };
+  const headers = Object.keys(rows[0]);
+  if (isResumeFormat(headers)) {
+    // Need raw arrays for position-based parsing - convert back
+    const rawRows = rows.map(row => {
+      const vals: any[] = [];
+      Object.values(row).forEach((v, i) => { vals[i] = v; });
+      return vals;
+    });
+    return parseResumeRows(rawRows);
+  }
+  return parseLegacyRows(rows);
 };
 
 const handleDownloadTemplate = () => {
@@ -255,9 +331,9 @@ export const TeamResultsUpload: React.FC = () => {
       }
 
       // Use edge function proxy to avoid CORS issues
-      // Always target the "Resultados" sheet by name, and use gviz endpoint for formulated values
+      // Target the "Resume" sheet by default
       const { data, error } = await supabase.functions.invoke("fetch-google-sheet", {
-        body: { url: sheetUrl.trim(), sheetName: "Resultados" },
+        body: { url: sheetUrl.trim(), sheetName: "Resume" },
       });
 
       if (error) {
