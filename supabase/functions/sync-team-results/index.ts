@@ -122,18 +122,19 @@ function parseResumeRows(rawRows: string[][]): { data: ParsedRow[]; errors: stri
     const gmvMetaMtd = parseNum(cols[16]);     // Q
     const gmvMetaMes = parseNum(cols[17]);     // R
 
-    // Back-calculate dias fraction from Meta MtD / Meta Mes
-    let diasFraction = 0;
-    if (firmasMetaMes > 0 && firmasMetaMtd > 0) {
-      diasFraction = Math.min(firmasMetaMtd / firmasMetaMes, 1);
-    } else if (origMetaMes > 0 && origMetaMtd > 0) {
-      diasFraction = Math.min(origMetaMtd / origMetaMes, 1);
-    } else if (gmvMetaMes > 0 && gmvMetaMtd > 0) {
-      diasFraction = Math.min(gmvMetaMtd / gmvMetaMes, 1);
-    }
+    // Column V (index 21) = Días hábiles transcurridos from the sheet
+    const diasHabilesTranscurridos = parseNum(cols[21]) || 0;
 
-    const diasHabilesMes = 20;
-    const diasHabilesTranscurridos = Math.round(diasFraction * diasHabilesMes);
+    // Back-calculate total business days from Meta MtD / Meta Mes ratio
+    let diasHabilesMes = 20; // fallback
+    if (diasHabilesTranscurridos > 0) {
+      if (firmasMetaMes > 0 && firmasMetaMtd > 0) {
+        diasHabilesMes = Math.round(diasHabilesTranscurridos / (firmasMetaMtd / firmasMetaMes));
+      } else if (origMetaMes > 0 && origMetaMtd > 0) {
+        diasHabilesMes = Math.round(diasHabilesTranscurridos / (origMetaMtd / origMetaMes));
+      }
+      if (diasHabilesMes < diasHabilesTranscurridos) diasHabilesMes = diasHabilesTranscurridos;
+    }
 
     data.push({
       user_email: name.toLowerCase().trim(),
