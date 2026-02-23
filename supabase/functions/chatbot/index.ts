@@ -496,7 +496,7 @@ serve(async (req) => {
 
     // Fetch all context data in parallel - no limits to include ALL content
     const [configResult, teamDataResult, coursesResult, materialsResult, announcementsResult, glossaryResult] = await Promise.all([
-      supabase.from("chatbot_config").select("system_prompt").single(),
+      supabase.from("chatbot_config").select("system_prompt, auto_generated_prompt").single(),
       supabase.from("chatbot_team_data").select("data_name, data_content, description").order("created_at", { ascending: false }),
       supabase.from("courses").select(`
         title, description, dimension, difficulty, points, estimated_duration_minutes, objectives, tags,
@@ -511,10 +511,17 @@ serve(async (req) => {
       supabase.from("glossary_terms").select("term, definition, example"),
     ]);
 
-    let systemPrompt = configResult.data?.system_prompt || 
+    const configData = configResult.data as { system_prompt?: string; auto_generated_prompt?: string } | null;
+    const manualPrompt = configData?.system_prompt || 
       "Eres un asistente virtual experto en procesos comerciales. Responde de manera clara, concisa y profesional en español.";
+    const autoPrompt = configData?.auto_generated_prompt || "";
 
-    // Append all context to system prompt
+    // Use auto-generated prompt as base if available, otherwise fall back to manual + dynamic
+    let systemPrompt = autoPrompt 
+      ? `${manualPrompt}\n\n${autoPrompt}` 
+      : manualPrompt;
+
+    // Always append dynamic context on top of stored prompt
     systemPrompt += "\n\nTienes acceso a toda la información de la plataforma de capacitación. Usa este conocimiento para ayudar a los usuarios.";
     
     // Process team data (including fetching Google Sheets)

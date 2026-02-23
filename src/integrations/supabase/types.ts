@@ -304,6 +304,7 @@ export type Database = {
       }
       chatbot_config: {
         Row: {
+          auto_generated_prompt: string | null
           avatar_url: string | null
           bot_name: string
           enabled: boolean
@@ -315,6 +316,7 @@ export type Database = {
           welcome_message: string
         }
         Insert: {
+          auto_generated_prompt?: string | null
           avatar_url?: string | null
           bot_name?: string
           enabled?: boolean
@@ -326,6 +328,7 @@ export type Database = {
           welcome_message?: string
         }
         Update: {
+          auto_generated_prompt?: string | null
           avatar_url?: string | null
           bot_name?: string
           enabled?: boolean
@@ -335,6 +338,42 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           welcome_message?: string
+        }
+        Relationships: []
+      }
+      chatbot_prompt_history: {
+        Row: {
+          announcements_count: number
+          courses_count: number
+          created_at: string
+          generated_by: string | null
+          generated_prompt: string
+          glossary_count: number
+          id: string
+          materials_count: number
+          team_data_count: number
+        }
+        Insert: {
+          announcements_count?: number
+          courses_count?: number
+          created_at?: string
+          generated_by?: string | null
+          generated_prompt: string
+          glossary_count?: number
+          id?: string
+          materials_count?: number
+          team_data_count?: number
+        }
+        Update: {
+          announcements_count?: number
+          courses_count?: number
+          created_at?: string
+          generated_by?: string | null
+          generated_prompt?: string
+          glossary_count?: number
+          id?: string
+          materials_count?: number
+          team_data_count?: number
         }
         Relationships: []
       }
