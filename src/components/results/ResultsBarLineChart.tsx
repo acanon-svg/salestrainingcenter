@@ -32,7 +32,7 @@ export const ResultsBarLineChart: React.FC<Props> = ({ data, indicator, selected
     const userMap = new Map<string, { real: number; meta: number; expected: number; email: string }>();
 
     const grouped = new Map<string, TeamResult[]>();
-    data.forEach((r) => {
+    data.filter((r) => !r.user_email.toLowerCase().includes("total")).forEach((r) => {
       const list = grouped.get(r.user_email) || [];
       list.push(r);
       grouped.set(r.user_email, list);
