@@ -391,6 +391,28 @@ serve(async (req) => {
       );
     }
 
+    // Enrich records with regional/team from profiles
+    const { data: profilesList } = await supabase
+      .from('profiles')
+      .select('email, full_name, regional, team');
+
+    const emailToProfile = new Map<string, { regional?: string; team?: string }>();
+    const nameToProfile = new Map<string, { regional?: string; team?: string }>();
+    for (const p of (profilesList || [])) {
+      const info = { regional: p.regional || undefined, team: p.team || undefined };
+      if (p.email) emailToProfile.set(p.email.toLowerCase().trim(), info);
+      if (p.full_name) nameToProfile.set(p.full_name.toLowerCase().trim(), info);
+    }
+
+    for (const row of parsedData) {
+      const key = row.user_email.toLowerCase().trim();
+      const profileInfo = emailToProfile.get(key) || nameToProfile.get(key);
+      if (profileInfo) {
+        if (!row.regional && profileInfo.regional) row.regional = profileInfo.regional;
+        if (!row.team && profileInfo.team) row.team = profileInfo.team;
+      }
+    }
+
     // Upsert data in chunks
     const chunkSize = 500;
     let totalInserted = 0;
