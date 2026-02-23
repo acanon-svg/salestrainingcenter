@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Bot, Save, Loader2, MessageCircle, Palette, FileText, User, RefreshCw } from "lucide-react";
+import { Bot, Save, Loader2, MessageCircle, Palette, FileText, User, RefreshCw, Sparkles, History, BookOpen } from "lucide-react";
 import { AvatarUpload } from "./AvatarUpload";
 import { TeamDataManager } from "./TeamDataManager";
+import { PromptGeneratorSection } from "./PromptGeneratorSection";
 
 export const ChatbotSettings: React.FC = () => {
   const { config, isLoading, updateConfig, refetch } = useChatbotConfig();
@@ -177,7 +178,7 @@ export const ChatbotSettings: React.FC = () => {
           <div className="space-y-2">
             <Label htmlFor="system_prompt" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
-              Instrucciones del Bot (System Prompt)
+              Instrucciones del Bot (System Prompt Manual)
             </Label>
             <Textarea
               id="system_prompt"
@@ -189,7 +190,7 @@ export const ChatbotSettings: React.FC = () => {
               className="font-mono text-sm"
             />
             <p className="text-xs text-muted-foreground">
-              Define el comportamiento, conocimiento y personalidad del bot. Aquí puedes incluir información específica sobre procesos comerciales.
+              Define el comportamiento y personalidad del bot. El prompt auto-generado con toda la información de cursos y materiales se agrega automáticamente.
             </p>
           </div>
 
@@ -223,6 +224,9 @@ export const ChatbotSettings: React.FC = () => {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Auto-Generated Prompt Section */}
+      <PromptGeneratorSection />
 
       {/* Team Data Manager */}
       <TeamDataManager />
