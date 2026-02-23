@@ -49,6 +49,17 @@ export const useTeamResults = (filters?: { regional?: string; email?: string }) 
   return useQuery({
     queryKey: ["team-results", filters, profile?.email, profile?.regional],
     queryFn: async () => {
+      // Fetch registered profile names to filter results
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("full_name");
+
+      const registeredNames = new Set(
+        (profiles || [])
+          .map((p: any) => (p.full_name || "").toLowerCase().trim())
+          .filter(Boolean)
+      );
+
       let query = db().from("team_results").select("*").order("period_date", { ascending: true });
 
       if (filters?.regional) {
@@ -60,7 +71,11 @@ export const useTeamResults = (filters?: { regional?: string; email?: string }) 
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data || []) as TeamResult[];
+
+      // Only return results for registered users
+      return ((data || []) as TeamResult[]).filter((r) =>
+        registeredNames.has(r.user_email.toLowerCase().trim())
+      );
     },
     enabled: !!profile,
   });
