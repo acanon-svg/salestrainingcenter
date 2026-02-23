@@ -1,4 +1,6 @@
 import React, { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { TeamResult } from "@/hooks/useTeamResults";
@@ -24,6 +26,22 @@ const getHeatmapColor = (ratio: number): string => {
 };
 
 export const ResultsHeatmapTable: React.FC<Props> = ({ data, indicator, selectedMonth, selectedYear }) => {
+  const { data: profilesList } = useQuery({
+    queryKey: ["profiles-names"],
+    queryFn: async () => {
+      const { data } = await supabase.from("profiles").select("email, full_name");
+      return data || [];
+    },
+  });
+
+  const profileNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    (profilesList || []).forEach((p: any) => {
+      if (p.email && p.full_name) map.set(p.email.toLowerCase(), p.full_name);
+    });
+    return map;
+  }, [profilesList]);
+
   const tableData = useMemo(() => {
     const userMap = new Map<string, { real: number; meta: number; expected: number; email: string }>();
 
@@ -41,12 +59,11 @@ export const ResultsHeatmapTable: React.FC<Props> = ({ data, indicator, selected
 
     const now = new Date();
     const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth() + 1; // 1-indexed
+    const currentMonth = now.getMonth() + 1;
 
     const viewYear = selectedYear ?? currentYear;
     const viewMonth = selectedMonth ?? currentMonth;
     const isPast = viewYear < currentYear || (viewYear === currentYear && viewMonth < currentMonth);
-    const isCurrent = viewYear === currentYear && viewMonth === currentMonth;
 
     grouped.forEach((records, email) => {
       let totalReal = 0;
@@ -83,12 +100,12 @@ export const ResultsHeatmapTable: React.FC<Props> = ({ data, indicator, selected
         }
       });
 
-      const name = email.split("@")[0].replace(/\./g, " ");
+      const name = profileNameMap.get(email.toLowerCase()) || email.split("@")[0].replace(/\./g, " ");
       userMap.set(email, { real: totalReal, meta: totalMeta, expected: totalExpected, email: name });
     });
 
     return Array.from(userMap.values()).sort((a, b) => b.real - a.real);
-  }, [data, indicator]);
+  }, [data, indicator, profileNameMap]);
 
   if (tableData.length === 0) {
     return (

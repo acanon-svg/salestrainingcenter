@@ -104,11 +104,16 @@ function parseResumeRows(rawRows: string[][]): { data: ParsedRow[]; errors: stri
 
   for (let i = 0; i < rawRows.length; i++) {
     const cols = rawRows[i];
-    const name = (cols[1] || '').trim(); // Column B
+    const name = (cols[1] || '').trim(); // Column B - Name
     if (!name) continue;
 
     // Skip aggregate/invalid rows
     if (EXCLUDED_NAMES.includes(name.toLowerCase())) continue;
+
+    // Column U (index 20) = Email of the executive
+    const email = (cols[20] || '').trim().toLowerCase();
+    // Use email if available, otherwise fall back to name
+    const userIdentifier = email || name.toLowerCase().trim();
 
     const firmasReal = parseNum(cols[3]);      // D
     const firmasMetaMtd = parseNum(cols[4]);   // E
@@ -137,7 +142,7 @@ function parseResumeRows(rawRows: string[][]): { data: ParsedRow[]; errors: stri
     }
 
     data.push({
-      user_email: name.toLowerCase().trim(),
+      user_email: userIdentifier,
       firmas_real: firmasReal,
       firmas_meta: firmasMetaMes,
       originaciones_real: origReal,
