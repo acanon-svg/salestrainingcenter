@@ -391,6 +391,9 @@ serve(async (req) => {
       );
     }
 
+    // Skip rows without a valid email (name-only identifiers)
+    parsedData = parsedData.filter(r => r.user_email.includes('@'));
+
     // Enrich records with regional/team from profiles
     const { data: profilesList } = await supabase
       .from('profiles')
@@ -413,11 +416,20 @@ serve(async (req) => {
       }
     }
 
+    // Deduplicate by user_email + period_date (keep last occurrence)
+    const deduped = new Map<string, ParsedRow>();
+    for (const row of parsedData) {
+      const key = `${row.user_email.toLowerCase().trim()}|${row.period_date}`;
+      deduped.set(key, row);
+    }
+    const uniqueData = Array.from(deduped.values());
+    console.log(`[sync] Deduplicated: ${parsedData.length} -> ${uniqueData.length} records`);
+
     // Upsert data in chunks
     const chunkSize = 500;
     let totalInserted = 0;
-    for (let i = 0; i < parsedData.length; i += chunkSize) {
-      const chunk = parsedData.slice(i, i + chunkSize);
+    for (let i = 0; i < uniqueData.length; i += chunkSize) {
+      const chunk = uniqueData.slice(i, i + chunkSize);
       const { error: upsertError } = await supabase
         .from('team_results')
         .upsert(chunk, { onConflict: 'user_email,period_date' });
