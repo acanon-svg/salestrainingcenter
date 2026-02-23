@@ -34,12 +34,16 @@ export const ResultsHeatmapTable: React.FC<Props> = ({ data, indicator, selected
     },
   });
 
-  const profileNameMap = useMemo(() => {
-    const map = new Map<string, string>();
+  const { profileNameMap, nameToEmailMap } = useMemo(() => {
+    const nameMap = new Map<string, string>();
+    const reverseMap = new Map<string, string>();
     (profilesList || []).forEach((p: any) => {
-      if (p.email && p.full_name) map.set(p.email.toLowerCase(), p.full_name);
+      if (p.email && p.full_name) {
+        nameMap.set(p.email.toLowerCase(), p.full_name);
+        reverseMap.set(p.full_name.toLowerCase(), p.full_name);
+      }
     });
-    return map;
+    return { profileNameMap: nameMap, nameToEmailMap: reverseMap };
   }, [profilesList]);
 
   const tableData = useMemo(() => {
@@ -100,7 +104,7 @@ export const ResultsHeatmapTable: React.FC<Props> = ({ data, indicator, selected
         }
       });
 
-      const name = profileNameMap.get(email.toLowerCase()) || email.split("@")[0].replace(/\./g, " ");
+      const name = profileNameMap.get(email.toLowerCase()) || nameToEmailMap.get(email.toLowerCase()) || email.split("@")[0].replace(/\./g, " ");
       userMap.set(email, { real: totalReal, meta: totalMeta, expected: totalExpected, email: name });
     });
 

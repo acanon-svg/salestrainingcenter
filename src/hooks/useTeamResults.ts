@@ -45,21 +45,11 @@ const db = () => supabase as any;
 
 export const useTeamResults = (filters?: { regional?: string; email?: string }) => {
   const { profile, hasRole } = useAuth();
+  const isCreatorOrAdmin = hasRole("creator") || hasRole("admin");
 
   return useQuery({
-    queryKey: ["team-results", filters, profile?.email, profile?.regional],
+    queryKey: ["team-results", filters, profile?.email, profile?.regional, isCreatorOrAdmin],
     queryFn: async () => {
-      // Fetch registered profile emails to filter results
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("email");
-
-      const registeredEmails = new Set(
-        (profiles || [])
-          .map((p: any) => (p.email || "").toLowerCase().trim())
-          .filter(Boolean)
-      );
-
       let query = db().from("team_results").select("*").order("period_date", { ascending: true });
 
       if (filters?.regional) {
@@ -72,10 +62,31 @@ export const useTeamResults = (filters?: { regional?: string; email?: string }) 
       const { data, error } = await query;
       if (error) throw error;
 
-      // Only return results for registered users
-      return ((data || []) as TeamResult[]).filter((r) =>
-        registeredEmails.has(r.user_email.toLowerCase().trim())
+      // Admins/creators see ALL records without filtering
+      if (isCreatorOrAdmin) {
+        return (data || []) as TeamResult[];
+      }
+
+      // For leaders and students, filter to only registered users
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("email, full_name");
+
+      const registeredEmails = new Set(
+        (profiles || [])
+          .map((p: any) => (p.email || "").toLowerCase().trim())
+          .filter(Boolean)
       );
+      const registeredNames = new Set(
+        (profiles || [])
+          .map((p: any) => (p.full_name || "").toLowerCase().trim())
+          .filter(Boolean)
+      );
+
+      return ((data || []) as TeamResult[]).filter((r) => {
+        const key = r.user_email.toLowerCase().trim();
+        return registeredEmails.has(key) || registeredNames.has(key);
+      });
     },
     enabled: !!profile,
   });
