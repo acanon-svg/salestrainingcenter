@@ -117,6 +117,7 @@ export interface CourseEnrollment {
   completed_at: string | null;
   score: number | null;
   points_earned: number;
+  personal_expires_at: string | null;
   created_at: string;
   updated_at: string;
   // Joined
