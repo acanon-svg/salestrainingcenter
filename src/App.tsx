@@ -32,6 +32,7 @@ import TeamFeedbackForms from "@/pages/TeamFeedbackForms";
 import TeamFeedbackView from "@/pages/TeamFeedbackView";
 import Results from "@/pages/Results";
 import Followups from "@/pages/Followups";
+import ResetPassword from "@/pages/ResetPassword";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
@@ -151,6 +152,7 @@ const AppRoutes = () => {
           </PublicRoute>
         }
       />
+      <Route path="/reset-password" element={<ResetPassword />} />
       
       {/* Protected Routes - All Users */}
       <Route
