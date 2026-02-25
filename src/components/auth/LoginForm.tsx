@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Mail, Lock, User, Loader2 } from "lucide-react";
 import addiTrainingLogo from "@/assets/addi-training-logo.svg";
+import { ForgotPasswordDialog } from "@/components/auth/ForgotPasswordDialog";
 
 export const LoginForm: React.FC = () => {
   const { signInWithEmail, signUpWithEmail } = useAuth();
@@ -15,6 +16,7 @@ export const LoginForm: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [fullName, setFullName] = useState("");
 
   const registrationEnabled = getSetting("registration_enabled", false);
@@ -110,6 +112,13 @@ export const LoginForm: React.FC = () => {
                         )}
                       </Button>
                     </form>
+                    <button
+                      type="button"
+                      onClick={() => setShowForgotPassword(true)}
+                      className="w-full text-sm text-primary hover:underline mt-2"
+                    >
+                      ¿Olvidaste tu contraseña?
+                    </button>
                   </TabsContent>
 
                   <TabsContent value="register" className="space-y-4 mt-4">
@@ -175,50 +184,59 @@ export const LoginForm: React.FC = () => {
                   </TabsContent>
                 </Tabs>
               ) : (
-                /* Login only - no registration */
-                <form onSubmit={handleEmailSignIn} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="login-email">Correo electrónico</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="login-email"
-                        type="email"
-                        placeholder="tu.nombre@addi.com"
-                        className="pl-10 h-11"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                      />
+                <>
+                  {/* Login only - no registration */}
+                  <form onSubmit={handleEmailSignIn} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="login-email">Correo electrónico</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          id="login-email"
+                          type="email"
+                          placeholder="tu.nombre@addi.com"
+                          className="pl-10 h-11"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          required
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="login-password">Contraseña</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="login-password"
-                        type="password"
-                        placeholder="••••••••"
-                        className="pl-10 h-11"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                      />
+                    <div className="space-y-2">
+                      <Label htmlFor="login-password">Contraseña</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          id="login-password"
+                          type="password"
+                          placeholder="••••••••"
+                          className="pl-10 h-11"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          required
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <Button
-                    type="submit"
-                    className="w-full h-11 text-base font-medium"
-                    disabled={isLoading}
+                    <Button
+                      type="submit"
+                      className="w-full h-11 text-base font-medium"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        "Iniciar Sesión"
+                      )}
+                    </Button>
+                  </form>
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPassword(true)}
+                    className="w-full text-sm text-primary hover:underline mt-2"
                   >
-                    {isLoading ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      "Iniciar Sesión"
-                    )}
-                  </Button>
-                </form>
+                    ¿Olvidaste tu contraseña?
+                  </button>
+                </>
               )}
 
               {/* Domain restriction notice */}
@@ -236,6 +254,8 @@ export const LoginForm: React.FC = () => {
           2026 - Todos los derechos reservados
         </p>
       </footer>
+
+      <ForgotPasswordDialog open={showForgotPassword} onOpenChange={setShowForgotPassword} />
     </div>
   );
 };
