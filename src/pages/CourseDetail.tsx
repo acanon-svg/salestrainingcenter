@@ -183,9 +183,13 @@ const CourseDetail: React.FC = () => {
 
   const enrollment = enrollments?.find((e) => e.course_id === id);
   const isCourseExpired = useMemo(() => {
+    // If the enrollment has a personal expiration, use that instead of the course global one
+    if (enrollment?.personal_expires_at) {
+      return new Date(enrollment.personal_expires_at) < new Date();
+    }
     if (!course?.expires_at) return false;
     return new Date(course.expires_at) < new Date();
-  }, [course?.expires_at]);
+  }, [course?.expires_at, enrollment?.personal_expires_at]);
   const completedMaterialIds = new Set(materialProgress?.filter((p) => p.completed).map((p) => p.material_id) || []);
 
   // Calculate progress
@@ -390,10 +394,10 @@ const CourseDetail: React.FC = () => {
                           Tendrás {course.time_limit_minutes} minutos para completarlo una vez inscrito
                         </span>
                       )}
-                      {isCourseExpired && (
+                      {isCourseExpired && !enrollment && (
                         <span className="block text-warning mt-1">
                           <AlertTriangle className="w-3 h-3 inline mr-1" />
-                          Este curso está vencido. Si lo completas, recibirás solo el 50% de los puntos ({Math.floor((course?.points || 0) / 2)} pts).
+                          Este curso ya venció, pero al inscribirte tendrás 10 días hábiles para completarlo con el 100% de los puntos ({course?.points || 0} pts).
                         </span>
                       )}
                     </p>
@@ -424,7 +428,15 @@ const CourseDetail: React.FC = () => {
           <Card className="border-primary/20 bg-primary/5">
             <CardContent className="py-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="font-medium">Tu progreso</span>
+                <div className="flex items-center gap-3">
+                  <span className="font-medium">Tu progreso</span>
+                  {enrollment.personal_expires_at && enrollment.status !== "completed" && (
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${isCourseExpired ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>
+                      <Clock className="w-3 h-3 inline mr-1" />
+                      {isCourseExpired ? 'Plazo vencido' : `Vence: ${new Date(enrollment.personal_expires_at).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })}`}
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-3">
                   <span className="text-lg font-bold text-primary">{progressPercentage}%</span>
                   {enrollment.status === "completed" && (

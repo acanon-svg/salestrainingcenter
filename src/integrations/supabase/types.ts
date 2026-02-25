@@ -653,6 +653,7 @@ export type Database = {
           course_id: string
           created_at: string
           id: string
+          personal_expires_at: string | null
           points_earned: number | null
           progress_percentage: number
           score: number | null
@@ -666,6 +667,7 @@ export type Database = {
           course_id: string
           created_at?: string
           id?: string
+          personal_expires_at?: string | null
           points_earned?: number | null
           progress_percentage?: number
           score?: number | null
@@ -679,6 +681,7 @@ export type Database = {
           course_id?: string
           created_at?: string
           id?: string
+          personal_expires_at?: string | null
           points_earned?: number | null
           progress_percentage?: number
           score?: number | null
@@ -2366,6 +2369,10 @@ export type Database = {
       }
     }
     Functions: {
+      add_business_days: {
+        Args: { num_days: number; start_date: string }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
