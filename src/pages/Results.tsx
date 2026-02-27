@@ -98,6 +98,22 @@ const Results: React.FC = () => {
           </Tabs>
         ) : isLeader ? (
           <div className="space-y-8">
+            <div className="flex justify-end">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => triggerMutation.mutate()}
+                disabled={triggerMutation.isPending}
+                className="gap-2"
+              >
+                {triggerMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+                Sincronizar ahora
+              </Button>
+            </div>
             <ResultsSection
               showTeamChart
               showTimePeriodFilter
