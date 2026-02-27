@@ -95,7 +95,10 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
 
     // Total commission calculation
     const porcentajeTotal = participacionOriginaciones + participacionGMV;
-    const comisionBase = (porcentajeTotal / 100) * effectiveConfig.base_comisional;
+    const indicadoresCumplen = porcentajeTotal >= 85;
+    const comisionBase = (candadoDesbloqueado && indicadoresCumplen)
+      ? (porcentajeTotal / 100) * effectiveConfig.base_comisional
+      : 0;
 
     // Accelerator calculation
     // Only applies if originaciones >= 100% AND GMV >= 100%
@@ -132,6 +135,7 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
     return {
       porcentajeFirmas,
       candadoDesbloqueado,
+      indicadoresCumplen,
       porcentajeOriginaciones,
       participacionOriginaciones,
       porcentajeGMV,
@@ -146,12 +150,21 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
   }, [firmasReales, originacionesReales, gmvReal, effectiveConfig, accelerators]);
 
   const getCommissionMessage = () => {
-    const { comisionTotal, candadoDesbloqueado } = calculations;
+    const { comisionTotal, candadoDesbloqueado, indicadoresCumplen } = calculations;
     
     if (!candadoDesbloqueado) {
       return {
         icon: <AlertTriangle className="h-6 w-6" />,
-        message: "⚠️ Recuerda que no has desbloqueado el candado de apertura. Aunque puedes ver tu comisión proyectada, debes alcanzar el 85% de firmas para aplicar a la bonificación.",
+        message: "⚠️ Recuerda que no has desbloqueado el candado de apertura. Debes alcanzar el 85% de firmas para aplicar a la bonificación.",
+        bgClass: "bg-destructive/10 border-destructive/30",
+        textClass: "text-destructive",
+      };
+    }
+
+    if (!indicadoresCumplen) {
+      return {
+        icon: <AlertTriangle className="h-6 w-6" />,
+        message: "⚠️ La suma ponderada de Originaciones y GMV no alcanza el 85% mínimo requerido para generar comisión.",
         bgClass: "bg-destructive/10 border-destructive/30",
         textClass: "text-destructive",
       };
