@@ -101,8 +101,8 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
       : 0;
 
     // Accelerator calculation
-    // Only applies if originaciones >= 100% AND GMV >= 100%
-    const acceleratorEligible = porcentajeOriginaciones >= 100 && porcentajeGMV >= 100;
+    // Only applies if the weighted sum of originaciones + GMV >= 100%
+    const acceleratorEligible = porcentajeTotal >= 100;
     let acceleratorBonus = 0;
     let appliedAccelerators: { min_firmas: number; bonus_percentage: number; description: string | null; bonusAmount: number }[] = [];
 
