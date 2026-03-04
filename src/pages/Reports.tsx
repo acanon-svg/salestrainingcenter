@@ -67,6 +67,7 @@ import {
   type ExportFormat,
 } from "@/lib/exportUtils";
 import { toast } from "sonner";
+import { useTeamResults } from "@/hooks/useTeamResults";
 
 // Leader-specific reports view
 const LeaderReportsView: React.FC<{ dateRange: string }> = ({ dateRange }) => {
@@ -361,6 +362,7 @@ const Reports: React.FC = () => {
   const { data: monthlyData, isLoading: loadingMonthly } = useMonthlyComparison();
   const { data: availableTeams } = useAvailableTeams();
   const { data: availableRegionals } = useAvailableRegionals();
+  const { data: teamResultsData, isLoading: loadingTeamResults } = useTeamResults();
 
   const handleExport = (type: "regional" | "teams" | "courses" | "monthly" | "full", format: ExportFormat) => {
     try {
@@ -676,7 +678,7 @@ const Reports: React.FC = () => {
             </div>
 
             <div className="grid gap-6 lg:grid-cols-2">
-              <TrendLineChart data={trendData} isLoading={loadingTrend} dateRange={dateRange} />
+              <TrendLineChart data={trendData} isLoading={loadingTrend} dateRange={dateRange} teamResults={teamResultsData} loadingTeamResults={loadingTeamResults} />
               <MonthlyComparisonChart data={monthlyData} isLoading={loadingMonthly} />
             </div>
 
