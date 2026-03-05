@@ -27,6 +27,7 @@ import {
 interface AcceleratorManagerProps {
   configId: string;
   configName: string;
+  metaFirmas?: number;
 }
 
 export const AcceleratorManager: React.FC<AcceleratorManagerProps> = ({
