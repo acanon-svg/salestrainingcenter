@@ -81,6 +81,7 @@ const findConfigForUser = (
 const calculateAcceleratorBonus = (
   accelerators: CommissionAccelerator[],
   firmasCompliancePct: number,
+  firmasReal: number,
   totalPct: number,
   baseCommissionAmount: number
 ) => {
@@ -93,11 +94,11 @@ const calculateAcceleratorBonus = (
   const applied: { min_firmas: number; bonus_percentage: number; description: string | null; amount: number }[] = [];
 
   // Find the highest applicable accelerator
-  // min_firmas is a percentage threshold (e.g. 120 means >= 120% of meta firmas)
-  // Compare firmasCompliancePct against the threshold percentage
+  // min_firmas is an ABSOLUTE number of signatures required (e.g. 61, 66, 72, 77)
+  // Compare actual firmas count against the threshold
   let bestAccelerator: CommissionAccelerator | null = null;
   accelerators.forEach((acc) => {
-    if (firmasCompliancePct >= acc.min_firmas) {
+    if (firmasReal >= acc.min_firmas) {
       if (!bestAccelerator || acc.min_firmas > bestAccelerator.min_firmas) {
         bestAccelerator = acc;
       }
