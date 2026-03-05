@@ -256,8 +256,8 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
   const commissionMessage = getCommissionMessage();
 
   return (
-    <div className="space-y-6">
-      {/* Month Selector - Only for students and leaders */}
+    <div className="space-y-4">
+      {/* Month Selector */}
       {!isCreatorOrAdmin && (
         <MonthSelector
           selectedMonth={selectedMonth}
@@ -267,256 +267,248 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
         />
       )}
 
-      {/* Configuration Info */}
-      <Card className="border-muted">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Calculator className="h-5 w-5" />
-                {config.name}
-              </CardTitle>
-              {config.description && (
-                <CardDescription>{config.description}</CardDescription>
-              )}
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              {!isCreatorOrAdmin && (
-                <Badge variant="secondary">
-                  {getMonthName(selectedMonth)} {selectedYear}
-                </Badge>
-              )}
-              <Badge variant="outline">
+      {/* Top bar: Config + Commission Total */}
+      <div className="flex items-stretch gap-3 flex-wrap">
+        {/* Config Info */}
+        <Card className="border-muted flex-1 min-w-[200px]">
+          <CardContent className="py-3 px-4">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Calculator className="h-4 w-4 text-muted-foreground" />
+                <span className="font-semibold text-sm">{config.name}</span>
+                {!isCreatorOrAdmin && (
+                  <Badge variant="secondary" className="text-xs">
+                    {getMonthName(selectedMonth)} {selectedYear}
+                  </Badge>
+                )}
+              </div>
+              <Badge variant="outline" className="text-xs">
                 Base: {formatCurrency(effectiveConfig.base_comisional)}
               </Badge>
-              {monthlyConfig && !isCreatorOrAdmin && (
-                <Badge variant="default" className="bg-emerald-500">
-                  Metas del mes
-                </Badge>
-              )}
             </div>
-          </div>
-        </CardHeader>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* Variable 1: Firmas - Candado de Apertura */}
+        {/* Commission Total - Top Right */}
+        <Card className={cn(
+          "border-2 min-w-[180px]",
+          calculations.comisionTotal >= 1500000 
+            ? "bg-emerald-500/10 border-emerald-500" 
+            : calculations.comisionTotal >= 1200000 
+              ? "bg-primary/10 border-primary" 
+              : calculations.comisionTotal > 0
+                ? "bg-amber-500/10 border-amber-500"
+                : "border-muted"
+        )}>
+          <CardContent className="py-3 px-4 text-center">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Tu Comisión</p>
+            <p className={cn(
+              "text-2xl font-bold",
+              calculations.comisionTotal >= 1500000 
+                ? "text-emerald-600" 
+                : calculations.comisionTotal >= 1200000 
+                  ? "text-primary" 
+                  : calculations.comisionTotal > 0
+                    ? "text-amber-600"
+                    : "text-muted-foreground"
+            )}>
+              {formatCurrency(calculations.comisionTotal)}
+            </p>
+            {calculations.acceleratorBonus > 0 && (
+              <p className="text-[10px] text-amber-600 font-medium">
+                (incl. +{formatCurrency(calculations.acceleratorBonus)} acelerador)
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Firmas + Accelerators in one card */}
       <Card className={cn(
         "transition-all duration-300",
         calculations.candadoDesbloqueado 
           ? "border-emerald-500/50 bg-emerald-500/5" 
           : "border-destructive/50 bg-destructive/5"
       )}>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+        <CardContent className="py-3 px-4">
+          <div className="flex items-center gap-2 mb-3">
             {calculations.candadoDesbloqueado ? (
-              <LockOpen className="h-5 w-5 text-emerald-500" />
+              <LockOpen className="h-4 w-4 text-emerald-500" />
             ) : (
-              <Lock className="h-5 w-5 text-destructive" />
+              <Lock className="h-4 w-4 text-destructive" />
             )}
-            Variable 1: Candado de Apertura (Firmas)
-          </CardTitle>
-          <CardDescription>
-            Debes alcanzar mínimo el 85% de la meta de firmas para desbloquear la bonificación
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-3">
-            {/* Meta de Firmas */}
-            <div className="space-y-2">
-              <Label className="text-muted-foreground">Meta de Firmas</Label>
-              <div className="flex items-center gap-2">
-                <Target className="h-4 w-4 text-muted-foreground" />
-                <span className="text-lg font-semibold">{effectiveConfig.meta_firmas}</span>
-              </div>
-              {isCreatorOrAdmin && (
-                <p className="text-xs text-muted-foreground">
-                  Configurable desde ajustes
-                </p>
-              )}
-            </div>
+            <span className="font-semibold text-sm">Candado de Apertura (Firmas)</span>
+            <span className={cn(
+              "text-sm font-bold ml-auto",
+              calculations.candadoDesbloqueado ? "text-emerald-600" : "text-destructive"
+            )}>
+              {calculations.porcentajeFirmas.toFixed(1)}%
+            </span>
+          </div>
 
-            {/* Firmas Reales */}
-            <div className="space-y-2">
-              <Label htmlFor="firmas-reales">Firmas Realizadas</Label>
+          <div className="grid gap-3 grid-cols-3 items-end">
+            <div>
+              <Label className="text-xs text-muted-foreground">Meta</Label>
+              <div className="flex items-center gap-1">
+                <Target className="h-3 w-3 text-muted-foreground" />
+                <span className="font-semibold">{effectiveConfig.meta_firmas}</span>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="firmas-reales" className="text-xs">Firmas Realizadas</Label>
               <Input
                 id="firmas-reales"
                 type="number"
                 min={0}
                 value={firmasReales}
                 onChange={(e) => setFirmasReales(parseInt(e.target.value) || 0)}
-                className="font-mono"
+                className="font-mono h-8 text-sm"
               />
             </div>
-
-            {/* Porcentaje de Cumplimiento */}
-            <div className="space-y-2">
-              <Label className="text-muted-foreground">% Cumplimiento</Label>
-              <div className="flex items-center gap-2">
-                <Percent className="h-4 w-4 text-muted-foreground" />
-                <span className={cn(
-                  "text-lg font-bold",
-                  calculations.candadoDesbloqueado ? "text-emerald-600" : "text-destructive"
-                )}>
-                  {calculations.porcentajeFirmas.toFixed(1)}%
-                </span>
-              </div>
+            <div>
               <Progress 
                 value={Math.min(calculations.porcentajeFirmas, 100)} 
                 className="h-2"
               />
+              {!calculations.candadoDesbloqueado && (
+                <p className="text-[10px] text-destructive mt-1">
+                  Mín. 85% ({Math.ceil(effectiveConfig.meta_firmas * 0.85)} firmas)
+                </p>
+              )}
             </div>
           </div>
 
-          {!calculations.candadoDesbloqueado && (
-            <Alert variant="destructive" className="mt-4">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                ⚠️ <strong>Candado de apertura activo:</strong> No aplicas para bonificación. 
-                Necesitas alcanzar el 85% de firmas ({Math.ceil(effectiveConfig.meta_firmas * 0.85)} firmas).
-              </AlertDescription>
-            </Alert>
+          {/* Inline accelerators */}
+          {accelerators && accelerators.length > 0 && (
+            <>
+              <Separator className="my-3" />
+              <div className="flex items-center gap-2 flex-wrap">
+                <Zap className="h-3.5 w-3.5 text-amber-500" />
+                <span className="text-xs font-medium text-muted-foreground">Aceleradores:</span>
+                {accelerators.map((acc) => {
+                  const isApplied = calculations.appliedAccelerators.some(
+                    (a) => a.min_firmas === acc.min_firmas && a.bonus_percentage === acc.bonus_percentage
+                  );
+                  return (
+                    <Badge
+                      key={acc.id}
+                      variant={isApplied ? "default" : "outline"}
+                      className={cn(
+                        "text-[10px] font-mono",
+                        isApplied && "bg-amber-500 text-white"
+                      )}
+                    >
+                      ≥{acc.min_firmas}% → +{acc.bonus_percentage}%
+                      {isApplied && calculations.appliedAccelerators.find(a => a.min_firmas === acc.min_firmas)?.bonusAmount
+                        ? ` (${formatCurrency(calculations.appliedAccelerators.find(a => a.min_firmas === acc.min_firmas)!.bonusAmount)})`
+                        : ""}
+                    </Badge>
+                  );
+                })}
+                {!calculations.acceleratorEligible && (
+                  <span className="text-[10px] text-muted-foreground">(Req. 100% ponderado)</span>
+                )}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
 
-      {/* Variable 2: Originaciones M0 */}
+      {/* Originaciones M0 + M1 in one card */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-primary" />
-            Variable 2: Originaciones {usesM1 ? 'M0' : ''}
-            <Badge variant="secondary" className="ml-2">{usesM1 ? '25%' : '50%'} participación</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="space-y-2">
-              <Label className="text-muted-foreground">Meta del Mes</Label>
-              <div className="flex items-center gap-2">
-                <Target className="h-4 w-4 text-muted-foreground" />
-                <span className="text-lg font-semibold">
-                  {effectiveConfig.meta_originaciones.toLocaleString("es-CO")}
-                </span>
-              </div>
+        <CardContent className="py-3 px-4">
+          <div className="flex items-center gap-2 mb-3">
+            <DollarSign className="h-4 w-4 text-primary" />
+            <span className="font-semibold text-sm">Originaciones</span>
+            {usesM1 && <Badge variant="secondary" className="text-[10px]">M0 + M1 × 25%</Badge>}
+            {!usesM1 && <Badge variant="secondary" className="text-[10px]">50%</Badge>}
+            <span className="text-sm font-bold text-amber-600 ml-auto">
+              {(calculations.participacionOriginaciones + calculations.participacionOriginacionesM1).toFixed(2)}%
+            </span>
+          </div>
+
+          {/* M0 row */}
+          <div className="grid gap-3 grid-cols-4 items-end">
+            <div>
+              <Label className="text-xs text-muted-foreground">Meta {usesM1 ? 'M0' : ''}</Label>
+              <span className="font-semibold text-sm block">{effectiveConfig.meta_originaciones.toLocaleString("es-CO")}</span>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="originaciones-reales">Valor Real</Label>
+            <div>
+              <Label htmlFor="originaciones-reales" className="text-xs">Real {usesM1 ? 'M0' : ''}</Label>
               <Input
                 id="originaciones-reales"
                 type="number"
                 min={0}
                 value={originacionesReales}
                 onChange={(e) => setOriginacionesReales(parseFloat(e.target.value) || 0)}
-                className="font-mono"
+                className="font-mono h-8 text-sm"
               />
             </div>
-            <div className="space-y-2">
-              <Label className="text-muted-foreground">% Ejecución</Label>
-              <div className="flex items-center gap-2">
-                <Percent className="h-4 w-4 text-muted-foreground" />
-                <span className="text-lg font-bold text-primary">
-                  {calculations.porcentajeOriginaciones.toFixed(1)}%
-                </span>
-              </div>
+            <div className="text-center">
+              <Label className="text-xs text-muted-foreground">% Ejec.</Label>
+              <span className="text-sm font-bold text-primary block">{calculations.porcentajeOriginaciones.toFixed(1)}%</span>
             </div>
-            <div className="space-y-2">
-              <Label className="text-muted-foreground">Resultado (×{usesM1 ? '25' : '50'}%)</Label>
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-amber-500" />
-                <span className="text-lg font-bold text-amber-600">
-                  {calculations.participacionOriginaciones.toFixed(2)}%
-                </span>
-              </div>
+            <div className="text-center">
+              <Label className="text-xs text-muted-foreground">Res. (×{usesM1 ? '25' : '50'}%)</Label>
+              <span className="text-sm font-bold text-amber-600 block">{calculations.participacionOriginaciones.toFixed(2)}%</span>
             </div>
           </div>
-          <Progress 
-            value={Math.min(calculations.porcentajeOriginaciones, 100)} 
-            className="h-2"
-          />
+
+          {/* M1 row */}
+          {usesM1 && effectiveConfig.meta_originaciones_m1 > 0 && (
+            <>
+              <Separator className="my-2" />
+              <div className="grid gap-3 grid-cols-4 items-end">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Meta M1</Label>
+                  <span className="font-semibold text-sm block">{effectiveConfig.meta_originaciones_m1.toLocaleString("es-CO")}</span>
+                </div>
+                <div>
+                  <Label htmlFor="originaciones-reales-m1" className="text-xs">Real M1</Label>
+                  <Input
+                    id="originaciones-reales-m1"
+                    type="number"
+                    min={0}
+                    value={originacionesRealesM1}
+                    onChange={(e) => setOriginacionesRealesM1(parseFloat(e.target.value) || 0)}
+                    className="font-mono h-8 text-sm"
+                  />
+                </div>
+                <div className="text-center">
+                  <Label className="text-xs text-muted-foreground">% Ejec.</Label>
+                  <span className="text-sm font-bold text-primary block">{calculations.porcentajeOriginacionesM1.toFixed(1)}%</span>
+                </div>
+                <div className="text-center">
+                  <Label className="text-xs text-muted-foreground">Res. (×25%)</Label>
+                  <span className="text-sm font-bold text-amber-600 block">{calculations.participacionOriginacionesM1.toFixed(2)}%</span>
+                </div>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
-      {/* Variable 2b: Originaciones M1 (March+) */}
-      {usesM1 && effectiveConfig.meta_originaciones_m1 > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-primary" />
-              Variable 2b: Originaciones M1
-              <Badge variant="secondary" className="ml-2">25% participación</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">Meta M1</Label>
-                <div className="flex items-center gap-2">
-                  <Target className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-lg font-semibold">
-                    {effectiveConfig.meta_originaciones_m1.toLocaleString("es-CO")}
-                  </span>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="originaciones-reales-m1">Valor Real</Label>
-                <Input
-                  id="originaciones-reales-m1"
-                  type="number"
-                  min={0}
-                  value={originacionesRealesM1}
-                  onChange={(e) => setOriginacionesRealesM1(parseFloat(e.target.value) || 0)}
-                  className="font-mono"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">% Ejecución</Label>
-                <div className="flex items-center gap-2">
-                  <Percent className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-lg font-bold text-primary">
-                    {calculations.porcentajeOriginacionesM1.toFixed(1)}%
-                  </span>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">Resultado (×25%)</Label>
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-amber-500" />
-                  <span className="text-lg font-bold text-amber-600">
-                    {calculations.participacionOriginacionesM1.toFixed(2)}%
-                  </span>
-                </div>
-              </div>
-            </div>
-            <Progress 
-              value={Math.min(calculations.porcentajeOriginacionesM1, 100)} 
-              className="h-2"
-            />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Variable 3: GMV M0 */}
+      {/* GMV M0 + M1 in one card */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-primary" />
-            Variable 3: GMV (USD) {usesM1 ? 'M0' : ''}
-            <Badge variant="secondary" className="ml-2">{usesM1 ? '25%' : '50%'} participación</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="space-y-2">
-              <Label className="text-muted-foreground">Meta del Mes (USD)</Label>
-              <div className="flex items-center gap-2">
-                <Target className="h-4 w-4 text-muted-foreground" />
-                <span className="text-lg font-semibold">
-                  {formatCurrencyUSD(effectiveConfig.meta_gmv_usd)}
-                </span>
-              </div>
+        <CardContent className="py-3 px-4">
+          <div className="flex items-center gap-2 mb-3">
+            <DollarSign className="h-4 w-4 text-primary" />
+            <span className="font-semibold text-sm">GMV (USD)</span>
+            {usesM1 && <Badge variant="secondary" className="text-[10px]">M0 + M1 × 25%</Badge>}
+            {!usesM1 && <Badge variant="secondary" className="text-[10px]">50%</Badge>}
+            <span className="text-sm font-bold text-amber-600 ml-auto">
+              {(calculations.participacionGMV + calculations.participacionGMVM1).toFixed(2)}%
+            </span>
+          </div>
+
+          {/* M0 row */}
+          <div className="grid gap-3 grid-cols-4 items-end">
+            <div>
+              <Label className="text-xs text-muted-foreground">Meta {usesM1 ? 'M0' : '(USD)'}</Label>
+              <span className="font-semibold text-sm block">{formatCurrencyUSD(effectiveConfig.meta_gmv_usd)}</span>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="gmv-real">Valor Real (USD)</Label>
+            <div>
+              <Label htmlFor="gmv-real" className="text-xs">Real {usesM1 ? 'M0' : '(USD)'}</Label>
               <Input
                 id="gmv-real"
                 type="number"
@@ -524,258 +516,102 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
                 step={0.01}
                 value={gmvReal}
                 onChange={(e) => setGmvReal(parseFloat(e.target.value) || 0)}
-                className="font-mono"
+                className="font-mono h-8 text-sm"
               />
             </div>
-            <div className="space-y-2">
-              <Label className="text-muted-foreground">% Ejecución</Label>
-              <div className="flex items-center gap-2">
-                <Percent className="h-4 w-4 text-muted-foreground" />
-                <span className="text-lg font-bold text-primary">
-                  {calculations.porcentajeGMV.toFixed(1)}%
-                </span>
-              </div>
+            <div className="text-center">
+              <Label className="text-xs text-muted-foreground">% Ejec.</Label>
+              <span className="text-sm font-bold text-primary block">{calculations.porcentajeGMV.toFixed(1)}%</span>
             </div>
-            <div className="space-y-2">
-              <Label className="text-muted-foreground">Resultado (×{usesM1 ? '25' : '50'}%)</Label>
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-amber-500" />
-                <span className="text-lg font-bold text-amber-600">
-                  {calculations.participacionGMV.toFixed(2)}%
-                </span>
-              </div>
+            <div className="text-center">
+              <Label className="text-xs text-muted-foreground">Res. (×{usesM1 ? '25' : '50'}%)</Label>
+              <span className="text-sm font-bold text-amber-600 block">{calculations.participacionGMV.toFixed(2)}%</span>
             </div>
           </div>
-          <Progress 
-            value={Math.min(calculations.porcentajeGMV, 100)} 
-            className="h-2"
-          />
+
+          {/* M1 row */}
+          {usesM1 && effectiveConfig.meta_gmv_m1 > 0 && (
+            <>
+              <Separator className="my-2" />
+              <div className="grid gap-3 grid-cols-4 items-end">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Meta M1</Label>
+                  <span className="font-semibold text-sm block">{formatCurrencyUSD(effectiveConfig.meta_gmv_m1)}</span>
+                </div>
+                <div>
+                  <Label htmlFor="gmv-real-m1" className="text-xs">Real M1</Label>
+                  <Input
+                    id="gmv-real-m1"
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={gmvRealM1}
+                    onChange={(e) => setGmvRealM1(parseFloat(e.target.value) || 0)}
+                    className="font-mono h-8 text-sm"
+                  />
+                </div>
+                <div className="text-center">
+                  <Label className="text-xs text-muted-foreground">% Ejec.</Label>
+                  <span className="text-sm font-bold text-primary block">{calculations.porcentajeGMVM1.toFixed(1)}%</span>
+                </div>
+                <div className="text-center">
+                  <Label className="text-xs text-muted-foreground">Res. (×25%)</Label>
+                  <span className="text-sm font-bold text-amber-600 block">{calculations.participacionGMVM1.toFixed(2)}%</span>
+                </div>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
-      {/* Variable 3b: GMV M1 (March+) */}
-      {usesM1 && effectiveConfig.meta_gmv_m1 > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-primary" />
-              Variable 3b: GMV (USD) M1
-              <Badge variant="secondary" className="ml-2">25% participación</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">Meta M1 (USD)</Label>
-                <div className="flex items-center gap-2">
-                  <Target className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-lg font-semibold">
-                    {formatCurrencyUSD(effectiveConfig.meta_gmv_m1)}
-                  </span>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="gmv-real-m1">Valor Real (USD)</Label>
-                <Input
-                  id="gmv-real-m1"
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={gmvRealM1}
-                  onChange={(e) => setGmvRealM1(parseFloat(e.target.value) || 0)}
-                  className="font-mono"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">% Ejecución</Label>
-                <div className="flex items-center gap-2">
-                  <Percent className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-lg font-bold text-primary">
-                    {calculations.porcentajeGMVM1.toFixed(1)}%
-                  </span>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">Resultado (×25%)</Label>
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-amber-500" />
-                  <span className="text-lg font-bold text-amber-600">
-                    {calculations.participacionGMVM1.toFixed(2)}%
-                  </span>
-                </div>
-              </div>
+      {/* Compact Result Summary */}
+      <Card className={cn("border-2", commissionMessage.bgClass)}>
+        <CardContent className="py-3 px-4">
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Trophy className="h-5 w-5" />
+              <span className="font-semibold text-sm">Resultado Final</span>
             </div>
-            <Progress 
-              value={Math.min(calculations.porcentajeGMVM1, 100)} 
-              className="h-2"
-            />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Accelerators Section */}
-      {accelerators && accelerators.length > 0 && (
-        <Card className={cn(
-          "transition-all duration-300",
-          calculations.acceleratorEligible
-            ? "border-amber-500/30 bg-amber-500/5"
-            : "border-muted"
-        )}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Zap className="h-5 w-5 text-amber-500" />
-              Aceleradores de Firmas
-            </CardTitle>
-            <CardDescription>
-              {calculations.acceleratorEligible
-                ? "¡Cumples el 100% en el ponderado de originaciones y GMV! Los aceleradores están activos."
-                : "Para activar los aceleradores debes cumplir el 100% en el ponderado de originaciones y GMV."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {accelerators.map((acc) => {
-              const isApplied = calculations.appliedAccelerators.some(
-                (a) => a.min_firmas === acc.min_firmas && a.bonus_percentage === acc.bonus_percentage
-              );
-              return (
-                <div
-                  key={acc.id}
-                  className={cn(
-                    "flex items-center justify-between p-3 rounded-lg border",
-                    isApplied
-                      ? "bg-amber-500/10 border-amber-500/40"
-                      : "bg-muted/30 border-muted opacity-60"
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <Badge variant={isApplied ? "default" : "outline"} className={cn(
-                      "font-mono",
-                      isApplied && "bg-amber-500 text-white"
-                    )}>
-                      ≥ {acc.min_firmas}% firmas
-                    </Badge>
-                    <span className="text-sm font-medium">+{acc.bonus_percentage}% sobre comisión</span>
-                    {acc.description && (
-                      <span className="text-xs text-muted-foreground">({acc.description})</span>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    {isApplied ? (
-                      <span className="text-sm font-bold text-amber-600">
-                        +{formatCurrency(calculations.appliedAccelerators.find(
-                          (a) => a.min_firmas === acc.min_firmas
-                        )?.bonusAmount || 0)}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">No aplica</span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-
-            {!calculations.acceleratorEligible && (
-              <Alert className="mt-2">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  Necesitas alcanzar el 100% en originaciones y GMV para desbloquear los aceleradores.
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {calculations.acceleratorBonus > 0 && (
-              <div className="text-right pt-2 border-t">
-                <span className="text-sm text-muted-foreground mr-2">Total aceleradores:</span>
-                <span className="text-lg font-bold text-amber-600">
-                  +{formatCurrency(calculations.acceleratorBonus)}
-                </span>
+            <div className="flex items-center gap-4 ml-auto flex-wrap">
+              <div className="text-center">
+                <p className="text-[10px] text-muted-foreground">% Total</p>
+                <p className="text-lg font-bold text-primary">{calculations.porcentajeTotal.toFixed(2)}%</p>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      <Separator />
-
-      {/* Final Commission Result */}
-      <Card className={cn(
-        "border-2 transition-all duration-300",
-        commissionMessage.bgClass
-      )}>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <Trophy className="h-6 w-6" />
-            Resultado Final de Comisión
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className={cn(
-            "grid gap-4",
-            calculations.acceleratorBonus > 0 ? "sm:grid-cols-4" : "sm:grid-cols-3"
-          )}>
-            {/* Porcentaje Total */}
-            <div className="text-center p-4 rounded-lg bg-background border">
-              <p className="text-sm text-muted-foreground mb-1">% Total Ejecución</p>
-              <p className="text-3xl font-bold text-primary">
-                {calculations.porcentajeTotal.toFixed(2)}%
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Originaciones + GMV
-              </p>
-            </div>
-
-            {/* Comisión Base */}
-            <div className="text-center p-4 rounded-lg bg-background border">
-              <p className="text-sm text-muted-foreground mb-1">Comisión Base</p>
-              <p className="text-3xl font-bold">
-                {formatCurrency(calculations.comisionBase)}
-              </p>
-            </div>
-
-            {/* Accelerator Bonus */}
-            {calculations.acceleratorBonus > 0 && (
-              <div className="text-center p-4 rounded-lg bg-amber-500/10 border border-amber-500/30">
-                <p className="text-sm text-muted-foreground mb-1">Aceleradores</p>
-                <p className="text-3xl font-bold text-amber-600">
-                  +{formatCurrency(calculations.acceleratorBonus)}
+              <div className="text-center">
+                <p className="text-[10px] text-muted-foreground">Base</p>
+                <p className="text-lg font-bold">{formatCurrency(calculations.comisionBase)}</p>
+              </div>
+              {calculations.acceleratorBonus > 0 && (
+                <div className="text-center">
+                  <p className="text-[10px] text-muted-foreground">Acelerador</p>
+                  <p className="text-lg font-bold text-amber-600">+{formatCurrency(calculations.acceleratorBonus)}</p>
+                </div>
+              )}
+              <div className={cn(
+                "text-center px-3 py-1 rounded-lg border",
+                calculations.comisionTotal >= 1500000 
+                  ? "bg-emerald-500/20 border-emerald-500" 
+                  : calculations.comisionTotal >= 1200000 
+                    ? "bg-primary/20 border-primary" 
+                    : "bg-amber-500/20 border-amber-500"
+              )}>
+                <p className="text-[10px] text-muted-foreground">Total</p>
+                <p className={cn(
+                  "text-xl font-bold",
+                  calculations.comisionTotal >= 1500000 ? "text-emerald-600" 
+                    : calculations.comisionTotal >= 1200000 ? "text-primary" 
+                    : "text-amber-600"
+                )}>
+                  {formatCurrency(calculations.comisionTotal)}
                 </p>
               </div>
-            )}
-
-            {/* Comisión Total */}
-            <div className={cn(
-              "text-center p-4 rounded-lg border-2",
-              calculations.comisionTotal >= 1500000 
-                ? "bg-emerald-500/20 border-emerald-500" 
-                : calculations.comisionTotal >= 1200000 
-                  ? "bg-primary/20 border-primary" 
-                  : "bg-amber-500/20 border-amber-500"
-            )}>
-              <p className="text-sm text-muted-foreground mb-1">Tu Comisión Total</p>
-              <p className={cn(
-                "text-3xl font-bold",
-                calculations.comisionTotal >= 1500000 
-                  ? "text-emerald-600" 
-                  : calculations.comisionTotal >= 1200000 
-                    ? "text-primary" 
-                    : "text-amber-600"
-              )}>
-                {formatCurrency(calculations.comisionTotal)}
-              </p>
             </div>
           </div>
 
-          {/* Message based on performance */}
-          <div className={cn(
-            "flex items-start gap-3 p-4 rounded-lg border",
-            commissionMessage.bgClass
-          )}>
-            <div className={commissionMessage.textClass}>
-              {commissionMessage.icon}
-            </div>
-            <p className={cn("text-sm", commissionMessage.textClass)}>
-              {commissionMessage.message}
-            </p>
+          {/* Compact motivational message */}
+          <div className={cn("flex items-center gap-2 mt-2 text-xs", commissionMessage.textClass)}>
+            {commissionMessage.icon}
+            <p className="line-clamp-2">{commissionMessage.message}</p>
           </div>
         </CardContent>
       </Card>
