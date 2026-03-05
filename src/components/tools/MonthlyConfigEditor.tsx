@@ -319,6 +319,14 @@ export const MonthlyConfigEditor: React.FC<MonthlyConfigEditorProps> = ({ config
               Guardar Metas de {getMonthName(selectedMonth)}
             </Button>
           </div>
+
+          {/* Accelerators section inside monthly config */}
+          <Separator className="my-6" />
+          <AcceleratorManager
+            configId={config.id}
+            configName={config.name}
+            metaFirmas={formData.meta_firmas}
+          />
         </div>
 
         {/* Configured months summary */}
