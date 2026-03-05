@@ -663,7 +663,7 @@ export const FieldSalesCommissions: React.FC = () => {
                       <div className="flex items-center gap-1.5 mb-1">
                         <Target className="h-4 w-4 text-primary" />
                         <span className="text-xs font-semibold">
-                          Originaciones (50%)
+                          Originaciones {exec.useM1 ? 'M0 (25%)' : '(50%)'}
                         </span>
                       </div>
                       <p className="text-lg font-bold">
@@ -675,11 +675,28 @@ export const FieldSalesCommissions: React.FC = () => {
                       </p>
                     </div>
 
+                    {/* Originaciones M1 (March+) */}
+                    {exec.useM1 && (
+                      <div className="p-3 rounded-lg border bg-muted/30">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <Target className="h-4 w-4 text-primary" />
+                          <span className="text-xs font-semibold">Originaciones M1 (25%)</span>
+                        </div>
+                        <p className="text-lg font-bold">
+                          {exec.originaciones_real.toLocaleString("es-CO")} /{" "}
+                          {(exec.effectiveOrigM1Meta ?? 0).toLocaleString("es-CO")}
+                        </p>
+                        <p className="text-sm text-primary font-medium">
+                          {(exec.origM1Pct ?? 0).toFixed(1)}% → {(exec.origM1Weighted ?? 0).toFixed(2)}%
+                        </p>
+                      </div>
+                    )}
+
                     {/* GMV */}
                     <div className="p-3 rounded-lg border bg-muted/30">
                       <div className="flex items-center gap-1.5 mb-1">
                         <DollarSign className="h-4 w-4 text-primary" />
-                        <span className="text-xs font-semibold">GMV USD (50%)</span>
+                        <span className="text-xs font-semibold">GMV USD {exec.useM1 ? 'M0 (25%)' : '(50%)'}</span>
                       </div>
                       <p className="text-lg font-bold">
                         ${exec.gmv_real.toLocaleString("en-US")} / $
@@ -689,6 +706,23 @@ export const FieldSalesCommissions: React.FC = () => {
                         {exec.gmvPct.toFixed(1)}% → {exec.gmvWeighted.toFixed(2)}%
                       </p>
                     </div>
+
+                    {/* GMV M1 (March+) */}
+                    {exec.useM1 && (
+                      <div className="p-3 rounded-lg border bg-muted/30">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <DollarSign className="h-4 w-4 text-primary" />
+                          <span className="text-xs font-semibold">GMV USD M1 (25%)</span>
+                        </div>
+                        <p className="text-lg font-bold">
+                          ${exec.gmv_real.toLocaleString("en-US")} / $
+                          {(exec.effectiveGmvM1Meta ?? 0).toLocaleString("en-US")}
+                        </p>
+                        <p className="text-sm text-primary font-medium">
+                          {(exec.gmvM1Pct ?? 0).toFixed(1)}% → {(exec.gmvM1Weighted ?? 0).toFixed(2)}%
+                        </p>
+                      </div>
+                    )}
 
                     {/* Indicadores Combinados */}
                     <div
