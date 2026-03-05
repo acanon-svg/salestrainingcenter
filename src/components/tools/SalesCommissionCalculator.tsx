@@ -45,7 +45,9 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
   // Input values (editable by student/leader)
   const [firmasReales, setFirmasReales] = useState<number>(0);
   const [originacionesReales, setOriginacionesReales] = useState<number>(0);
+  const [originacionesRealesM1, setOriginacionesRealesM1] = useState<number>(0);
   const [gmvReal, setGmvReal] = useState<number>(0);
+  const [gmvRealM1, setGmvRealM1] = useState<number>(0);
 
   const isCreatorOrAdmin = userRole === "admin" || userRole === "creator";
 
