@@ -419,72 +419,67 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
         <CardContent className="py-3 px-4">
           <div className="flex items-center gap-2 mb-3">
             <DollarSign className="h-4 w-4 text-primary" />
-            <span className="font-semibold text-sm">Originaciones</span>
-            {usesM1 && <Badge variant="secondary" className="text-[10px]">M0 + M1 × 25%</Badge>}
-            {!usesM1 && <Badge variant="secondary" className="text-[10px]">50%</Badge>}
-            <span className="text-sm font-bold text-amber-600 ml-auto">
+            <span className="font-semibold">Originaciones</span>
+            {usesM1 && <Badge variant="secondary" className="text-xs">M0 + M1 × 25%</Badge>}
+            {!usesM1 && <Badge variant="secondary" className="text-xs">50%</Badge>}
+            <span className="font-bold text-primary ml-auto">
               {(calculations.participacionOriginaciones + calculations.participacionOriginacionesM1).toFixed(2)}%
             </span>
           </div>
 
-          {/* M0 row */}
-          <div className="grid gap-3 grid-cols-4 items-end">
+          <div className={cn("grid gap-x-6 gap-y-2 items-end", usesM1 && effectiveConfig.meta_originaciones_m1 > 0 ? "grid-cols-8" : "grid-cols-4")}>
+            {/* M0 */}
             <div>
               <Label className="text-xs text-muted-foreground">Meta {usesM1 ? 'M0' : ''}</Label>
-              <span className="font-semibold text-sm block">{effectiveConfig.meta_originaciones.toLocaleString("es-CO")}</span>
+              <span className="font-semibold block">{effectiveConfig.meta_originaciones.toLocaleString("es-CO")}</span>
             </div>
             <div>
               <Label htmlFor="originaciones-reales" className="text-xs">Real {usesM1 ? 'M0' : ''}</Label>
-              <Input
-                id="originaciones-reales"
-                type="number"
-                min={0}
-                value={originacionesReales}
-                onChange={(e) => setOriginacionesReales(parseFloat(e.target.value) || 0)}
-                className="font-mono h-8 text-sm"
-              />
+              <Input id="originaciones-reales" type="number" min={0} value={originacionesReales}
+                onChange={(e) => setOriginacionesReales(parseFloat(e.target.value) || 0)} className="font-mono h-9" />
             </div>
             <div className="text-center">
               <Label className="text-xs text-muted-foreground">% Ejec.</Label>
-              <span className="text-sm font-bold text-primary block">{calculations.porcentajeOriginaciones.toFixed(1)}%</span>
+              <span className="font-bold text-primary block">{calculations.porcentajeOriginaciones.toFixed(1)}%</span>
             </div>
             <div className="text-center">
               <Label className="text-xs text-muted-foreground">Res. (×{usesM1 ? '25' : '50'}%)</Label>
-              <span className="text-sm font-bold text-amber-600 block">{calculations.participacionOriginaciones.toFixed(2)}%</span>
+              <Badge variant="outline" className={cn(
+                "font-bold text-sm",
+                calculations.participacionOriginaciones >= (usesM1 ? 25 : 50) ? "bg-emerald-100 text-emerald-700 border-emerald-300" : "bg-amber-100 text-amber-700 border-amber-300"
+              )}>
+                {calculations.participacionOriginaciones.toFixed(2)}%
+              </Badge>
             </div>
-          </div>
 
-          {/* M1 row */}
-          {usesM1 && effectiveConfig.meta_originaciones_m1 > 0 && (
-            <>
-              <Separator className="my-2" />
-              <div className="grid gap-3 grid-cols-4 items-end">
+            {/* M1 inline */}
+            {usesM1 && effectiveConfig.meta_originaciones_m1 > 0 && (
+              <>
                 <div>
                   <Label className="text-xs text-muted-foreground">Meta M1</Label>
-                  <span className="font-semibold text-sm block">{effectiveConfig.meta_originaciones_m1.toLocaleString("es-CO")}</span>
+                  <span className="font-semibold block">{effectiveConfig.meta_originaciones_m1.toLocaleString("es-CO")}</span>
                 </div>
                 <div>
                   <Label htmlFor="originaciones-reales-m1" className="text-xs">Real M1</Label>
-                  <Input
-                    id="originaciones-reales-m1"
-                    type="number"
-                    min={0}
-                    value={originacionesRealesM1}
-                    onChange={(e) => setOriginacionesRealesM1(parseFloat(e.target.value) || 0)}
-                    className="font-mono h-8 text-sm"
-                  />
+                  <Input id="originaciones-reales-m1" type="number" min={0} value={originacionesRealesM1}
+                    onChange={(e) => setOriginacionesRealesM1(parseFloat(e.target.value) || 0)} className="font-mono h-9" />
                 </div>
                 <div className="text-center">
                   <Label className="text-xs text-muted-foreground">% Ejec.</Label>
-                  <span className="text-sm font-bold text-primary block">{calculations.porcentajeOriginacionesM1.toFixed(1)}%</span>
+                  <span className="font-bold text-primary block">{calculations.porcentajeOriginacionesM1.toFixed(1)}%</span>
                 </div>
                 <div className="text-center">
                   <Label className="text-xs text-muted-foreground">Res. (×25%)</Label>
-                  <span className="text-sm font-bold text-amber-600 block">{calculations.participacionOriginacionesM1.toFixed(2)}%</span>
+                  <Badge variant="outline" className={cn(
+                    "font-bold text-sm",
+                    calculations.participacionOriginacionesM1 >= 25 ? "bg-emerald-100 text-emerald-700 border-emerald-300" : "bg-amber-100 text-amber-700 border-amber-300"
+                  )}>
+                    {calculations.participacionOriginacionesM1.toFixed(2)}%
+                  </Badge>
                 </div>
-              </div>
-            </>
-          )}
+              </>
+            )}
+          </div>
         </CardContent>
       </Card>
 
