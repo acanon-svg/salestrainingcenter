@@ -134,8 +134,11 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
       ? (porcentajeTotal / 100) * effectiveConfig.base_comisional
       : 0;
 
-    // Accelerator: applies when weighted total >= 100%
-    const acceleratorEligible = porcentajeTotal >= 100;
+    // Accelerator: applies when weighted total >= 100% AND firmas >= 100%
+    const firmasCompliancePctForAccel = effectiveConfig.meta_firmas > 0
+      ? (firmasReales / effectiveConfig.meta_firmas) * 100
+      : 0;
+    const acceleratorEligible = porcentajeTotal >= 100 && firmasCompliancePctForAccel >= 100;
     let acceleratorBonus = 0;
     let appliedAccelerators: { min_firmas: number; bonus_percentage: number; description: string | null; bonusAmount: number }[] = [];
 
@@ -406,7 +409,7 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
                   );
                 })}
                 {!calculations.acceleratorEligible && (
-                  <span className="text-[10px] text-muted-foreground">(Req. 100% ponderado)</span>
+                  <span className="text-[10px] text-muted-foreground">(Req. 100% ponderado y 100% firmas)</span>
                 )}
               </div>
             </>
