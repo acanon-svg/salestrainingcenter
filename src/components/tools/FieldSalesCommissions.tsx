@@ -767,7 +767,7 @@ export const FieldSalesCommissions: React.FC = () => {
                       <div className="flex flex-wrap gap-1.5">
                         {exec.accelerator.applied.map((a, i) => (
                           <Badge key={i} variant="outline" className="text-xs font-mono border-amber-500/50">
-                            ≥{a.min_firmas} firmas → +{a.bonus_percentage}%
+                            ≥{a.min_firmas}% firmas → +{a.bonus_percentage}%
                             {a.description && ` (${a.description})`}
                           </Badge>
                         ))}
