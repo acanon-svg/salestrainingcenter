@@ -153,14 +153,7 @@ export const FieldSalesCommissions: React.FC = () => {
   // Load accelerators for all configs at once
   const { data: allAccelerators } = useAllAcceleratorsForConfigs(allConfigIds);
 
-  // Load ALL monthly configs for all config IDs so we can find per-user monthly overrides
-  // We use the first config's monthly configs as a starting point (useMonthlyConfigs needs a single configId)
-  // Instead, fetch monthly configs for the selected month/year from all configs
-  const monthlyConfigsQueries = useMemo(() => {
-    return allConfigIds;
-  }, [allConfigIds]);
-
-  // Fetch monthly configs for all commission configs
+  // Fetch monthly configs for all commission configs for the selected period
   const { data: allMonthlyConfigs } = useQuery({
     queryKey: ["all-monthly-configs-for-period", allConfigIds.join(","), selectedMonth, selectedYear],
     queryFn: async () => {
