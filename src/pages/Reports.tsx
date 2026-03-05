@@ -54,6 +54,8 @@ import {
   useHierarchyStatusDistribution,
 } from "@/hooks/useHierarchyReportsData";
 import { ComplianceBarChart } from "@/components/reports/ComplianceBarChart";
+import { TeamMemberBreakdownTable } from "@/components/reports/TeamMemberBreakdownTable";
+import { useTeamMemberCourseBreakdown } from "@/hooks/useTeamMemberCourseBreakdown";
 import { TrendLineChart } from "@/components/reports/TrendLineChart";
 import { StatusPieChart } from "@/components/reports/StatusPieChart";
 import { MonthlyComparisonChart } from "@/components/reports/MonthlyComparisonChart";
