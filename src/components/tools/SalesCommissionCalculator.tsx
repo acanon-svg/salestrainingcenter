@@ -455,8 +455,15 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-muted-foreground">Valor Real</Label>
-                <span className="text-lg font-semibold block pt-1">{originacionesReales.toLocaleString("es-CO")}</span>
+                <Label htmlFor="originaciones-reales-m1">Valor Real</Label>
+                <Input
+                  id="originaciones-reales-m1"
+                  type="number"
+                  min={0}
+                  value={originacionesRealesM1}
+                  onChange={(e) => setOriginacionesRealesM1(parseFloat(e.target.value) || 0)}
+                  className="font-mono"
+                />
               </div>
               <div className="space-y-2">
                 <Label className="text-muted-foreground">% Ejecución</Label>
