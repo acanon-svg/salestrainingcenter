@@ -183,7 +183,7 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
       acceleratorBonus,
       appliedAccelerators,
     };
-  }, [firmasReales, originacionesReales, gmvReal, effectiveConfig, accelerators, usesM1]);
+  }, [firmasReales, originacionesReales, originacionesRealesM1, gmvReal, gmvRealM1, effectiveConfig, accelerators, usesM1]);
 
   const getCommissionMessage = () => {
     const { comisionTotal, candadoDesbloqueado, indicadoresCumplen } = calculations;
