@@ -38,32 +38,45 @@ export interface CommissionReview {
   updated_at: string;
 }
 
-export const calculateCommission = (result: {
-  firmas_real: number;
-  firmas_meta: number;
-  originaciones_real: number;
-  originaciones_meta: number;
-  gmv_real: number;
-  gmv_meta: number;
-}) => {
+export const calculateCommission = (
+  result: {
+    firmas_real: number;
+    firmas_meta: number;
+    originaciones_real: number;
+    originaciones_meta: number;
+    gmv_real: number;
+    gmv_meta: number;
+  },
+  overrides?: {
+    meta_firmas?: number;
+    meta_originaciones?: number;
+    meta_gmv_usd?: number;
+    base_comisional?: number;
+  }
+) => {
+  // Use overrides from monthly config if available, otherwise use team_results metas
+  const metaFirmas = overrides?.meta_firmas ?? result.firmas_meta;
+  const metaOrig = overrides?.meta_originaciones ?? result.originaciones_meta;
+  const metaGmv = overrides?.meta_gmv_usd ?? result.gmv_meta;
+  const baseCommission = overrides?.base_comisional ?? 1500000;
+
   const firmasCompliance =
-    result.firmas_meta > 0
-      ? (result.firmas_real / result.firmas_meta) * 100
+    metaFirmas > 0
+      ? (result.firmas_real / metaFirmas) * 100
       : 0;
   const candadoMet = firmasCompliance >= 85;
 
   const origPct =
-    result.originaciones_meta > 0
-      ? (result.originaciones_real / result.originaciones_meta) * 100
+    metaOrig > 0
+      ? (result.originaciones_real / metaOrig) * 100
       : 0;
   const gmvPct =
-    result.gmv_meta > 0 ? (result.gmv_real / result.gmv_meta) * 100 : 0;
+    metaGmv > 0 ? (result.gmv_real / metaGmv) * 100 : 0;
 
   const origWeighted = origPct * 0.5;
   const gmvWeighted = gmvPct * 0.5;
   const totalPct = origWeighted + gmvWeighted;
 
-  const baseCommission = 1500000;
   const indicatorsMet = totalPct >= 85;
   const calculatedCommission = candadoMet && indicatorsMet
     ? (totalPct / 100) * baseCommission
@@ -80,6 +93,10 @@ export const calculateCommission = (result: {
     totalPct,
     baseCommission,
     calculatedCommission,
+    // Return effective metas for display
+    effectiveFirmasMeta: metaFirmas,
+    effectiveOrigMeta: metaOrig,
+    effectiveGmvMeta: metaGmv,
   };
 };
 
