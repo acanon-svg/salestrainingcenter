@@ -471,10 +471,75 @@ export const useNotApprovedCommissions = (month?: number, year?: number) => {
         }
       }
 
-      // 5. Create synthetic "not_sent" entries for users with results but no commission review
+      // 5. Fetch commission configs and monthly configs for meta overrides
+      const { data: configs } = await supabase
+        .from("commission_calculator_configs")
+        .select("*");
+      
+      let monthlyConfigMap = new Map<string, any>();
+      if (configs && configs.length > 0) {
+        const configIds = configs.map((c: any) => c.id);
+        const { data: monthlyConfigs } = await supabase
+          .from("commission_monthly_configs")
+          .select("*")
+          .in("config_id", configIds)
+          .eq("month", month)
+          .eq("year", year);
+        for (const mc of monthlyConfigs || []) {
+          monthlyConfigMap.set(mc.config_id, mc);
+        }
+      }
+
+      // Fetch profiles with team info for config matching
+      let profileTeamMap = new Map<string, { user_id: string; team: string | null }>();
+      if (missingEmails.length > 0) {
+        const { data: profilesWithTeam } = await supabase
+          .from("profiles")
+          .select("email, user_id, team")
+          .in("email", missingEmails);
+        for (const p of profilesWithTeam || []) {
+          profileTeamMap.set(p.email, { user_id: p.user_id, team: p.team });
+        }
+      }
+
+      // Helper to find config for user
+      const findConfig = (email: string) => {
+        if (!configs || configs.length === 0) return null;
+        const pInfo = profileTeamMap.get(email);
+        if (pInfo?.user_id) {
+          const userConfig = configs.find((c: any) => c.target_users && c.target_users.includes(pInfo.user_id));
+          if (userConfig) return userConfig;
+        }
+        if (pInfo?.team) {
+          const teamConfig = configs.find((c: any) => c.target_teams && c.target_teams.includes(pInfo.team));
+          if (teamConfig) return teamConfig;
+        }
+        return configs.find((c: any) => c.is_default) || null;
+      };
+
+      // 6. Create synthetic "not_sent" entries for users with results but no commission review
       const syntheticEntries: CommissionReview[] = missingEmails.map(email => {
         const r = grouped.get(email)!;
-        const calc = calculateCommission(r);
+        const matchedConfig = findConfig(email);
+        const monthlyOverride = matchedConfig ? monthlyConfigMap.get(matchedConfig.id) : null;
+        
+        const overrides = monthlyOverride
+          ? {
+              meta_firmas: monthlyOverride.meta_firmas,
+              meta_originaciones: monthlyOverride.meta_originaciones,
+              meta_gmv_usd: monthlyOverride.meta_gmv_usd,
+              base_comisional: monthlyOverride.base_comisional,
+            }
+          : matchedConfig
+          ? {
+              meta_firmas: matchedConfig.meta_firmas,
+              meta_originaciones: matchedConfig.meta_originaciones,
+              meta_gmv_usd: matchedConfig.meta_gmv_usd,
+              base_comisional: matchedConfig.base_comisional,
+            }
+          : undefined;
+
+        const calc = calculateCommission(r, overrides);
         return {
           id: `synthetic-${email}`,
           user_email: email,
@@ -483,11 +548,11 @@ export const useNotApprovedCommissions = (month?: number, year?: number) => {
           period_year: year,
           regional: r.regional || null,
           firmas_real: r.firmas_real,
-          firmas_meta: r.firmas_meta,
+          firmas_meta: calc.effectiveFirmasMeta,
           originaciones_real: r.originaciones_real,
-          originaciones_meta: r.originaciones_meta,
+          originaciones_meta: calc.effectiveOrigMeta,
           gmv_real: r.gmv_real,
-          gmv_meta: r.gmv_meta,
+          gmv_meta: calc.effectiveGmvMeta,
           firmas_compliance: calc.firmasCompliance,
           candado_met: calc.candadoMet,
           originaciones_weighted: calc.origWeighted,
