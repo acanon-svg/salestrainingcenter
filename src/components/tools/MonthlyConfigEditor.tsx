@@ -41,7 +41,12 @@ export const MonthlyConfigEditor: React.FC<MonthlyConfigEditorProps> = ({ config
     meta_originaciones: config.meta_originaciones,
     meta_gmv_usd: config.meta_gmv_usd,
     base_comisional: config.base_comisional,
+    meta_originaciones_m1: 0,
+    meta_gmv_m1: 0,
   });
+
+  // Whether this month uses the M0/M1 split (March+)
+  const usesM1 = selectedMonth >= 3;
 
   // Load existing monthly config when month/year changes
   useEffect(() => {
@@ -55,21 +60,24 @@ export const MonthlyConfigEditor: React.FC<MonthlyConfigEditorProps> = ({ config
         meta_originaciones: existingConfig.meta_originaciones,
         meta_gmv_usd: existingConfig.meta_gmv_usd,
         base_comisional: existingConfig.base_comisional,
+        meta_originaciones_m1: (existingConfig as any).meta_originaciones_m1 ?? 0,
+        meta_gmv_m1: (existingConfig as any).meta_gmv_m1 ?? 0,
       });
     } else {
-      // Use base config values as default
       setFormData({
         meta_firmas: config.meta_firmas,
         meta_originaciones: config.meta_originaciones,
         meta_gmv_usd: config.meta_gmv_usd,
         base_comisional: config.base_comisional,
+        meta_originaciones_m1: 0,
+        meta_gmv_m1: 0,
       });
     }
   }, [selectedMonth, selectedYear, monthlyConfigs, config]);
 
   const handleSave = async () => {
     try {
-      await upsertConfig.mutateAsync({
+      const payload: any = {
         config_id: config.id,
         month: selectedMonth,
         year: selectedYear,
@@ -77,8 +85,11 @@ export const MonthlyConfigEditor: React.FC<MonthlyConfigEditorProps> = ({ config
         meta_originaciones: formData.meta_originaciones,
         meta_gmv_usd: formData.meta_gmv_usd,
         base_comisional: formData.base_comisional,
+        meta_originaciones_m1: usesM1 ? formData.meta_originaciones_m1 : 0,
+        meta_gmv_m1: usesM1 ? formData.meta_gmv_m1 : 0,
         created_by: null,
-      });
+      };
+      await upsertConfig.mutateAsync(payload);
       toast.success(`Metas de ${getMonthName(selectedMonth)} ${selectedYear} guardadas`);
     } catch (error) {
       toast.error("Error al guardar las metas mensuales");
@@ -105,7 +116,7 @@ export const MonthlyConfigEditor: React.FC<MonthlyConfigEditorProps> = ({ config
           Configuración Mensual de Metas
         </CardTitle>
         <CardDescription>
-          Define metas específicas para cada mes del año
+          Define metas específicas para cada mes del año. A partir de marzo se usan 4 indicadores (M0 y M1) con peso del 25% cada uno.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -182,11 +193,15 @@ export const MonthlyConfigEditor: React.FC<MonthlyConfigEditorProps> = ({ config
           <h4 className="font-medium mb-4 flex items-center gap-2">
             <Target className="h-4 w-4" />
             Metas para {getMonthName(selectedMonth)} {selectedYear}
+            {usesM1 && (
+              <Badge variant="secondary" className="text-xs">4 indicadores × 25%</Badge>
+            )}
           </h4>
           
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Row 1: Firmas + Base */}
+          <div className="grid gap-4 sm:grid-cols-2 mb-4">
             <div className="space-y-2">
-              <Label htmlFor="monthly-firmas">Meta de Firmas</Label>
+              <Label htmlFor="monthly-firmas">Meta de Firmas (Candado)</Label>
               <Input
                 id="monthly-firmas"
                 type="number"
@@ -194,37 +209,6 @@ export const MonthlyConfigEditor: React.FC<MonthlyConfigEditorProps> = ({ config
                 value={formData.meta_firmas}
                 onChange={(e) =>
                   setFormData({ ...formData, meta_firmas: parseInt(e.target.value) || 0 })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="monthly-originaciones">Meta Originaciones</Label>
-              <Input
-                id="monthly-originaciones"
-                type="number"
-                min={0}
-                value={formData.meta_originaciones}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    meta_originaciones: parseFloat(e.target.value) || 0,
-                  })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="monthly-gmv">Meta GMV (USD)</Label>
-              <Input
-                id="monthly-gmv"
-                type="number"
-                min={0}
-                step={0.01}
-                value={formData.meta_gmv_usd}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    meta_gmv_usd: parseFloat(e.target.value) || 0,
-                  })
                 }
               />
             </div>
@@ -245,6 +229,88 @@ export const MonthlyConfigEditor: React.FC<MonthlyConfigEditorProps> = ({ config
             </div>
           </div>
 
+          {/* Row 2: Originaciones */}
+          <div className={`grid gap-4 ${usesM1 ? 'sm:grid-cols-2' : 'sm:grid-cols-1'} mb-4`}>
+            <div className="space-y-2">
+              <Label htmlFor="monthly-originaciones">
+                Meta Originaciones {usesM1 ? 'M0 (25%)' : '(50%)'}
+              </Label>
+              <Input
+                id="monthly-originaciones"
+                type="number"
+                min={0}
+                value={formData.meta_originaciones}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    meta_originaciones: parseFloat(e.target.value) || 0,
+                  })
+                }
+              />
+            </div>
+            {usesM1 && (
+              <div className="space-y-2">
+                <Label htmlFor="monthly-originaciones-m1">
+                  Meta Originaciones M1 (25%)
+                </Label>
+                <Input
+                  id="monthly-originaciones-m1"
+                  type="number"
+                  min={0}
+                  value={formData.meta_originaciones_m1}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      meta_originaciones_m1: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Row 3: GMV */}
+          <div className={`grid gap-4 ${usesM1 ? 'sm:grid-cols-2' : 'sm:grid-cols-1'} mb-4`}>
+            <div className="space-y-2">
+              <Label htmlFor="monthly-gmv">
+                Meta GMV USD {usesM1 ? 'M0 (25%)' : '(50%)'}
+              </Label>
+              <Input
+                id="monthly-gmv"
+                type="number"
+                min={0}
+                step={0.01}
+                value={formData.meta_gmv_usd}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    meta_gmv_usd: parseFloat(e.target.value) || 0,
+                  })
+                }
+              />
+            </div>
+            {usesM1 && (
+              <div className="space-y-2">
+                <Label htmlFor="monthly-gmv-m1">
+                  Meta GMV USD M1 (25%)
+                </Label>
+                <Input
+                  id="monthly-gmv-m1"
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={formData.meta_gmv_m1}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      meta_gmv_m1: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                />
+              </div>
+            )}
+          </div>
+
           <div className="flex justify-end mt-4">
             <Button onClick={handleSave} disabled={upsertConfig.isPending}>
               <Save className="h-4 w-4 mr-2" />
@@ -262,20 +328,38 @@ export const MonthlyConfigEditor: React.FC<MonthlyConfigEditorProps> = ({ config
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {monthlyConfigs
                 .filter((mc) => mc.year === selectedYear)
-                .map((mc) => (
-                  <div
-                    key={mc.id}
-                    className="p-3 border rounded-lg text-sm bg-background"
-                  >
-                    <div className="font-medium">{getMonthName(mc.month)}</div>
-                    <div className="text-muted-foreground text-xs mt-1 space-y-0.5">
-                      <div>Firmas: {mc.meta_firmas}</div>
-                      <div>Originaciones: {mc.meta_originaciones.toLocaleString()}</div>
-                      <div>GMV: ${mc.meta_gmv_usd.toLocaleString()}</div>
-                      <div>Base: {formatCurrency(mc.base_comisional)}</div>
+                .map((mc) => {
+                  const mcAny = mc as any;
+                  const hasM1 = mc.month >= 3;
+                  return (
+                    <div
+                      key={mc.id}
+                      className="p-3 border rounded-lg text-sm bg-background"
+                    >
+                      <div className="font-medium flex items-center gap-2">
+                        {getMonthName(mc.month)}
+                        {hasM1 && <Badge variant="outline" className="text-[10px]">M0/M1</Badge>}
+                      </div>
+                      <div className="text-muted-foreground text-xs mt-1 space-y-0.5">
+                        <div>Firmas: {mc.meta_firmas}</div>
+                        {hasM1 ? (
+                          <>
+                            <div>Orig M0: {mc.meta_originaciones.toLocaleString()} (25%)</div>
+                            <div>Orig M1: {(mcAny.meta_originaciones_m1 ?? 0).toLocaleString()} (25%)</div>
+                            <div>GMV M0: ${mc.meta_gmv_usd.toLocaleString()} (25%)</div>
+                            <div>GMV M1: ${(mcAny.meta_gmv_m1 ?? 0).toLocaleString()} (25%)</div>
+                          </>
+                        ) : (
+                          <>
+                            <div>Originaciones: {mc.meta_originaciones.toLocaleString()} (50%)</div>
+                            <div>GMV: ${mc.meta_gmv_usd.toLocaleString()} (50%)</div>
+                          </>
+                        )}
+                        <div>Base: {formatCurrency(mc.base_comisional)}</div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
             </div>
           </div>
         )}

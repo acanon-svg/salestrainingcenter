@@ -10,6 +10,8 @@ export interface CommissionMonthlyConfig {
   meta_originaciones: number;
   meta_gmv_usd: number;
   base_comisional: number;
+  meta_originaciones_m1: number;
+  meta_gmv_m1: number;
   created_at: string;
   updated_at: string;
   created_by: string | null;
