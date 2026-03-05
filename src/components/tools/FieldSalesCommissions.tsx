@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -153,6 +153,22 @@ export const FieldSalesCommissions: React.FC = () => {
   // Load accelerators for all configs at once
   const { data: allAccelerators } = useAllAcceleratorsForConfigs(allConfigIds);
 
+  // Fetch monthly configs for all commission configs for the selected period
+  const { data: allMonthlyConfigs } = useQuery({
+    queryKey: ["all-monthly-configs-for-period", allConfigIds.join(","), selectedMonth, selectedYear],
+    queryFn: async () => {
+      if (allConfigIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("commission_monthly_configs")
+        .select("*")
+        .in("config_id", allConfigIds)
+        .eq("month", selectedMonth)
+        .eq("year", selectedYear);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: allConfigIds.length > 0,
+  });
   const upsertReview = useUpsertCommissionReview();
   const approveCommission = useApproveCommission();
   const rejectCommission = useRejectCommission();
@@ -211,7 +227,35 @@ export const FieldSalesCommissions: React.FC = () => {
   const executiveData = useMemo(() => {
     if (!teamResults) return [];
     return teamResults.map((result) => {
-      const calc = calculateCommission(result);
+      // Find matching config and accelerators for this executive
+      const pInfo = profileInfoMap.get(result.user_email);
+      const matchedConfig = commissionConfigs && commissionConfigs.length > 0
+        ? findConfigForUser(commissionConfigs, result.user_email, pInfo?.user_id, pInfo?.team)
+        : null;
+
+      // Find monthly config override for this config + selected month/year
+      const monthlyOverride = matchedConfig && allMonthlyConfigs
+        ? allMonthlyConfigs.find((mc: any) => mc.config_id === matchedConfig.id)
+        : null;
+
+      // Build meta overrides: monthly config > base config > team_results
+      const overrides = monthlyOverride
+        ? {
+            meta_firmas: monthlyOverride.meta_firmas,
+            meta_originaciones: monthlyOverride.meta_originaciones,
+            meta_gmv_usd: monthlyOverride.meta_gmv_usd,
+            base_comisional: monthlyOverride.base_comisional,
+          }
+        : matchedConfig
+        ? {
+            meta_firmas: matchedConfig.meta_firmas,
+            meta_originaciones: matchedConfig.meta_originaciones,
+            meta_gmv_usd: matchedConfig.meta_gmv_usd,
+            base_comisional: matchedConfig.base_comisional,
+          }
+        : undefined;
+
+      const calc = calculateCommission(result, overrides);
       const review = existingReviews?.find(
         (r) => r.user_email === result.user_email
       );
@@ -221,11 +265,6 @@ export const FieldSalesCommissions: React.FC = () => {
       };
       const isGuaranteed = guaranteedMap.get(result.user_email) || false;
 
-      // Find matching config and accelerators for this executive
-      const pInfo = profileInfoMap.get(result.user_email);
-      const matchedConfig = commissionConfigs && commissionConfigs.length > 0
-        ? findConfigForUser(commissionConfigs, result.user_email, pInfo?.user_id, pInfo?.team)
-        : null;
       const configAccelerators = matchedConfig && allAccelerators
         ? allAccelerators.filter((a) => a.config_id === matchedConfig.id)
         : [];
@@ -265,10 +304,34 @@ export const FieldSalesCommissions: React.FC = () => {
         accelerator: accelResult,
       };
     });
-  }, [teamResults, existingReviews, adjustments, nameMap, guaranteedMap, profileInfoMap, commissionConfigs, allAccelerators]);
+  }, [teamResults, existingReviews, adjustments, nameMap, guaranteedMap, profileInfoMap, commissionConfigs, allAccelerators, allMonthlyConfigs]);
 
   const buildReviewPayload = (exec: (typeof executiveData)[0]) => {
-    const calc = calculateCommission(exec);
+    // Rebuild overrides for this exec
+    const pInfo = profileInfoMap.get(exec.user_email);
+    const matchedConfig = commissionConfigs && commissionConfigs.length > 0
+      ? findConfigForUser(commissionConfigs, exec.user_email, pInfo?.user_id, pInfo?.team)
+      : null;
+    const monthlyOverride = matchedConfig && allMonthlyConfigs
+      ? allMonthlyConfigs.find((mc: any) => mc.config_id === matchedConfig.id)
+      : null;
+    const overrides = monthlyOverride
+      ? {
+          meta_firmas: monthlyOverride.meta_firmas,
+          meta_originaciones: monthlyOverride.meta_originaciones,
+          meta_gmv_usd: monthlyOverride.meta_gmv_usd,
+          base_comisional: monthlyOverride.base_comisional,
+        }
+      : matchedConfig
+      ? {
+          meta_firmas: matchedConfig.meta_firmas,
+          meta_originaciones: matchedConfig.meta_originaciones,
+          meta_gmv_usd: matchedConfig.meta_gmv_usd,
+          base_comisional: matchedConfig.base_comisional,
+        }
+      : undefined;
+
+    const calc = calculateCommission(exec, overrides);
     const adj = adjustments[exec.user_email] || { hasMb: false, bonus: 0 };
     const isGuaranteed = guaranteedMap.get(exec.user_email) || false;
     
@@ -292,11 +355,11 @@ export const FieldSalesCommissions: React.FC = () => {
       period_year: selectedYear,
       regional: exec.regional,
       firmas_real: exec.firmas_real,
-      firmas_meta: exec.firmas_meta,
+      firmas_meta: calc.effectiveFirmasMeta,
       originaciones_real: exec.originaciones_real,
-      originaciones_meta: exec.originaciones_meta,
+      originaciones_meta: calc.effectiveOrigMeta,
       gmv_real: exec.gmv_real,
-      gmv_meta: exec.gmv_meta,
+      gmv_meta: calc.effectiveGmvMeta,
       firmas_compliance: calc.firmasCompliance,
       candado_met: isGuaranteed ? true : calc.candadoMet,
       originaciones_weighted: calc.origWeighted,
@@ -576,7 +639,7 @@ export const FieldSalesCommissions: React.FC = () => {
                         <span className="text-xs font-semibold">Firmas (Candado)</span>
                       </div>
                       <p className="text-lg font-bold">
-                        {exec.firmas_real} / {exec.firmas_meta}
+                        {exec.firmas_real} / {exec.effectiveFirmasMeta}
                       </p>
                       <p
                         className={cn(
@@ -599,7 +662,7 @@ export const FieldSalesCommissions: React.FC = () => {
                       </div>
                       <p className="text-lg font-bold">
                         {exec.originaciones_real.toLocaleString("es-CO")} /{" "}
-                        {exec.originaciones_meta.toLocaleString("es-CO")}
+                        {exec.effectiveOrigMeta.toLocaleString("es-CO")}
                       </p>
                       <p className="text-sm text-primary font-medium">
                         {exec.origPct.toFixed(1)}% → {exec.origWeighted.toFixed(2)}%
@@ -614,7 +677,7 @@ export const FieldSalesCommissions: React.FC = () => {
                       </div>
                       <p className="text-lg font-bold">
                         ${exec.gmv_real.toLocaleString("en-US")} / $
-                        {exec.gmv_meta.toLocaleString("en-US")}
+                        {exec.effectiveGmvMeta.toLocaleString("en-US")}
                       </p>
                       <p className="text-sm text-primary font-medium">
                         {exec.gmvPct.toFixed(1)}% → {exec.gmvWeighted.toFixed(2)}%
