@@ -126,7 +126,7 @@ export const AcceleratorManager: React.FC<AcceleratorManagerProps> = ({
           <CardContent className="pt-4 space-y-3">
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="space-y-1">
-                <Label className="text-xs">Firmas mínimas</Label>
+                <Label className="text-xs">% Cumplimiento Firmas</Label>
                 <Input
                   type="number"
                   min={0}
