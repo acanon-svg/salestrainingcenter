@@ -235,7 +235,35 @@ export const FieldSalesCommissions: React.FC = () => {
   const executiveData = useMemo(() => {
     if (!teamResults) return [];
     return teamResults.map((result) => {
-      const calc = calculateCommission(result);
+      // Find matching config and accelerators for this executive
+      const pInfo = profileInfoMap.get(result.user_email);
+      const matchedConfig = commissionConfigs && commissionConfigs.length > 0
+        ? findConfigForUser(commissionConfigs, result.user_email, pInfo?.user_id, pInfo?.team)
+        : null;
+
+      // Find monthly config override for this config + selected month/year
+      const monthlyOverride = matchedConfig && allMonthlyConfigs
+        ? allMonthlyConfigs.find((mc: any) => mc.config_id === matchedConfig.id)
+        : null;
+
+      // Build meta overrides: monthly config > base config > team_results
+      const overrides = monthlyOverride
+        ? {
+            meta_firmas: monthlyOverride.meta_firmas,
+            meta_originaciones: monthlyOverride.meta_originaciones,
+            meta_gmv_usd: monthlyOverride.meta_gmv_usd,
+            base_comisional: monthlyOverride.base_comisional,
+          }
+        : matchedConfig
+        ? {
+            meta_firmas: matchedConfig.meta_firmas,
+            meta_originaciones: matchedConfig.meta_originaciones,
+            meta_gmv_usd: matchedConfig.meta_gmv_usd,
+            base_comisional: matchedConfig.base_comisional,
+          }
+        : undefined;
+
+      const calc = calculateCommission(result, overrides);
       const review = existingReviews?.find(
         (r) => r.user_email === result.user_email
       );
@@ -245,11 +273,6 @@ export const FieldSalesCommissions: React.FC = () => {
       };
       const isGuaranteed = guaranteedMap.get(result.user_email) || false;
 
-      // Find matching config and accelerators for this executive
-      const pInfo = profileInfoMap.get(result.user_email);
-      const matchedConfig = commissionConfigs && commissionConfigs.length > 0
-        ? findConfigForUser(commissionConfigs, result.user_email, pInfo?.user_id, pInfo?.team)
-        : null;
       const configAccelerators = matchedConfig && allAccelerators
         ? allAccelerators.filter((a) => a.config_id === matchedConfig.id)
         : [];
