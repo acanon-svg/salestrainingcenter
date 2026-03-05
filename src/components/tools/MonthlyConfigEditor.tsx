@@ -20,6 +20,7 @@ import {
   useUpsertMonthlyConfig,
   getMonthName,
 } from "@/hooks/useCommissionMonthlyConfig";
+import { AcceleratorManager } from "./AcceleratorManager";
 
 interface MonthlyConfigEditorProps {
   config: CommissionCalculatorConfig;
