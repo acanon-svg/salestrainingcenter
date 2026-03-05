@@ -608,8 +608,8 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
             </CardTitle>
             <CardDescription>
               {calculations.acceleratorEligible
-                ? "¡Cumples el 100% en originaciones y GMV! Los aceleradores están activos."
-                : "Para activar los aceleradores debes cumplir el 100% en originaciones y GMV."}
+                ? "¡Cumples el 100% en el ponderado de originaciones y GMV! Los aceleradores están activos."
+                : "Para activar los aceleradores debes cumplir el 100% en el ponderado de originaciones y GMV."}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
