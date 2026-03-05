@@ -670,7 +670,7 @@ export const FieldSalesCommissions: React.FC = () => {
                       </div>
                       <p className="text-lg font-bold">
                         {exec.originaciones_real.toLocaleString("es-CO")} /{" "}
-                        {exec.originaciones_meta.toLocaleString("es-CO")}
+                        {exec.effectiveOrigMeta.toLocaleString("es-CO")}
                       </p>
                       <p className="text-sm text-primary font-medium">
                         {exec.origPct.toFixed(1)}% → {exec.origWeighted.toFixed(2)}%
