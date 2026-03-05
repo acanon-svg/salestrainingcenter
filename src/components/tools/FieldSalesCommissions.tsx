@@ -45,7 +45,6 @@ import {
 } from "@/hooks/useCommissionReviews";
 import { useCommissionAccelerators, useAllAcceleratorsForConfigs, CommissionAccelerator } from "@/hooks/useCommissionAccelerators";
 import { useAllCommissionConfigs } from "@/hooks/useCommissionCalculatorConfig";
-import { useMonthlyConfigs } from "@/hooks/useCommissionMonthlyConfig";
 import * as XLSX from "xlsx";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
