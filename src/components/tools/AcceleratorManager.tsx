@@ -33,6 +33,7 @@ interface AcceleratorManagerProps {
 export const AcceleratorManager: React.FC<AcceleratorManagerProps> = ({
   configId,
   configName,
+  metaFirmas = 0,
 }) => {
   const { data: accelerators, isLoading } = useCommissionAccelerators(configId);
   const createAccelerator = useCreateAccelerator();
