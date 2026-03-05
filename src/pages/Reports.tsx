@@ -54,6 +54,8 @@ import {
   useHierarchyStatusDistribution,
 } from "@/hooks/useHierarchyReportsData";
 import { ComplianceBarChart } from "@/components/reports/ComplianceBarChart";
+import { TeamMemberBreakdownTable } from "@/components/reports/TeamMemberBreakdownTable";
+import { useTeamMemberCourseBreakdown } from "@/hooks/useTeamMemberCourseBreakdown";
 import { TrendLineChart } from "@/components/reports/TrendLineChart";
 import { StatusPieChart } from "@/components/reports/StatusPieChart";
 import { MonthlyComparisonChart } from "@/components/reports/MonthlyComparisonChart";
@@ -84,6 +86,9 @@ const LeaderReportsView: React.FC<{ dateRange: string }> = ({ dateRange }) => {
   const { data: hierarchyStatusData, isLoading: loadingHierarchyStatus } = useHierarchyStatusDistribution({
     dateRange: parseInt(dateRange),
   });
+  const { data: memberBreakdown, isLoading: loadingMemberBreakdown } = useTeamMemberCourseBreakdown(
+    leaderData?.userIds
+  );
 
   if (loadingLeaderData || loadingHierarchyOverview) {
     return (
@@ -332,6 +337,9 @@ const LeaderReportsView: React.FC<{ dateRange: string }> = ({ dateRange }) => {
           </CardContent>
         </Card>
       )}
+
+      {/* Team Member Course Breakdown */}
+      <TeamMemberBreakdownTable data={memberBreakdown} isLoading={loadingMemberBreakdown} />
     </div>
   );
 };
