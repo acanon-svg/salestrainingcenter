@@ -55,6 +55,9 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
   // Fetch accelerators for this config
   const { data: accelerators } = useCommissionAccelerators(config.id);
 
+  // Whether this month uses M0/M1 (March+)
+  const usesM1 = selectedMonth >= 3;
+
   // Use monthly config if available, otherwise use base config
   const effectiveConfig = useMemo(() => {
     if (monthlyConfig) {
@@ -63,6 +66,8 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
         meta_originaciones: monthlyConfig.meta_originaciones,
         meta_gmv_usd: monthlyConfig.meta_gmv_usd,
         base_comisional: monthlyConfig.base_comisional,
+        meta_originaciones_m1: (monthlyConfig as any).meta_originaciones_m1 ?? 0,
+        meta_gmv_m1: (monthlyConfig as any).meta_gmv_m1 ?? 0,
       };
     }
     return {
@@ -70,6 +75,8 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
       meta_originaciones: config.meta_originaciones,
       meta_gmv_usd: config.meta_gmv_usd,
       base_comisional: config.base_comisional,
+      meta_originaciones_m1: 0,
+      meta_gmv_m1: 0,
     };
   }, [monthlyConfig, config]);
 
@@ -81,33 +88,56 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
       : 0;
     const candadoDesbloqueado = porcentajeFirmas >= 85;
 
-    // Variable 2: Originaciones (50% participación)
-    const porcentajeOriginaciones = effectiveConfig.meta_originaciones > 0 
-      ? (originacionesReales / effectiveConfig.meta_originaciones) * 100 
-      : 0;
-    const participacionOriginaciones = porcentajeOriginaciones * 0.5;
+    let porcentajeOriginaciones: number;
+    let participacionOriginaciones: number;
+    let porcentajeGMV: number;
+    let participacionGMV: number;
+    let porcentajeOriginacionesM1 = 0;
+    let participacionOriginacionesM1 = 0;
+    let porcentajeGMVM1 = 0;
+    let participacionGMVM1 = 0;
 
-    // Variable 3: GMV (50% participación)
-    const porcentajeGMV = effectiveConfig.meta_gmv_usd > 0 
-      ? (gmvReal / effectiveConfig.meta_gmv_usd) * 100 
-      : 0;
-    const participacionGMV = porcentajeGMV * 0.5;
+    if (usesM1 && (effectiveConfig.meta_originaciones_m1 > 0 || effectiveConfig.meta_gmv_m1 > 0)) {
+      // M0/M1: 25% each
+      porcentajeOriginaciones = effectiveConfig.meta_originaciones > 0 
+        ? (originacionesReales / effectiveConfig.meta_originaciones) * 100 : 0;
+      participacionOriginaciones = porcentajeOriginaciones * 0.25;
+
+      porcentajeOriginacionesM1 = effectiveConfig.meta_originaciones_m1 > 0
+        ? (originacionesReales / effectiveConfig.meta_originaciones_m1) * 100 : 0;
+      participacionOriginacionesM1 = porcentajeOriginacionesM1 * 0.25;
+
+      porcentajeGMV = effectiveConfig.meta_gmv_usd > 0 
+        ? (gmvReal / effectiveConfig.meta_gmv_usd) * 100 : 0;
+      participacionGMV = porcentajeGMV * 0.25;
+
+      porcentajeGMVM1 = effectiveConfig.meta_gmv_m1 > 0
+        ? (gmvReal / effectiveConfig.meta_gmv_m1) * 100 : 0;
+      participacionGMVM1 = porcentajeGMVM1 * 0.25;
+    } else {
+      // Jan/Feb: 50% each
+      porcentajeOriginaciones = effectiveConfig.meta_originaciones > 0 
+        ? (originacionesReales / effectiveConfig.meta_originaciones) * 100 : 0;
+      participacionOriginaciones = porcentajeOriginaciones * 0.5;
+
+      porcentajeGMV = effectiveConfig.meta_gmv_usd > 0 
+        ? (gmvReal / effectiveConfig.meta_gmv_usd) * 100 : 0;
+      participacionGMV = porcentajeGMV * 0.5;
+    }
 
     // Total commission calculation
-    const porcentajeTotal = participacionOriginaciones + participacionGMV;
+    const porcentajeTotal = participacionOriginaciones + participacionGMV + participacionOriginacionesM1 + participacionGMVM1;
     const indicadoresCumplen = porcentajeTotal >= 85;
     const comisionBase = (candadoDesbloqueado && indicadoresCumplen)
       ? (porcentajeTotal / 100) * effectiveConfig.base_comisional
       : 0;
 
-    // Accelerator calculation
-    // Only applies if the weighted sum of originaciones + GMV >= 100%
+    // Accelerator: applies when weighted total >= 100%
     const acceleratorEligible = porcentajeTotal >= 100;
     let acceleratorBonus = 0;
     let appliedAccelerators: { min_firmas: number; bonus_percentage: number; description: string | null; bonusAmount: number }[] = [];
 
     if (acceleratorEligible && accelerators && accelerators.length > 0) {
-      // Find the highest applicable accelerator (not cumulative)
       let bestAccelerator: typeof accelerators[0] | null = null;
       accelerators.forEach((acc) => {
         if (firmasReales >= acc.min_firmas) {
@@ -138,8 +168,12 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
       indicadoresCumplen,
       porcentajeOriginaciones,
       participacionOriginaciones,
+      porcentajeOriginacionesM1,
+      participacionOriginacionesM1,
       porcentajeGMV,
       participacionGMV,
+      porcentajeGMVM1,
+      participacionGMVM1,
       porcentajeTotal,
       comisionBase,
       comisionTotal,
@@ -147,7 +181,7 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
       acceleratorBonus,
       appliedAccelerators,
     };
-  }, [firmasReales, originacionesReales, gmvReal, effectiveConfig, accelerators]);
+  }, [firmasReales, originacionesReales, gmvReal, effectiveConfig, accelerators, usesM1]);
 
   const getCommissionMessage = () => {
     const { comisionTotal, candadoDesbloqueado, indicadoresCumplen } = calculations;
@@ -340,18 +374,17 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
         </CardContent>
       </Card>
 
-      {/* Variable 2: Originaciones */}
+      {/* Variable 2: Originaciones M0 */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <DollarSign className="h-5 w-5 text-primary" />
-            Variable 2: Originaciones
-            <Badge variant="secondary" className="ml-2">50% participación</Badge>
+            Variable 2: Originaciones {usesM1 ? 'M0' : ''}
+            <Badge variant="secondary" className="ml-2">{usesM1 ? '25%' : '50%'} participación</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {/* Meta de Originaciones */}
             <div className="space-y-2">
               <Label className="text-muted-foreground">Meta del Mes</Label>
               <div className="flex items-center gap-2">
@@ -361,8 +394,6 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
                 </span>
               </div>
             </div>
-
-            {/* Originaciones Reales */}
             <div className="space-y-2">
               <Label htmlFor="originaciones-reales">Valor Real</Label>
               <Input
@@ -374,8 +405,6 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
                 className="font-mono"
               />
             </div>
-
-            {/* Porcentaje de Ejecución */}
             <div className="space-y-2">
               <Label className="text-muted-foreground">% Ejecución</Label>
               <div className="flex items-center gap-2">
@@ -385,10 +414,8 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
                 </span>
               </div>
             </div>
-
-            {/* Resultado con Participación */}
             <div className="space-y-2">
-              <Label className="text-muted-foreground">Resultado (×50%)</Label>
+              <Label className="text-muted-foreground">Resultado (×{usesM1 ? '25' : '50'}%)</Label>
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-amber-500" />
                 <span className="text-lg font-bold text-amber-600">
@@ -404,18 +431,69 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
         </CardContent>
       </Card>
 
-      {/* Variable 3: GMV */}
+      {/* Variable 2b: Originaciones M1 (March+) */}
+      {usesM1 && effectiveConfig.meta_originaciones_m1 > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-primary" />
+              Variable 2b: Originaciones M1
+              <Badge variant="secondary" className="ml-2">25% participación</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="space-y-2">
+                <Label className="text-muted-foreground">Meta M1</Label>
+                <div className="flex items-center gap-2">
+                  <Target className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-lg font-semibold">
+                    {effectiveConfig.meta_originaciones_m1.toLocaleString("es-CO")}
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-muted-foreground">Valor Real</Label>
+                <span className="text-lg font-semibold block pt-1">{originacionesReales.toLocaleString("es-CO")}</span>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-muted-foreground">% Ejecución</Label>
+                <div className="flex items-center gap-2">
+                  <Percent className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-lg font-bold text-primary">
+                    {calculations.porcentajeOriginacionesM1.toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-muted-foreground">Resultado (×25%)</Label>
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-amber-500" />
+                  <span className="text-lg font-bold text-amber-600">
+                    {calculations.participacionOriginacionesM1.toFixed(2)}%
+                  </span>
+                </div>
+              </div>
+            </div>
+            <Progress 
+              value={Math.min(calculations.porcentajeOriginacionesM1, 100)} 
+              className="h-2"
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Variable 3: GMV M0 */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <DollarSign className="h-5 w-5 text-primary" />
-            Variable 3: GMV (USD)
-            <Badge variant="secondary" className="ml-2">50% participación</Badge>
+            Variable 3: GMV (USD) {usesM1 ? 'M0' : ''}
+            <Badge variant="secondary" className="ml-2">{usesM1 ? '25%' : '50%'} participación</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {/* Meta de GMV */}
             <div className="space-y-2">
               <Label className="text-muted-foreground">Meta del Mes (USD)</Label>
               <div className="flex items-center gap-2">
@@ -425,8 +503,6 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
                 </span>
               </div>
             </div>
-
-            {/* GMV Real */}
             <div className="space-y-2">
               <Label htmlFor="gmv-real">Valor Real (USD)</Label>
               <Input
@@ -439,8 +515,6 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
                 className="font-mono"
               />
             </div>
-
-            {/* Porcentaje de Ejecución */}
             <div className="space-y-2">
               <Label className="text-muted-foreground">% Ejecución</Label>
               <div className="flex items-center gap-2">
@@ -450,10 +524,8 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
                 </span>
               </div>
             </div>
-
-            {/* Resultado con Participación */}
             <div className="space-y-2">
-              <Label className="text-muted-foreground">Resultado (×50%)</Label>
+              <Label className="text-muted-foreground">Resultado (×{usesM1 ? '25' : '50'}%)</Label>
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-amber-500" />
                 <span className="text-lg font-bold text-amber-600">
@@ -468,6 +540,58 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
           />
         </CardContent>
       </Card>
+
+      {/* Variable 3b: GMV M1 (March+) */}
+      {usesM1 && effectiveConfig.meta_gmv_m1 > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-primary" />
+              Variable 3b: GMV (USD) M1
+              <Badge variant="secondary" className="ml-2">25% participación</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="space-y-2">
+                <Label className="text-muted-foreground">Meta M1 (USD)</Label>
+                <div className="flex items-center gap-2">
+                  <Target className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-lg font-semibold">
+                    {formatCurrencyUSD(effectiveConfig.meta_gmv_m1)}
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-muted-foreground">Valor Real (USD)</Label>
+                <span className="text-lg font-semibold block pt-1">{formatCurrencyUSD(gmvReal)}</span>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-muted-foreground">% Ejecución</Label>
+                <div className="flex items-center gap-2">
+                  <Percent className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-lg font-bold text-primary">
+                    {calculations.porcentajeGMVM1.toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-muted-foreground">Resultado (×25%)</Label>
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-amber-500" />
+                  <span className="text-lg font-bold text-amber-600">
+                    {calculations.participacionGMVM1.toFixed(2)}%
+                  </span>
+                </div>
+              </div>
+            </div>
+            <Progress 
+              value={Math.min(calculations.porcentajeGMVM1, 100)} 
+              className="h-2"
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Accelerators Section */}
       {accelerators && accelerators.length > 0 && (
@@ -484,8 +608,8 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
             </CardTitle>
             <CardDescription>
               {calculations.acceleratorEligible
-                ? "¡Cumples el 100% en originaciones y GMV! Los aceleradores están activos."
-                : "Para activar los aceleradores debes cumplir el 100% en originaciones y GMV."}
+                ? "¡Cumples el 100% en el ponderado de originaciones y GMV! Los aceleradores están activos."
+                : "Para activar los aceleradores debes cumplir el 100% en el ponderado de originaciones y GMV."}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">

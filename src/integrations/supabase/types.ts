@@ -512,8 +512,10 @@ export type Database = {
           created_by: string | null
           id: string
           meta_firmas: number
+          meta_gmv_m1: number
           meta_gmv_usd: number
           meta_originaciones: number
+          meta_originaciones_m1: number
           month: number
           updated_at: string
           year: number
@@ -525,8 +527,10 @@ export type Database = {
           created_by?: string | null
           id?: string
           meta_firmas?: number
+          meta_gmv_m1?: number
           meta_gmv_usd?: number
           meta_originaciones?: number
+          meta_originaciones_m1?: number
           month: number
           updated_at?: string
           year: number
@@ -538,8 +542,10 @@ export type Database = {
           created_by?: string | null
           id?: string
           meta_firmas?: number
+          meta_gmv_m1?: number
           meta_gmv_usd?: number
           meta_originaciones?: number
+          meta_originaciones_m1?: number
           month?: number
           updated_at?: string
           year?: number

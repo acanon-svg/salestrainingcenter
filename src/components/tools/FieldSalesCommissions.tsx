@@ -81,11 +81,10 @@ const findConfigForUser = (
 const calculateAcceleratorBonus = (
   accelerators: CommissionAccelerator[],
   firmasReal: number,
-  origPct: number,
-  gmvPct: number,
+  totalPct: number,
   baseCommissionAmount: number
 ) => {
-  const eligible = origPct >= 100 && gmvPct >= 100;
+  const eligible = totalPct >= 100;
   if (!eligible || accelerators.length === 0) {
     return { eligible, totalBonus: 0, applied: [] as { min_firmas: number; bonus_percentage: number; description: string | null; amount: number }[] };
   }
@@ -245,6 +244,9 @@ export const FieldSalesCommissions: React.FC = () => {
             meta_originaciones: monthlyOverride.meta_originaciones,
             meta_gmv_usd: monthlyOverride.meta_gmv_usd,
             base_comisional: monthlyOverride.base_comisional,
+            meta_originaciones_m1: (monthlyOverride as any).meta_originaciones_m1 ?? 0,
+            meta_gmv_m1: (monthlyOverride as any).meta_gmv_m1 ?? 0,
+            month: selectedMonth,
           }
         : matchedConfig
         ? {
@@ -252,8 +254,9 @@ export const FieldSalesCommissions: React.FC = () => {
             meta_originaciones: matchedConfig.meta_originaciones,
             meta_gmv_usd: matchedConfig.meta_gmv_usd,
             base_comisional: matchedConfig.base_comisional,
+            month: selectedMonth,
           }
-        : undefined;
+        : { month: selectedMonth };
 
       const calc = calculateCommission(result, overrides);
       const review = existingReviews?.find(
@@ -274,8 +277,7 @@ export const FieldSalesCommissions: React.FC = () => {
       const accelResult = calculateAcceleratorBonus(
         configAccelerators,
         result.firmas_real,
-        calc.origPct,
-        calc.gmvPct,
+        calc.totalPct,
         baseForAccelerator
       );
 
@@ -321,6 +323,9 @@ export const FieldSalesCommissions: React.FC = () => {
           meta_originaciones: monthlyOverride.meta_originaciones,
           meta_gmv_usd: monthlyOverride.meta_gmv_usd,
           base_comisional: monthlyOverride.base_comisional,
+          meta_originaciones_m1: (monthlyOverride as any).meta_originaciones_m1 ?? 0,
+          meta_gmv_m1: (monthlyOverride as any).meta_gmv_m1 ?? 0,
+          month: selectedMonth,
         }
       : matchedConfig
       ? {
@@ -328,8 +333,9 @@ export const FieldSalesCommissions: React.FC = () => {
           meta_originaciones: matchedConfig.meta_originaciones,
           meta_gmv_usd: matchedConfig.meta_gmv_usd,
           base_comisional: matchedConfig.base_comisional,
+          month: selectedMonth,
         }
-      : undefined;
+      : { month: selectedMonth };
 
     const calc = calculateCommission(exec, overrides);
     const adj = adjustments[exec.user_email] || { hasMb: false, bonus: 0 };
@@ -657,7 +663,7 @@ export const FieldSalesCommissions: React.FC = () => {
                       <div className="flex items-center gap-1.5 mb-1">
                         <Target className="h-4 w-4 text-primary" />
                         <span className="text-xs font-semibold">
-                          Originaciones (50%)
+                          Originaciones {exec.useM1 ? 'M0 (25%)' : '(50%)'}
                         </span>
                       </div>
                       <p className="text-lg font-bold">
@@ -669,11 +675,28 @@ export const FieldSalesCommissions: React.FC = () => {
                       </p>
                     </div>
 
+                    {/* Originaciones M1 (March+) */}
+                    {exec.useM1 && (
+                      <div className="p-3 rounded-lg border bg-muted/30">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <Target className="h-4 w-4 text-primary" />
+                          <span className="text-xs font-semibold">Originaciones M1 (25%)</span>
+                        </div>
+                        <p className="text-lg font-bold">
+                          {exec.originaciones_real.toLocaleString("es-CO")} /{" "}
+                          {(exec.effectiveOrigM1Meta ?? 0).toLocaleString("es-CO")}
+                        </p>
+                        <p className="text-sm text-primary font-medium">
+                          {(exec.origM1Pct ?? 0).toFixed(1)}% → {(exec.origM1Weighted ?? 0).toFixed(2)}%
+                        </p>
+                      </div>
+                    )}
+
                     {/* GMV */}
                     <div className="p-3 rounded-lg border bg-muted/30">
                       <div className="flex items-center gap-1.5 mb-1">
                         <DollarSign className="h-4 w-4 text-primary" />
-                        <span className="text-xs font-semibold">GMV USD (50%)</span>
+                        <span className="text-xs font-semibold">GMV USD {exec.useM1 ? 'M0 (25%)' : '(50%)'}</span>
                       </div>
                       <p className="text-lg font-bold">
                         ${exec.gmv_real.toLocaleString("en-US")} / $
@@ -683,6 +706,23 @@ export const FieldSalesCommissions: React.FC = () => {
                         {exec.gmvPct.toFixed(1)}% → {exec.gmvWeighted.toFixed(2)}%
                       </p>
                     </div>
+
+                    {/* GMV M1 (March+) */}
+                    {exec.useM1 && (
+                      <div className="p-3 rounded-lg border bg-muted/30">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <DollarSign className="h-4 w-4 text-primary" />
+                          <span className="text-xs font-semibold">GMV USD M1 (25%)</span>
+                        </div>
+                        <p className="text-lg font-bold">
+                          ${exec.gmv_real.toLocaleString("en-US")} / $
+                          {(exec.effectiveGmvM1Meta ?? 0).toLocaleString("en-US")}
+                        </p>
+                        <p className="text-sm text-primary font-medium">
+                          {(exec.gmvM1Pct ?? 0).toFixed(1)}% → {(exec.gmvM1Weighted ?? 0).toFixed(2)}%
+                        </p>
+                      </div>
+                    )}
 
                     {/* Indicadores Combinados */}
                     <div
