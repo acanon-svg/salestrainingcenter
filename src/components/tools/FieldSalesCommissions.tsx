@@ -81,11 +81,10 @@ const findConfigForUser = (
 const calculateAcceleratorBonus = (
   accelerators: CommissionAccelerator[],
   firmasReal: number,
-  origPct: number,
-  gmvPct: number,
+  totalPct: number,
   baseCommissionAmount: number
 ) => {
-  const eligible = origPct >= 100 && gmvPct >= 100;
+  const eligible = totalPct >= 100;
   if (!eligible || accelerators.length === 0) {
     return { eligible, totalBonus: 0, applied: [] as { min_firmas: number; bonus_percentage: number; description: string | null; amount: number }[] };
   }
