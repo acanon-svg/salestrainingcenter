@@ -11,7 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, Save, Target, DollarSign, Check } from "lucide-react";
+import { Calendar, Save, Target, DollarSign, Check, Zap } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { CommissionCalculatorConfig } from "@/hooks/useCommissionCalculatorConfig";
 import {
