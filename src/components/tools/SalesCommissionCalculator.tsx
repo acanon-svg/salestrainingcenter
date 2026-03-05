@@ -45,7 +45,9 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
   // Input values (editable by student/leader)
   const [firmasReales, setFirmasReales] = useState<number>(0);
   const [originacionesReales, setOriginacionesReales] = useState<number>(0);
+  const [originacionesRealesM1, setOriginacionesRealesM1] = useState<number>(0);
   const [gmvReal, setGmvReal] = useState<number>(0);
+  const [gmvRealM1, setGmvRealM1] = useState<number>(0);
 
   const isCreatorOrAdmin = userRole === "admin" || userRole === "creator";
 
@@ -104,7 +106,7 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
       participacionOriginaciones = porcentajeOriginaciones * 0.25;
 
       porcentajeOriginacionesM1 = effectiveConfig.meta_originaciones_m1 > 0
-        ? (originacionesReales / effectiveConfig.meta_originaciones_m1) * 100 : 0;
+        ? (originacionesRealesM1 / effectiveConfig.meta_originaciones_m1) * 100 : 0;
       participacionOriginacionesM1 = porcentajeOriginacionesM1 * 0.25;
 
       porcentajeGMV = effectiveConfig.meta_gmv_usd > 0 
@@ -112,7 +114,7 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
       participacionGMV = porcentajeGMV * 0.25;
 
       porcentajeGMVM1 = effectiveConfig.meta_gmv_m1 > 0
-        ? (gmvReal / effectiveConfig.meta_gmv_m1) * 100 : 0;
+        ? (gmvRealM1 / effectiveConfig.meta_gmv_m1) * 100 : 0;
       participacionGMVM1 = porcentajeGMVM1 * 0.25;
     } else {
       // Jan/Feb: 50% each
@@ -181,7 +183,7 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
       acceleratorBonus,
       appliedAccelerators,
     };
-  }, [firmasReales, originacionesReales, gmvReal, effectiveConfig, accelerators, usesM1]);
+  }, [firmasReales, originacionesReales, originacionesRealesM1, gmvReal, gmvRealM1, effectiveConfig, accelerators, usesM1]);
 
   const getCommissionMessage = () => {
     const { comisionTotal, candadoDesbloqueado, indicadoresCumplen } = calculations;
@@ -453,8 +455,15 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-muted-foreground">Valor Real</Label>
-                <span className="text-lg font-semibold block pt-1">{originacionesReales.toLocaleString("es-CO")}</span>
+                <Label htmlFor="originaciones-reales-m1">Valor Real</Label>
+                <Input
+                  id="originaciones-reales-m1"
+                  type="number"
+                  min={0}
+                  value={originacionesRealesM1}
+                  onChange={(e) => setOriginacionesRealesM1(parseFloat(e.target.value) || 0)}
+                  className="font-mono"
+                />
               </div>
               <div className="space-y-2">
                 <Label className="text-muted-foreground">% Ejecución</Label>
@@ -563,8 +572,16 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-muted-foreground">Valor Real (USD)</Label>
-                <span className="text-lg font-semibold block pt-1">{formatCurrencyUSD(gmvReal)}</span>
+                <Label htmlFor="gmv-real-m1">Valor Real (USD)</Label>
+                <Input
+                  id="gmv-real-m1"
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={gmvRealM1}
+                  onChange={(e) => setGmvRealM1(parseFloat(e.target.value) || 0)}
+                  className="font-mono"
+                />
               </div>
               <div className="space-y-2">
                 <Label className="text-muted-foreground">% Ejecución</Label>
