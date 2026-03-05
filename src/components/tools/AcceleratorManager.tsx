@@ -221,7 +221,12 @@ export const AcceleratorManager: React.FC<AcceleratorManagerProps> = ({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3 flex-wrap">
                   <Badge variant="outline" className="font-mono">
-                    ≥ {acc.min_firmas} firmas
+                    ≥ {acc.min_firmas}% firmas
+                    {metaFirmas > 0 && (
+                      <span className="text-muted-foreground ml-1">
+                        ({Math.ceil(metaFirmas * acc.min_firmas / 100)} firmas)
+                      </span>
+                    )}
                   </Badge>
                   <Badge className="bg-amber-500 text-white">
                     +{acc.bonus_percentage}%
