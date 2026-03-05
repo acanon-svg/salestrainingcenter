@@ -245,6 +245,9 @@ export const FieldSalesCommissions: React.FC = () => {
             meta_originaciones: monthlyOverride.meta_originaciones,
             meta_gmv_usd: monthlyOverride.meta_gmv_usd,
             base_comisional: monthlyOverride.base_comisional,
+            meta_originaciones_m1: (monthlyOverride as any).meta_originaciones_m1 ?? 0,
+            meta_gmv_m1: (monthlyOverride as any).meta_gmv_m1 ?? 0,
+            month: selectedMonth,
           }
         : matchedConfig
         ? {
@@ -252,8 +255,9 @@ export const FieldSalesCommissions: React.FC = () => {
             meta_originaciones: matchedConfig.meta_originaciones,
             meta_gmv_usd: matchedConfig.meta_gmv_usd,
             base_comisional: matchedConfig.base_comisional,
+            month: selectedMonth,
           }
-        : undefined;
+        : { month: selectedMonth };
 
       const calc = calculateCommission(result, overrides);
       const review = existingReviews?.find(
