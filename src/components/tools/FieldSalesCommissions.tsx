@@ -312,10 +312,34 @@ export const FieldSalesCommissions: React.FC = () => {
         accelerator: accelResult,
       };
     });
-  }, [teamResults, existingReviews, adjustments, nameMap, guaranteedMap, profileInfoMap, commissionConfigs, allAccelerators]);
+  }, [teamResults, existingReviews, adjustments, nameMap, guaranteedMap, profileInfoMap, commissionConfigs, allAccelerators, allMonthlyConfigs]);
 
   const buildReviewPayload = (exec: (typeof executiveData)[0]) => {
-    const calc = calculateCommission(exec);
+    // Rebuild overrides for this exec
+    const pInfo = profileInfoMap.get(exec.user_email);
+    const matchedConfig = commissionConfigs && commissionConfigs.length > 0
+      ? findConfigForUser(commissionConfigs, exec.user_email, pInfo?.user_id, pInfo?.team)
+      : null;
+    const monthlyOverride = matchedConfig && allMonthlyConfigs
+      ? allMonthlyConfigs.find((mc: any) => mc.config_id === matchedConfig.id)
+      : null;
+    const overrides = monthlyOverride
+      ? {
+          meta_firmas: monthlyOverride.meta_firmas,
+          meta_originaciones: monthlyOverride.meta_originaciones,
+          meta_gmv_usd: monthlyOverride.meta_gmv_usd,
+          base_comisional: monthlyOverride.base_comisional,
+        }
+      : matchedConfig
+      ? {
+          meta_firmas: matchedConfig.meta_firmas,
+          meta_originaciones: matchedConfig.meta_originaciones,
+          meta_gmv_usd: matchedConfig.meta_gmv_usd,
+          base_comisional: matchedConfig.base_comisional,
+        }
+      : undefined;
+
+    const calc = calculateCommission(exec, overrides);
     const adj = adjustments[exec.user_email] || { hasMb: false, bonus: 0 };
     const isGuaranteed = guaranteedMap.get(exec.user_email) || false;
     
