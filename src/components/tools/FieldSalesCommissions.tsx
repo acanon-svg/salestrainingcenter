@@ -80,7 +80,7 @@ const findConfigForUser = (
 /** Calculate accelerator bonus for an executive */
 const calculateAcceleratorBonus = (
   accelerators: CommissionAccelerator[],
-  firmasReal: number,
+  firmasCompliancePct: number,
   totalPct: number,
   baseCommissionAmount: number
 ) => {
@@ -91,10 +91,10 @@ const calculateAcceleratorBonus = (
 
   const applied: { min_firmas: number; bonus_percentage: number; description: string | null; amount: number }[] = [];
 
-  // Find the highest applicable accelerator (not cumulative)
+  // Find the highest applicable accelerator based on firmas compliance %
   let bestAccelerator: CommissionAccelerator | null = null;
   accelerators.forEach((acc) => {
-    if (firmasReal >= acc.min_firmas) {
+    if (firmasCompliancePct >= acc.min_firmas) {
       if (!bestAccelerator || acc.bonus_percentage > bestAccelerator.bonus_percentage) {
         bestAccelerator = acc;
       }
