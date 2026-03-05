@@ -409,7 +409,7 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
                   );
                 })}
                 {!calculations.acceleratorEligible && (
-                  <span className="text-[10px] text-muted-foreground">(Req. 100% ponderado)</span>
+                  <span className="text-[10px] text-muted-foreground">(Req. 100% ponderado y 100% firmas)</span>
                 )}
               </div>
             </>
