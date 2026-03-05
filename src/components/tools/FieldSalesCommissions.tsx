@@ -276,7 +276,7 @@ export const FieldSalesCommissions: React.FC = () => {
       const baseForAccelerator = isGuaranteed ? calc.baseCommission : calc.calculatedCommission;
       const accelResult = calculateAcceleratorBonus(
         configAccelerators,
-        result.firmas_real,
+        calc.firmasCompliance,
         calc.totalPct,
         baseForAccelerator
       );
