@@ -88,33 +88,56 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
       : 0;
     const candadoDesbloqueado = porcentajeFirmas >= 85;
 
-    // Variable 2: Originaciones (50% participación)
-    const porcentajeOriginaciones = effectiveConfig.meta_originaciones > 0 
-      ? (originacionesReales / effectiveConfig.meta_originaciones) * 100 
-      : 0;
-    const participacionOriginaciones = porcentajeOriginaciones * 0.5;
+    let porcentajeOriginaciones: number;
+    let participacionOriginaciones: number;
+    let porcentajeGMV: number;
+    let participacionGMV: number;
+    let porcentajeOriginacionesM1 = 0;
+    let participacionOriginacionesM1 = 0;
+    let porcentajeGMVM1 = 0;
+    let participacionGMVM1 = 0;
 
-    // Variable 3: GMV (50% participación)
-    const porcentajeGMV = effectiveConfig.meta_gmv_usd > 0 
-      ? (gmvReal / effectiveConfig.meta_gmv_usd) * 100 
-      : 0;
-    const participacionGMV = porcentajeGMV * 0.5;
+    if (usesM1 && (effectiveConfig.meta_originaciones_m1 > 0 || effectiveConfig.meta_gmv_m1 > 0)) {
+      // M0/M1: 25% each
+      porcentajeOriginaciones = effectiveConfig.meta_originaciones > 0 
+        ? (originacionesReales / effectiveConfig.meta_originaciones) * 100 : 0;
+      participacionOriginaciones = porcentajeOriginaciones * 0.25;
+
+      porcentajeOriginacionesM1 = effectiveConfig.meta_originaciones_m1 > 0
+        ? (originacionesReales / effectiveConfig.meta_originaciones_m1) * 100 : 0;
+      participacionOriginacionesM1 = porcentajeOriginacionesM1 * 0.25;
+
+      porcentajeGMV = effectiveConfig.meta_gmv_usd > 0 
+        ? (gmvReal / effectiveConfig.meta_gmv_usd) * 100 : 0;
+      participacionGMV = porcentajeGMV * 0.25;
+
+      porcentajeGMVM1 = effectiveConfig.meta_gmv_m1 > 0
+        ? (gmvReal / effectiveConfig.meta_gmv_m1) * 100 : 0;
+      participacionGMVM1 = porcentajeGMVM1 * 0.25;
+    } else {
+      // Jan/Feb: 50% each
+      porcentajeOriginaciones = effectiveConfig.meta_originaciones > 0 
+        ? (originacionesReales / effectiveConfig.meta_originaciones) * 100 : 0;
+      participacionOriginaciones = porcentajeOriginaciones * 0.5;
+
+      porcentajeGMV = effectiveConfig.meta_gmv_usd > 0 
+        ? (gmvReal / effectiveConfig.meta_gmv_usd) * 100 : 0;
+      participacionGMV = porcentajeGMV * 0.5;
+    }
 
     // Total commission calculation
-    const porcentajeTotal = participacionOriginaciones + participacionGMV;
+    const porcentajeTotal = participacionOriginaciones + participacionGMV + participacionOriginacionesM1 + participacionGMVM1;
     const indicadoresCumplen = porcentajeTotal >= 85;
     const comisionBase = (candadoDesbloqueado && indicadoresCumplen)
       ? (porcentajeTotal / 100) * effectiveConfig.base_comisional
       : 0;
 
-    // Accelerator calculation
-    // Only applies if the weighted sum of originaciones + GMV >= 100%
+    // Accelerator: applies when weighted total >= 100%
     const acceleratorEligible = porcentajeTotal >= 100;
     let acceleratorBonus = 0;
     let appliedAccelerators: { min_firmas: number; bonus_percentage: number; description: string | null; bonusAmount: number }[] = [];
 
     if (acceleratorEligible && accelerators && accelerators.length > 0) {
-      // Find the highest applicable accelerator (not cumulative)
       let bestAccelerator: typeof accelerators[0] | null = null;
       accelerators.forEach((acc) => {
         if (firmasReales >= acc.min_firmas) {
@@ -145,8 +168,12 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
       indicadoresCumplen,
       porcentajeOriginaciones,
       participacionOriginaciones,
+      porcentajeOriginacionesM1,
+      participacionOriginacionesM1,
       porcentajeGMV,
       participacionGMV,
+      porcentajeGMVM1,
+      participacionGMVM1,
       porcentajeTotal,
       comisionBase,
       comisionTotal,
@@ -154,7 +181,7 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
       acceleratorBonus,
       appliedAccelerators,
     };
-  }, [firmasReales, originacionesReales, gmvReal, effectiveConfig, accelerators]);
+  }, [firmasReales, originacionesReales, gmvReal, effectiveConfig, accelerators, usesM1]);
 
   const getCommissionMessage = () => {
     const { comisionTotal, candadoDesbloqueado, indicadoresCumplen } = calculations;
