@@ -86,6 +86,9 @@ const LeaderReportsView: React.FC<{ dateRange: string }> = ({ dateRange }) => {
   const { data: hierarchyStatusData, isLoading: loadingHierarchyStatus } = useHierarchyStatusDistribution({
     dateRange: parseInt(dateRange),
   });
+  const { data: memberBreakdown, isLoading: loadingMemberBreakdown } = useTeamMemberCourseBreakdown(
+    leaderData?.userIds
+  );
 
   if (loadingLeaderData || loadingHierarchyOverview) {
     return (
