@@ -143,13 +143,11 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
     let appliedAccelerators: { min_firmas: number; bonus_percentage: number; description: string | null; bonusAmount: number }[] = [];
 
     if (acceleratorEligible && accelerators && accelerators.length > 0) {
-      const firmasCompliancePct = effectiveConfig.meta_firmas > 0
-        ? (firmasReales / effectiveConfig.meta_firmas) * 100
-        : 0;
       // Pick the highest qualifying accelerator tier (non-cumulative)
+      // min_firmas is an absolute number of signatures, compare against actual firmas
       let bestAccelerator: typeof accelerators[0] | null = null;
       accelerators.forEach((acc) => {
-        if (firmasCompliancePct >= acc.min_firmas) {
+        if (firmasReales >= acc.min_firmas) {
           if (!bestAccelerator || acc.min_firmas > bestAccelerator.min_firmas) {
             bestAccelerator = acc;
           }
