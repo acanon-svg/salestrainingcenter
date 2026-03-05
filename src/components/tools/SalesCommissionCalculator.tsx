@@ -144,13 +144,10 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
 
     if (acceleratorEligible && accelerators && accelerators.length > 0) {
       // Pick the highest qualifying accelerator tier (non-cumulative)
-      // min_firmas is an absolute number of signatures, compare against actual firmas
+      // min_firmas is an ABSOLUTE number of signatures required (e.g. 61, 66, 72, 77)
       let bestAccelerator: typeof accelerators[0] | null = null;
       accelerators.forEach((acc) => {
-        // min_firmas is a percentage (e.g. 120 means 120% of meta)
-        // Convert to absolute number of signatures required
-        const firmasRequired = (acc.min_firmas / 100) * effectiveConfig.meta_firmas;
-        if (firmasReales >= firmasRequired) {
+        if (firmasReales >= acc.min_firmas) {
           if (!bestAccelerator || acc.min_firmas > bestAccelerator.min_firmas) {
             bestAccelerator = acc;
           }

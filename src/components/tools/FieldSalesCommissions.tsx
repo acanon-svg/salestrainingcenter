@@ -281,6 +281,7 @@ export const FieldSalesCommissions: React.FC = () => {
       const accelResult = calculateAcceleratorBonus(
         configAccelerators,
         calc.firmasCompliance,
+        result.firmas_real,
         calc.totalPct,
         baseForAccelerator
       );
