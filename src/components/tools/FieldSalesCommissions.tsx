@@ -647,7 +647,7 @@ export const FieldSalesCommissions: React.FC = () => {
                         <span className="text-xs font-semibold">Firmas (Candado)</span>
                       </div>
                       <p className="text-lg font-bold">
-                        {exec.firmas_real} / {exec.firmas_meta}
+                        {exec.firmas_real} / {exec.effectiveFirmasMeta}
                       </p>
                       <p
                         className={cn(
