@@ -106,7 +106,7 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
       participacionOriginaciones = porcentajeOriginaciones * 0.25;
 
       porcentajeOriginacionesM1 = effectiveConfig.meta_originaciones_m1 > 0
-        ? (originacionesReales / effectiveConfig.meta_originaciones_m1) * 100 : 0;
+        ? (originacionesRealesM1 / effectiveConfig.meta_originaciones_m1) * 100 : 0;
       participacionOriginacionesM1 = porcentajeOriginacionesM1 * 0.25;
 
       porcentajeGMV = effectiveConfig.meta_gmv_usd > 0 
