@@ -337,6 +337,9 @@ const LeaderReportsView: React.FC<{ dateRange: string }> = ({ dateRange }) => {
           </CardContent>
         </Card>
       )}
+
+      {/* Team Member Course Breakdown */}
+      <TeamMemberBreakdownTable data={memberBreakdown} isLoading={loadingMemberBreakdown} />
     </div>
   );
 };
