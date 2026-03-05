@@ -55,6 +55,9 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
   // Fetch accelerators for this config
   const { data: accelerators } = useCommissionAccelerators(config.id);
 
+  // Whether this month uses M0/M1 (March+)
+  const usesM1 = selectedMonth >= 3;
+
   // Use monthly config if available, otherwise use base config
   const effectiveConfig = useMemo(() => {
     if (monthlyConfig) {
@@ -63,6 +66,8 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
         meta_originaciones: monthlyConfig.meta_originaciones,
         meta_gmv_usd: monthlyConfig.meta_gmv_usd,
         base_comisional: monthlyConfig.base_comisional,
+        meta_originaciones_m1: (monthlyConfig as any).meta_originaciones_m1 ?? 0,
+        meta_gmv_m1: (monthlyConfig as any).meta_gmv_m1 ?? 0,
       };
     }
     return {
@@ -70,6 +75,8 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
       meta_originaciones: config.meta_originaciones,
       meta_gmv_usd: config.meta_gmv_usd,
       base_comisional: config.base_comisional,
+      meta_originaciones_m1: 0,
+      meta_gmv_m1: 0,
     };
   }, [monthlyConfig, config]);
 
