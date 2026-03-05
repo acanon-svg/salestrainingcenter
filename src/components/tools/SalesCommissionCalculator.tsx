@@ -146,26 +146,19 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
       const firmasCompliancePct = effectiveConfig.meta_firmas > 0
         ? (firmasReales / effectiveConfig.meta_firmas) * 100
         : 0;
-      let bestAccelerator: typeof accelerators[0] | null = null;
+      // Apply ALL qualifying accelerator tiers (cumulative)
       accelerators.forEach((acc) => {
         if (firmasCompliancePct >= acc.min_firmas) {
-          if (!bestAccelerator || acc.bonus_percentage > bestAccelerator.bonus_percentage) {
-            bestAccelerator = acc;
-          }
+          const bonus = (acc.bonus_percentage / 100) * comisionBase;
+          acceleratorBonus += bonus;
+          appliedAccelerators.push({
+            min_firmas: acc.min_firmas,
+            bonus_percentage: acc.bonus_percentage,
+            description: acc.description,
+            bonusAmount: bonus,
+          });
         }
       });
-
-      if (bestAccelerator) {
-        const best = bestAccelerator as typeof accelerators[0];
-        const bonus = (best.bonus_percentage / 100) * comisionBase;
-        acceleratorBonus = bonus;
-        appliedAccelerators.push({
-          min_firmas: best.min_firmas,
-          bonus_percentage: best.bonus_percentage,
-          description: best.description,
-          bonusAmount: bonus,
-        });
-      }
     }
 
     const comisionTotal = comisionBase + acceleratorBonus;
