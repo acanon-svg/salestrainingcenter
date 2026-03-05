@@ -652,7 +652,7 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
                       "font-mono",
                       isApplied && "bg-amber-500 text-white"
                     )}>
-                      ≥ {acc.min_firmas} firmas
+                      ≥ {acc.min_firmas}% firmas
                     </Badge>
                     <span className="text-sm font-medium">+{acc.bonus_percentage}% sobre comisión</span>
                     {acc.description && (
