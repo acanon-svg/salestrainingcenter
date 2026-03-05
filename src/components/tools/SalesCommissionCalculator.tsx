@@ -114,7 +114,7 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
       participacionGMV = porcentajeGMV * 0.25;
 
       porcentajeGMVM1 = effectiveConfig.meta_gmv_m1 > 0
-        ? (gmvReal / effectiveConfig.meta_gmv_m1) * 100 : 0;
+        ? (gmvRealM1 / effectiveConfig.meta_gmv_m1) * 100 : 0;
       participacionGMVM1 = porcentajeGMVM1 * 0.25;
     } else {
       // Jan/Feb: 50% each
