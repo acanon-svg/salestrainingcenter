@@ -572,8 +572,16 @@ export const SalesCommissionCalculator: React.FC<SalesCommissionCalculatorProps>
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-muted-foreground">Valor Real (USD)</Label>
-                <span className="text-lg font-semibold block pt-1">{formatCurrencyUSD(gmvReal)}</span>
+                <Label htmlFor="gmv-real-m1">Valor Real (USD)</Label>
+                <Input
+                  id="gmv-real-m1"
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={gmvRealM1}
+                  onChange={(e) => setGmvRealM1(parseFloat(e.target.value) || 0)}
+                  className="font-mono"
+                />
               </div>
               <div className="space-y-2">
                 <Label className="text-muted-foreground">% Ejecución</Label>
