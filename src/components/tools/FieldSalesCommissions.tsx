@@ -80,7 +80,7 @@ const findConfigForUser = (
 /** Calculate accelerator bonus for an executive */
 const calculateAcceleratorBonus = (
   accelerators: CommissionAccelerator[],
-  firmasReal: number,
+  firmasCompliancePct: number,
   totalPct: number,
   baseCommissionAmount: number
 ) => {
@@ -91,10 +91,10 @@ const calculateAcceleratorBonus = (
 
   const applied: { min_firmas: number; bonus_percentage: number; description: string | null; amount: number }[] = [];
 
-  // Find the highest applicable accelerator (not cumulative)
+  // Find the highest applicable accelerator based on firmas compliance %
   let bestAccelerator: CommissionAccelerator | null = null;
   accelerators.forEach((acc) => {
-    if (firmasReal >= acc.min_firmas) {
+    if (firmasCompliancePct >= acc.min_firmas) {
       if (!bestAccelerator || acc.bonus_percentage > bestAccelerator.bonus_percentage) {
         bestAccelerator = acc;
       }
@@ -276,7 +276,7 @@ export const FieldSalesCommissions: React.FC = () => {
       const baseForAccelerator = isGuaranteed ? calc.baseCommission : calc.calculatedCommission;
       const accelResult = calculateAcceleratorBonus(
         configAccelerators,
-        result.firmas_real,
+        calc.firmasCompliance,
         calc.totalPct,
         baseForAccelerator
       );
@@ -767,7 +767,7 @@ export const FieldSalesCommissions: React.FC = () => {
                       <div className="flex flex-wrap gap-1.5">
                         {exec.accelerator.applied.map((a, i) => (
                           <Badge key={i} variant="outline" className="text-xs font-mono border-amber-500/50">
-                            ≥{a.min_firmas} firmas → +{a.bonus_percentage}%
+                            ≥{a.min_firmas}% firmas → +{a.bonus_percentage}%
                             {a.description && ` (${a.description})`}
                           </Badge>
                         ))}
