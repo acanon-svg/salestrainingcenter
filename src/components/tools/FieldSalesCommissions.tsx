@@ -84,18 +84,21 @@ const calculateAcceleratorBonus = (
   totalPct: number,
   baseCommissionAmount: number
 ) => {
-  const eligible = totalPct >= 100;
+  // Accelerators require BOTH weighted total >= 100% AND firmas compliance >= 100%
+  const eligible = totalPct >= 100 && firmasCompliancePct >= 100;
   if (!eligible || accelerators.length === 0) {
     return { eligible, totalBonus: 0, applied: [] as { min_firmas: number; bonus_percentage: number; description: string | null; amount: number }[] };
   }
 
   const applied: { min_firmas: number; bonus_percentage: number; description: string | null; amount: number }[] = [];
 
-  // Find the highest applicable accelerator based on firmas compliance %
+  // Find the highest applicable accelerator
+  // min_firmas is a percentage threshold (e.g. 120 means >= 120% of meta firmas)
+  // Compare firmasCompliancePct against the threshold percentage
   let bestAccelerator: CommissionAccelerator | null = null;
   accelerators.forEach((acc) => {
     if (firmasCompliancePct >= acc.min_firmas) {
-      if (!bestAccelerator || acc.bonus_percentage > bestAccelerator.bonus_percentage) {
+      if (!bestAccelerator || acc.min_firmas > bestAccelerator.min_firmas) {
         bestAccelerator = acc;
       }
     }
