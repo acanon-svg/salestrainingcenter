@@ -685,7 +685,7 @@ export const FieldSalesCommissions: React.FC = () => {
                       </div>
                       <p className="text-lg font-bold">
                         ${exec.gmv_real.toLocaleString("en-US")} / $
-                        {exec.gmv_meta.toLocaleString("en-US")}
+                        {exec.effectiveGmvMeta.toLocaleString("en-US")}
                       </p>
                       <p className="text-sm text-primary font-medium">
                         {exec.gmvPct.toFixed(1)}% → {exec.gmvWeighted.toFixed(2)}%
