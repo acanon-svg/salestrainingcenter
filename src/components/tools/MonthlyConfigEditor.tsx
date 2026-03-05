@@ -11,7 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, Save, Target, DollarSign, Check } from "lucide-react";
+import { Calendar, Save, Target, DollarSign, Check, Zap } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { CommissionCalculatorConfig } from "@/hooks/useCommissionCalculatorConfig";
 import {
@@ -19,6 +20,7 @@ import {
   useUpsertMonthlyConfig,
   getMonthName,
 } from "@/hooks/useCommissionMonthlyConfig";
+import { AcceleratorManager } from "./AcceleratorManager";
 
 interface MonthlyConfigEditorProps {
   config: CommissionCalculatorConfig;
@@ -317,6 +319,14 @@ export const MonthlyConfigEditor: React.FC<MonthlyConfigEditorProps> = ({ config
               Guardar Metas de {getMonthName(selectedMonth)}
             </Button>
           </div>
+
+          {/* Accelerators section inside monthly config */}
+          <Separator className="my-6" />
+          <AcceleratorManager
+            configId={config.id}
+            configName={config.name}
+            metaFirmas={formData.meta_firmas}
+          />
         </div>
 
         {/* Configured months summary */}

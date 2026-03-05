@@ -27,11 +27,13 @@ import {
 interface AcceleratorManagerProps {
   configId: string;
   configName: string;
+  metaFirmas?: number;
 }
 
 export const AcceleratorManager: React.FC<AcceleratorManagerProps> = ({
   configId,
   configName,
+  metaFirmas = 0,
 }) => {
   const { data: accelerators, isLoading } = useCommissionAccelerators(configId);
   const createAccelerator = useCreateAccelerator();
@@ -124,7 +126,7 @@ export const AcceleratorManager: React.FC<AcceleratorManagerProps> = ({
           <CardContent className="pt-4 space-y-3">
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="space-y-1">
-                <Label className="text-xs">Firmas mínimas</Label>
+                <Label className="text-xs">% Cumplimiento Firmas</Label>
                 <Input
                   type="number"
                   min={0}
@@ -179,7 +181,7 @@ export const AcceleratorManager: React.FC<AcceleratorManagerProps> = ({
               <div className="space-y-3">
                 <div className="grid gap-3 sm:grid-cols-3">
                   <div className="space-y-1">
-                    <Label className="text-xs">Firmas mínimas</Label>
+                    <Label className="text-xs">% Cumplimiento Firmas</Label>
                     <Input
                       type="number"
                       min={0}
@@ -219,7 +221,12 @@ export const AcceleratorManager: React.FC<AcceleratorManagerProps> = ({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3 flex-wrap">
                   <Badge variant="outline" className="font-mono">
-                    ≥ {acc.min_firmas} firmas
+                    ≥ {acc.min_firmas}% firmas
+                    {metaFirmas > 0 && (
+                      <span className="text-muted-foreground ml-1">
+                        ({Math.ceil(metaFirmas * acc.min_firmas / 100)} firmas)
+                      </span>
+                    )}
                   </Badge>
                   <Badge className="bg-amber-500 text-white">
                     +{acc.bonus_percentage}%
