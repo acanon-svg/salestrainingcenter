@@ -15,6 +15,7 @@ interface CourseCardProps {
   enrollment?: {
     progress_percentage: number;
     status: string;
+    personal_expires_at?: string | null;
   };
   showEnrollButton?: boolean;
   onEnroll?: () => void;
