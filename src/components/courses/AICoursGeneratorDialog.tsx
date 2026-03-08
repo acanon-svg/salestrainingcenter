@@ -267,6 +267,14 @@ export const AICourseGeneratorDialog: React.FC = () => {
                       >
                         <Globe className="w-3 h-3" /> URL
                       </Button>
+                      <Button
+                        variant={material.type === "file" ? "default" : "outline"}
+                        size="sm"
+                        className="h-7 text-xs gap-1"
+                        onClick={() => updateMaterial(material.id, "type", "file")}
+                      >
+                        <Upload className="w-3 h-3" /> Archivo
+                      </Button>
                       {materials.length > 1 && (
                         <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={() => removeMaterial(material.id)}>
                           <Trash2 className="w-3.5 h-3.5" />
@@ -290,13 +298,50 @@ export const AICourseGeneratorDialog: React.FC = () => {
                       rows={4}
                       className="resize-none text-sm"
                     />
-                  ) : (
+                  ) : material.type === "url" ? (
                     <Input
                       placeholder="URL del recurso (Google Docs, página web, etc.)"
                       value={material.content}
                       onChange={(e) => updateMaterial(material.id, "content", e.target.value)}
                       className="h-8 text-sm"
                     />
+                  ) : (
+                    <div className="space-y-2">
+                      <input
+                        ref={(el) => { fileInputRefs.current[material.id] = el; }}
+                        type="file"
+                        accept=".txt,.csv,.md,.pdf,.docx,.pptx,.xlsx,.doc"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFileUpload(material.id, file);
+                          e.target.value = "";
+                        }}
+                      />
+                      {material.fileName ? (
+                        <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 border border-border">
+                          <File className="w-4 h-4 text-primary shrink-0" />
+                          <span className="text-sm truncate flex-1">{material.fileName}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => fileInputRefs.current[material.id]?.click()}
+                          >
+                            Cambiar
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          className="w-full border-dashed border-2 h-16 flex flex-col gap-1"
+                          onClick={() => fileInputRefs.current[material.id]?.click()}
+                        >
+                          <Upload className="w-4 h-4" />
+                          <span className="text-xs">Seleccionar archivo (TXT, CSV, MD, PDF, DOCX, PPTX, XLSX)</span>
+                        </Button>
+                      )}
+                    </div>
                   )}
                 </div>
               ))}
