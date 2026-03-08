@@ -65,7 +65,7 @@ export const AICourseGeneratorDialog: React.FC = () => {
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "application/msword",
     ];
-    const isText = file.type.startsWith("text/") || file.name.endsWith(".md") || file.name.endsWith(".txt") || file.name.endsWith(".csv");
+    const isText = file.type.startsWith("text/") || file.name.endsWith(".md") || file.name.endsWith(".txt") || file.name.endsWith(".csv") || file.name.endsWith(".html") || file.name.endsWith(".htm");
 
     if (isText) {
       const text = await file.text();
@@ -90,7 +90,7 @@ export const AICourseGeneratorDialog: React.FC = () => {
       };
       reader.readAsDataURL(file);
     } else {
-      toast({ title: "Formato no soportado", description: "Usa archivos TXT, CSV, MD, PDF, DOCX, PPTX o XLSX.", variant: "destructive" });
+      toast({ title: "Formato no soportado", description: "Usa archivos TXT, CSV, MD, HTML, PDF, DOCX, PPTX o XLSX.", variant: "destructive" });
     }
   };
 
@@ -310,7 +310,7 @@ export const AICourseGeneratorDialog: React.FC = () => {
                       <input
                         ref={(el) => { fileInputRefs.current[material.id] = el; }}
                         type="file"
-                        accept=".txt,.csv,.md,.pdf,.docx,.pptx,.xlsx,.doc"
+                        accept=".txt,.csv,.md,.html,.htm,.pdf,.docx,.pptx,.xlsx,.doc"
                         className="hidden"
                         onChange={(e) => {
                           const file = e.target.files?.[0];
