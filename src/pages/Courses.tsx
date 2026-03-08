@@ -238,6 +238,7 @@ const Courses: React.FC = () => {
                     enrollment={{
                       progress_percentage: enrollment.progress_percentage,
                       status: enrollment.status,
+                      personal_expires_at: enrollment.personal_expires_at,
                     }}
                   />
                 ))}
