@@ -149,7 +149,7 @@ export const AICourseGeneratorDialog: React.FC = () => {
   const handleClose = () => {
     setOpen(false);
     setPrompt("");
-    setMaterials([{ id: crypto.randomUUID(), title: "", type: "text", content: "" }]);
+    setMaterials([{ id: crypto.randomUUID(), title: "", type: "text", content: "", fileName: undefined }]);
     setStep(1);
     setResult(null);
   };
