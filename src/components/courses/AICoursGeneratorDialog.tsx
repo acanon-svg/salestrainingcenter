@@ -20,13 +20,14 @@ interface MaterialInput {
 
 export const AICourseGeneratorDialog: React.FC = () => {
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState<1 | 2 | 3>(1); // 1=prompt, 2=materials, 3=result
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [prompt, setPrompt] = useState("");
   const [materials, setMaterials] = useState<MaterialInput[]>([
     { id: crypto.randomUUID(), title: "", type: "text", content: "" },
   ]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -47,6 +48,50 @@ export const AICourseGeneratorDialog: React.FC = () => {
     setMaterials((prev) =>
       prev.map((m) => (m.id === id ? { ...m, [field]: value } : m))
     );
+  };
+
+  const handleFileUpload = async (materialId: string, file: globalThis.File) => {
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      toast({ title: "Error", description: "El archivo debe ser menor a 10MB.", variant: "destructive" });
+      return;
+    }
+
+    const allowedTypes = [
+      "text/plain", "text/csv", "text/markdown",
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/msword",
+    ];
+    const isText = file.type.startsWith("text/") || file.name.endsWith(".md") || file.name.endsWith(".txt") || file.name.endsWith(".csv");
+
+    if (isText) {
+      const text = await file.text();
+      setMaterials((prev) =>
+        prev.map((m) => m.id === materialId ? { ...m, content: text, fileName: file.name, title: m.title || file.name } : m)
+      );
+      toast({ title: "Archivo cargado", description: `"${file.name}" fue leído correctamente.` });
+    } else if (allowedTypes.includes(file.type)) {
+      // Read as base64 for non-text files and send to edge function for parsing
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(",")[1];
+        setMaterials((prev) =>
+          prev.map((m) => m.id === materialId ? { 
+            ...m, 
+            content: `[ARCHIVO: ${file.name}]\n\nContenido del archivo en base64 (el sistema lo procesará automáticamente):\n${base64.substring(0, 50000)}`,
+            fileName: file.name,
+            title: m.title || file.name 
+          } : m)
+        );
+        toast({ title: "Archivo cargado", description: `"${file.name}" fue adjuntado correctamente.` });
+      };
+      reader.readAsDataURL(file);
+    } else {
+      toast({ title: "Formato no soportado", description: "Usa archivos TXT, CSV, MD, PDF, DOCX, PPTX o XLSX.", variant: "destructive" });
+    }
   };
 
   const handleGenerate = async () => {
