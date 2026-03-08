@@ -1,0 +1,1 @@
+ALTER TABLE public.chatbot_config ADD COLUMN ai_bot_enabled boolean NOT NULL DEFAULT true;
