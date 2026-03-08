@@ -65,7 +65,7 @@ export const AICourseGeneratorDialog: React.FC = () => {
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "application/msword",
     ];
-    const isText = file.type.startsWith("text/") || file.name.endsWith(".md") || file.name.endsWith(".txt") || file.name.endsWith(".csv");
+    const isText = file.type.startsWith("text/") || file.name.endsWith(".md") || file.name.endsWith(".txt") || file.name.endsWith(".csv") || file.name.endsWith(".html") || file.name.endsWith(".htm");
 
     if (isText) {
       const text = await file.text();
