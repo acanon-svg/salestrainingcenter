@@ -79,9 +79,18 @@ serve(async (req) => {
 
 REGLAS IMPORTANTES:
 - DEBES usar los materiales proporcionados como BASE para crear el contenido de los módulos
-- Los materiales deben ser de tipo "documento" con contenido textual educativo rico y detallado
-- Cada material debe tener al menos 3-4 párrafos de contenido educativo real, basado en la información proporcionada
-- Enriquece y estructura la información de los materiales en formato educativo claro
+- Los materiales deben ser de tipo "documento" con contenido HTML rico y visualmente atractivo
+- El contenido de cada material DEBE estar en formato HTML con etiquetas como <h2>, <h3>, <p>, <ul>, <li>, <ol>, <strong>, <em>, <blockquote>, <table>, <tr>, <td>, <th>
+- Cada material debe tener al menos 5-8 secciones bien estructuradas con:
+  * Títulos y subtítulos con <h2> y <h3>
+  * Párrafos explicativos con <p>
+  * Listas de puntos clave con <ul><li> o listas numeradas con <ol><li>
+  * Palabras importantes resaltadas con <strong> o <em>
+  * Citas o datos relevantes con <blockquote>
+  * Tablas comparativas cuando sea apropiado con <table>
+  * Tips o consejos prácticos destacados
+- El contenido debe ser extenso, mínimo 800 palabras por material, con información educativa real y detallada
+- NO uses markdown, SOLO HTML válido
 - El quiz debe tener entre 5 y 10 preguntas variadas (multiple_choice y true_false) basadas en el contenido de los materiales
 - Cada pregunta multiple_choice debe tener exactamente 4 opciones, una correcta
 - Los puntos del curso deben ser entre 50 y 200
