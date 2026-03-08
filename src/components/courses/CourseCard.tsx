@@ -28,7 +28,13 @@ export const CourseCard: React.FC<CourseCardProps> = ({
 }) => {
   const { data: tagData } = useCourseTagsWithAssignments();
   
-  const isExpired = course.expires_at && isPast(new Date(course.expires_at));
+  // If the user has a personal expiration (late enrollment), use that instead of global
+  const isExpired = React.useMemo(() => {
+    if (enrollment?.personal_expires_at) {
+      return isPast(new Date(enrollment.personal_expires_at));
+    }
+    return course.expires_at ? isPast(new Date(course.expires_at)) : false;
+  }, [course.expires_at, enrollment?.personal_expires_at]);
   const isScheduled = course.scheduled_at && isFuture(new Date(course.scheduled_at)) && course.status === "draft";
 
   // Get course tags for this course
