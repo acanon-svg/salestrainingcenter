@@ -8,6 +8,7 @@ import { LoginForm } from "@/components/auth/LoginForm";
 import { PasswordChangeDialog } from "@/components/auth/PasswordChangeDialog";
 import { InactivityWarningDialog } from "@/components/auth/InactivityWarningDialog";
 import { ChatbotBubble } from "@/components/chatbot/ChatbotBubble";
+import { AITrainingBot } from "@/components/AITrainingBot";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useInactivityTimeout } from "@/hooks/useInactivityTimeout";
 import Dashboard from "@/pages/Dashboard";
