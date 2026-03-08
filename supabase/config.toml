@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.analyze-ranking]
 verify_jwt = false
+
+[functions.create-ai-course]
+verify_jwt = false
