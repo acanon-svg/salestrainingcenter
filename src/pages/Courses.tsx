@@ -42,8 +42,17 @@ const Courses: React.FC = () => {
   // Filter and categorize enrollments
   const enrolledCourseIds = new Set(enrollments?.map((e) => e.course_id) || []);
 
+  const isEnrollmentExpired = (e: any) => {
+    const course = e.course;
+    // If user has a personal expiration, use that
+    if (e.personal_expires_at) {
+      return isPast(new Date(e.personal_expires_at));
+    }
+    return course?.expires_at ? isPast(new Date(course.expires_at)) : false;
+  };
+
   const inProgressEnrollments = enrollments?.filter(
-    (e) => e.status === "in_progress" || e.status === "enrolled"
+    (e) => (e.status === "in_progress" || e.status === "enrolled") && !isEnrollmentExpired(e)
   ) || [];
 
   const completedEnrollments = enrollments?.filter(
@@ -51,14 +60,15 @@ const Courses: React.FC = () => {
   ) || [];
 
   const expiredEnrollments = enrollments?.filter((e) => {
-    const course = e.course;
-    return course?.expires_at && isPast(new Date(course.expires_at)) && e.status !== "completed";
+    return isEnrollmentExpired(e) && e.status !== "completed";
   }) || [];
 
   const pendingEnrollments = inProgressEnrollments.filter((e) => {
     const course = e.course;
-    if (!course?.expires_at) return false;
-    const daysUntilExpiry = differenceInDays(new Date(course.expires_at), new Date());
+    // Use personal expiry if available
+    const expiryDate = e.personal_expires_at ? new Date(e.personal_expires_at) : course?.expires_at ? new Date(course.expires_at) : null;
+    if (!expiryDate) return false;
+    const daysUntilExpiry = differenceInDays(expiryDate, new Date());
     return daysUntilExpiry <= 7 && daysUntilExpiry > 0;
   });
 
