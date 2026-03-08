@@ -30,6 +30,7 @@ import {
 } from "@/hooks/useDashboardStats";
 import { useRankingCompetitor } from "@/hooks/useRanking";
 import { Link } from "react-router-dom";
+import AIDashboardInsights from "@/components/AIDashboardInsights";
 
 const Dashboard: React.FC = () => {
   const { user, profile, roles } = useAuth();
@@ -299,6 +300,9 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* AI Dashboard Insights */}
+        <AIDashboardInsights />
 
         {/* Level and Badges Row */}
         <div className="grid gap-6 lg:grid-cols-2">
