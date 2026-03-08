@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BookOpen, Plus, Users, BarChart, CheckCircle, Timer, Folder } from "lucide-react";
+import { AICourseGeneratorDialog } from "@/components/courses/AICoursGeneratorDialog";
 import {
   useCreatorCourses,
   useDeleteCourse,
