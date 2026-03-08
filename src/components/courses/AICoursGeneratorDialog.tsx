@@ -90,7 +90,7 @@ export const AICourseGeneratorDialog: React.FC = () => {
       };
       reader.readAsDataURL(file);
     } else {
-      toast({ title: "Formato no soportado", description: "Usa archivos TXT, CSV, MD, PDF, DOCX, PPTX o XLSX.", variant: "destructive" });
+      toast({ title: "Formato no soportado", description: "Usa archivos TXT, CSV, MD, HTML, PDF, DOCX, PPTX o XLSX.", variant: "destructive" });
     }
   };
 
