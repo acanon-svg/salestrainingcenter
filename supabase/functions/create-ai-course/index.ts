@@ -106,13 +106,13 @@ REGLAS IMPORTANTES:
                   description: { type: "string", description: "Descripción detallada del curso (2-4 oraciones)" },
                   dimension: {
                     type: "string",
-                    enum: ["entrenamiento", "producto", "habilidades", "procesos", "herramientas", "cultura"],
+                    enum: ["onboarding", "refuerzo", "taller", "entrenamiento"],
                     description: "Dimensión del entrenamiento",
                   },
                   difficulty: {
                     type: "string",
-                    enum: ["basico", "intermedio", "avanzado"],
-                    description: "Nivel de dificultad",
+                    enum: ["basico", "medio", "avanzado"],
+                    description: "Nivel de dificultad (basico, medio, avanzado)",
                   },
                   points: { type: "number", description: "Puntos del curso (50-200)" },
                   estimated_duration_minutes: { type: "number", description: "Duración estimada en minutos" },
