@@ -17,6 +17,7 @@ export const ChatbotSettings: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [formData, setFormData] = useState({
     enabled: false,
+    ai_bot_enabled: false,
     bot_name: "",
     welcome_message: "",
     avatar_url: "",
