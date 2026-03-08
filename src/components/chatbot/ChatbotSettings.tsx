@@ -17,6 +17,7 @@ export const ChatbotSettings: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [formData, setFormData] = useState({
     enabled: false,
+    ai_bot_enabled: false,
     bot_name: "",
     welcome_message: "",
     avatar_url: "",
@@ -28,6 +29,7 @@ export const ChatbotSettings: React.FC = () => {
     if (config) {
       setFormData({
         enabled: config.enabled,
+        ai_bot_enabled: config.ai_bot_enabled,
         bot_name: config.bot_name,
         welcome_message: config.welcome_message,
         avatar_url: config.avatar_url || "",
@@ -93,25 +95,46 @@ export const ChatbotSettings: React.FC = () => {
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Enable/Disable Toggle */}
-          <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
-            <div className="flex items-center gap-3">
-              <MessageCircle className="h-5 w-5 text-primary" />
-              <div>
-                <p className="font-medium">Activar Chatbot</p>
-                <p className="text-sm text-muted-foreground">
-                  {formData.enabled 
-                    ? "El chatbot está visible para todos los usuarios" 
-                    : "El chatbot está oculto"}
-                </p>
+          {/* Enable/Disable Toggles */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
+              <div className="flex items-center gap-3">
+                <MessageCircle className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="font-medium">Chatbot Andy</p>
+                  <p className="text-sm text-muted-foreground">
+                    {formData.enabled 
+                      ? "El chatbot Andy está visible para todos los usuarios" 
+                      : "El chatbot Andy está oculto"}
+                  </p>
+                </div>
               </div>
+              <Switch
+                checked={formData.enabled}
+                onCheckedChange={(checked) =>
+                  setFormData((prev) => ({ ...prev, enabled: checked }))
+                }
+              />
             </div>
-            <Switch
-              checked={formData.enabled}
-              onCheckedChange={(checked) =>
-                setFormData((prev) => ({ ...prev, enabled: checked }))
-              }
-            />
+            <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
+              <div className="flex items-center gap-3">
+                <Sparkles className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="font-medium">Asistente de IA (Entrenamiento)</p>
+                  <p className="text-sm text-muted-foreground">
+                    {formData.ai_bot_enabled 
+                      ? "El asistente de IA está visible para todos los usuarios" 
+                      : "El asistente de IA está oculto"}
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={formData.ai_bot_enabled}
+                onCheckedChange={(checked) =>
+                  setFormData((prev) => ({ ...prev, ai_bot_enabled: checked }))
+                }
+              />
+            </div>
           </div>
 
           {/* Bot Identity */}

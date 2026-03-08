@@ -304,6 +304,7 @@ export type Database = {
       }
       chatbot_config: {
         Row: {
+          ai_bot_enabled: boolean
           auto_generated_prompt: string | null
           avatar_url: string | null
           bot_name: string
@@ -316,6 +317,7 @@ export type Database = {
           welcome_message: string
         }
         Insert: {
+          ai_bot_enabled?: boolean
           auto_generated_prompt?: string | null
           avatar_url?: string | null
           bot_name?: string
@@ -328,6 +330,7 @@ export type Database = {
           welcome_message?: string
         }
         Update: {
+          ai_bot_enabled?: boolean
           auto_generated_prompt?: string | null
           avatar_url?: string | null
           bot_name?: string

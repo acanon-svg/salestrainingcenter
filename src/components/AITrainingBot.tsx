@@ -42,7 +42,7 @@ export const AITrainingBot: React.FC = () => {
   }, [isOpen, isMinimized]);
 
   // Don't render for unauthenticated users or when chatbot is disabled
-  if (!user || configLoading || !config?.enabled) return null;
+  if (!user || configLoading || !config?.ai_bot_enabled) return null;
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || isLoading) return;
