@@ -8,6 +8,7 @@ const getSupabaseClient = () => supabase as unknown as SupabaseClient;
 export interface ChatbotConfig {
   id: string;
   enabled: boolean;
+  ai_bot_enabled: boolean;
   bot_name: string;
   welcome_message: string;
   avatar_url: string | null;
