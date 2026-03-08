@@ -21,6 +21,7 @@ import {
   DollarSign,
   ClipboardCheck,
   Eye,
+  Brain,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -49,6 +50,7 @@ const defaultNavItems: NavItem[] = [
   { label: "Home", icon: Home, href: "/dashboard", sectionKey: "dashboard" },
   { label: "Mis Cursos", icon: BookOpen, href: "/courses", sectionKey: "courses" },
   { label: "Material Formativo", icon: FolderOpen, href: "/materials", sectionKey: "training_materials" },
+  { label: "Mi Plan IA", icon: Brain, href: "/personalized-training", sectionKey: "personalized_training" },
   { label: "Herramientas", icon: Wrench, href: "/tools", sectionKey: "tools" },
   { label: "Resultados", icon: TrendingUp, href: "/results", sectionKey: "results" },
   { label: "Ranking", icon: Trophy, href: "/ranking", sectionKey: "ranking" },

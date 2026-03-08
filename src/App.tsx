@@ -34,6 +34,7 @@ import TeamFeedbackView from "@/pages/TeamFeedbackView";
 import Results from "@/pages/Results";
 import Followups from "@/pages/Followups";
 import ResetPassword from "@/pages/ResetPassword";
+import PersonalizedTraining from "@/pages/PersonalizedTraining";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
@@ -233,6 +234,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <TrainingMaterials />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/personalized-training"
+        element={
+          <ProtectedRoute>
+            <PersonalizedTraining />
           </ProtectedRoute>
         }
       />
