@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.dashboard-insights]
 verify_jwt = false
+
+[functions.analyze-ranking]
+verify_jwt = false
