@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.generate-chatbot-prompt]
 verify_jwt = false
+
+[functions.ai-training-bot]
+verify_jwt = false
