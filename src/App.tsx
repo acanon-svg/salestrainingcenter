@@ -237,6 +237,14 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/personalized-training"
+        element={
+          <ProtectedRoute>
+            <PersonalizedTraining />
+          </ProtectedRoute>
+        }
+      />
       
       {/* Creator/Admin Routes */}
       <Route
