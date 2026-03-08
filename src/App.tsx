@@ -35,6 +35,7 @@ import Results from "@/pages/Results";
 import Followups from "@/pages/Followups";
 import ResetPassword from "@/pages/ResetPassword";
 import PersonalizedTraining from "@/pages/PersonalizedTraining";
+import AICourseReview from "@/pages/AICourseReview";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
@@ -247,6 +248,14 @@ const AppRoutes = () => {
       />
       
       {/* Creator/Admin Routes */}
+      <Route
+        path="/ai-courses"
+        element={
+          <RoleRoute allowedRoles={["creator", "admin"]}>
+            <AICourseReview />
+          </RoleRoute>
+        }
+      />
       <Route
         path="/courses/create"
         element={

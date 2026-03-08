@@ -886,6 +886,9 @@ export type Database = {
       }
       courses: {
         Row: {
+          ai_analysis: string | null
+          ai_generation_trigger: string | null
+          ai_metadata: Json | null
           cover_image_url: string | null
           created_at: string
           created_by: string | null
@@ -896,6 +899,7 @@ export type Database = {
           expires_at: string | null
           folder_id: string | null
           id: string
+          is_ai_generated: boolean
           language: string
           objectives: string[] | null
           order_index: number | null
@@ -914,6 +918,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ai_analysis?: string | null
+          ai_generation_trigger?: string | null
+          ai_metadata?: Json | null
           cover_image_url?: string | null
           created_at?: string
           created_by?: string | null
@@ -924,6 +931,7 @@ export type Database = {
           expires_at?: string | null
           folder_id?: string | null
           id?: string
+          is_ai_generated?: boolean
           language?: string
           objectives?: string[] | null
           order_index?: number | null
@@ -942,6 +950,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ai_analysis?: string | null
+          ai_generation_trigger?: string | null
+          ai_metadata?: Json | null
           cover_image_url?: string | null
           created_at?: string
           created_by?: string | null
@@ -952,6 +963,7 @@ export type Database = {
           expires_at?: string | null
           folder_id?: string | null
           id?: string
+          is_ai_generated?: boolean
           language?: string
           objectives?: string[] | null
           order_index?: number | null
@@ -2395,7 +2407,7 @@ export type Database = {
     Enums: {
       app_role: "student" | "creator" | "admin" | "lider" | "analista" | "qa"
       content_type: "video" | "documento" | "link" | "quiz" | "encuesta"
-      course_status: "draft" | "published" | "archived"
+      course_status: "draft" | "published" | "archived" | "rejected"
       difficulty_level: "basico" | "medio" | "avanzado"
       training_dimension: "onboarding" | "refuerzo" | "taller" | "entrenamiento"
     }
@@ -2527,7 +2539,7 @@ export const Constants = {
     Enums: {
       app_role: ["student", "creator", "admin", "lider", "analista", "qa"],
       content_type: ["video", "documento", "link", "quiz", "encuesta"],
-      course_status: ["draft", "published", "archived"],
+      course_status: ["draft", "published", "archived", "rejected"],
       difficulty_level: ["basico", "medio", "avanzado"],
       training_dimension: ["onboarding", "refuerzo", "taller", "entrenamiento"],
     },

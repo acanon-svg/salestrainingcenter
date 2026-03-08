@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.generate-training-plan]
 verify_jwt = false
+
+[functions.generate-ai-courses]
+verify_jwt = false
