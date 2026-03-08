@@ -363,6 +363,11 @@ const App = () => (
           <ErrorBoundary fallbackTitle="No pudimos cargar el chatbot">
             <ChatbotBubble />
           </ErrorBoundary>
+
+          {/* AI Training Bot */}
+          <ErrorBoundary fallbackTitle="No pudimos cargar el asistente IA">
+            <AITrainingBot />
+          </ErrorBoundary>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
