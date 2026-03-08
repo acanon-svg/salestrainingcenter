@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Sparkles, Loader2, CheckCircle2, BookOpen, HelpCircle, FileText, Plus, Trash2, ArrowRight, ArrowLeft, Link, Globe } from "lucide-react";
+import { Sparkles, Loader2, CheckCircle2, BookOpen, HelpCircle, FileText, Plus, Trash2, ArrowRight, ArrowLeft, Link, Globe, Upload, File } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -13,8 +13,9 @@ import { useNavigate } from "react-router-dom";
 interface MaterialInput {
   id: string;
   title: string;
-  type: "text" | "url";
+  type: "text" | "url" | "file";
   content: string;
+  fileName?: string;
 }
 
 export const AICourseGeneratorDialog: React.FC = () => {
