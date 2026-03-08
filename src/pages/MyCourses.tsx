@@ -107,12 +107,15 @@ const MyCourses: React.FC = () => {
               Gestiona los cursos que has creado • Arrastra para reordenar
             </p>
           </div>
-          <Link to="/courses/create">
-            <Button className="gap-2">
-              <Plus className="w-4 h-4" />
-              Crear Nuevo Curso
-            </Button>
-          </Link>
+          <div className="flex gap-2">
+            <AICourseGeneratorDialog />
+            <Link to="/courses/create">
+              <Button className="gap-2">
+                <Plus className="w-4 h-4" />
+                Crear Nuevo Curso
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Stats */}
