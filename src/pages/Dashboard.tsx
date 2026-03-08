@@ -301,6 +301,9 @@ const Dashboard: React.FC = () => {
           </Card>
         </div>
 
+        {/* AI Dashboard Insights */}
+        <AIDashboardInsights />
+
         {/* Level and Badges Row */}
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Level Card */}
