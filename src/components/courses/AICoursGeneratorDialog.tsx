@@ -310,7 +310,7 @@ export const AICourseGeneratorDialog: React.FC = () => {
                       <input
                         ref={(el) => { fileInputRefs.current[material.id] = el; }}
                         type="file"
-                        accept=".txt,.csv,.md,.pdf,.docx,.pptx,.xlsx,.doc"
+                        accept=".txt,.csv,.md,.html,.htm,.pdf,.docx,.pptx,.xlsx,.doc"
                         className="hidden"
                         onChange={(e) => {
                           const file = e.target.files?.[0];
