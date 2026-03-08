@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Sparkles, Loader2, CheckCircle2, BookOpen, HelpCircle, FileText, Plus, Trash2, ArrowRight, ArrowLeft, Link, Globe } from "lucide-react";
+import { Sparkles, Loader2, CheckCircle2, BookOpen, HelpCircle, FileText, Plus, Trash2, ArrowRight, ArrowLeft, Link, Globe, Upload, File } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -13,19 +13,21 @@ import { useNavigate } from "react-router-dom";
 interface MaterialInput {
   id: string;
   title: string;
-  type: "text" | "url";
+  type: "text" | "url" | "file";
   content: string;
+  fileName?: string;
 }
 
 export const AICourseGeneratorDialog: React.FC = () => {
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState<1 | 2 | 3>(1); // 1=prompt, 2=materials, 3=result
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [prompt, setPrompt] = useState("");
   const [materials, setMaterials] = useState<MaterialInput[]>([
     { id: crypto.randomUUID(), title: "", type: "text", content: "" },
   ]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -46,6 +48,50 @@ export const AICourseGeneratorDialog: React.FC = () => {
     setMaterials((prev) =>
       prev.map((m) => (m.id === id ? { ...m, [field]: value } : m))
     );
+  };
+
+  const handleFileUpload = async (materialId: string, file: globalThis.File) => {
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      toast({ title: "Error", description: "El archivo debe ser menor a 10MB.", variant: "destructive" });
+      return;
+    }
+
+    const allowedTypes = [
+      "text/plain", "text/csv", "text/markdown",
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/msword",
+    ];
+    const isText = file.type.startsWith("text/") || file.name.endsWith(".md") || file.name.endsWith(".txt") || file.name.endsWith(".csv");
+
+    if (isText) {
+      const text = await file.text();
+      setMaterials((prev) =>
+        prev.map((m) => m.id === materialId ? { ...m, content: text, fileName: file.name, title: m.title || file.name } : m)
+      );
+      toast({ title: "Archivo cargado", description: `"${file.name}" fue leído correctamente.` });
+    } else if (allowedTypes.includes(file.type)) {
+      // Read as base64 for non-text files and send to edge function for parsing
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(",")[1];
+        setMaterials((prev) =>
+          prev.map((m) => m.id === materialId ? { 
+            ...m, 
+            content: `[ARCHIVO: ${file.name}]\n\nContenido del archivo en base64 (el sistema lo procesará automáticamente):\n${base64.substring(0, 50000)}`,
+            fileName: file.name,
+            title: m.title || file.name 
+          } : m)
+        );
+        toast({ title: "Archivo cargado", description: `"${file.name}" fue adjuntado correctamente.` });
+      };
+      reader.readAsDataURL(file);
+    } else {
+      toast({ title: "Formato no soportado", description: "Usa archivos TXT, CSV, MD, PDF, DOCX, PPTX o XLSX.", variant: "destructive" });
+    }
   };
 
   const handleGenerate = async () => {
@@ -103,7 +149,7 @@ export const AICourseGeneratorDialog: React.FC = () => {
   const handleClose = () => {
     setOpen(false);
     setPrompt("");
-    setMaterials([{ id: crypto.randomUUID(), title: "", type: "text", content: "" }]);
+    setMaterials([{ id: crypto.randomUUID(), title: "", type: "text", content: "", fileName: undefined }]);
     setStep(1);
     setResult(null);
   };
@@ -221,6 +267,14 @@ export const AICourseGeneratorDialog: React.FC = () => {
                       >
                         <Globe className="w-3 h-3" /> URL
                       </Button>
+                      <Button
+                        variant={material.type === "file" ? "default" : "outline"}
+                        size="sm"
+                        className="h-7 text-xs gap-1"
+                        onClick={() => updateMaterial(material.id, "type", "file")}
+                      >
+                        <Upload className="w-3 h-3" /> Archivo
+                      </Button>
                       {materials.length > 1 && (
                         <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={() => removeMaterial(material.id)}>
                           <Trash2 className="w-3.5 h-3.5" />
@@ -244,13 +298,50 @@ export const AICourseGeneratorDialog: React.FC = () => {
                       rows={4}
                       className="resize-none text-sm"
                     />
-                  ) : (
+                  ) : material.type === "url" ? (
                     <Input
                       placeholder="URL del recurso (Google Docs, página web, etc.)"
                       value={material.content}
                       onChange={(e) => updateMaterial(material.id, "content", e.target.value)}
                       className="h-8 text-sm"
                     />
+                  ) : (
+                    <div className="space-y-2">
+                      <input
+                        ref={(el) => { fileInputRefs.current[material.id] = el; }}
+                        type="file"
+                        accept=".txt,.csv,.md,.pdf,.docx,.pptx,.xlsx,.doc"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFileUpload(material.id, file);
+                          e.target.value = "";
+                        }}
+                      />
+                      {material.fileName ? (
+                        <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 border border-border">
+                          <File className="w-4 h-4 text-primary shrink-0" />
+                          <span className="text-sm truncate flex-1">{material.fileName}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => fileInputRefs.current[material.id]?.click()}
+                          >
+                            Cambiar
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          className="w-full border-dashed border-2 h-16 flex flex-col gap-1"
+                          onClick={() => fileInputRefs.current[material.id]?.click()}
+                        >
+                          <Upload className="w-4 h-4" />
+                          <span className="text-xs">Seleccionar archivo (TXT, CSV, MD, PDF, DOCX, PPTX, XLSX)</span>
+                        </Button>
+                      )}
+                    </div>
                   )}
                 </div>
               ))}
