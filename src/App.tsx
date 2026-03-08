@@ -249,6 +249,14 @@ const AppRoutes = () => {
       
       {/* Creator/Admin Routes */}
       <Route
+        path="/ai-courses"
+        element={
+          <RoleRoute allowedRoles={["creator", "admin"]}>
+            <AICourseReview />
+          </RoleRoute>
+        }
+      />
+      <Route
         path="/courses/create"
         element={
           <RoleRoute allowedRoles={["creator", "admin"]}>

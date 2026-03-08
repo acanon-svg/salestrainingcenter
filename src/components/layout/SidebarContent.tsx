@@ -61,6 +61,7 @@ const defaultNavItems: NavItem[] = [
 ];
 
 const creatorItems: NavItem[] = [
+  { label: "Cursos IA", icon: Brain, href: "/ai-courses", roles: ["creator", "admin"], sectionKey: "ai_courses" },
   { label: "Crear Curso", icon: PlusCircle, href: "/courses/create", roles: ["creator"], sectionKey: "create_course" },
   { label: "Mis Creaciones", icon: BookOpen, href: "/my-courses", roles: ["creator"], sectionKey: "my_courses" },
   { label: "Resultados del Equipo", icon: TrendingUp, href: "/results", roles: ["creator", "admin"], sectionKey: "results" },
