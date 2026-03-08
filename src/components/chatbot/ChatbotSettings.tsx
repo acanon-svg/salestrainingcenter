@@ -29,6 +29,7 @@ export const ChatbotSettings: React.FC = () => {
     if (config) {
       setFormData({
         enabled: config.enabled,
+        ai_bot_enabled: config.ai_bot_enabled,
         bot_name: config.bot_name,
         welcome_message: config.welcome_message,
         avatar_url: config.avatar_url || "",
