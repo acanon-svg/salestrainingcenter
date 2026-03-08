@@ -20,6 +20,7 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-training-
 
 export const AITrainingBot: React.FC = () => {
   const { user } = useAuth();
+  const { config, isLoading: configLoading } = useChatbotConfig();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
@@ -40,8 +41,8 @@ export const AITrainingBot: React.FC = () => {
     }
   }, [isOpen, isMinimized]);
 
-  // Don't render for unauthenticated users
-  if (!user) return null;
+  // Don't render for unauthenticated users or when chatbot is disabled
+  if (!user || configLoading || !config?.enabled) return null;
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || isLoading) return;
