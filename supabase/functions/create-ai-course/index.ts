@@ -140,7 +140,7 @@ REGLAS IMPORTANTES:
                       type: "object",
                       properties: {
                         title: { type: "string", description: "Título del material/módulo" },
-                        content: { type: "string", description: "Contenido educativo completo del módulo (mínimo 3 párrafos con información detallada, ejemplos y consejos prácticos). DEBE estar basado en los materiales proporcionados." },
+                        content: { type: "string", description: "Contenido educativo completo en formato HTML rico (usa <h2>, <h3>, <p>, <ul>, <li>, <ol>, <strong>, <em>, <blockquote>, <table>). Mínimo 800 palabras con secciones claras, ejemplos prácticos, tips y datos relevantes. DEBE estar basado en los materiales proporcionados. NO uses markdown, SOLO HTML." },
                       },
                       required: ["title", "content"],
                       additionalProperties: false,
