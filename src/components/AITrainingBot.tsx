@@ -2,27 +2,12 @@ import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Bot, X, Minimize2, Maximize2, Send, Sparkles, User, BookOpen, Trophy, Clock, Target, CheckCircle } from "lucide-react";
+import { Bot, X, Minimize2, Maximize2, Send, Sparkles, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChatbotConfig } from "@/hooks/useChatbotConfig";
 import ReactMarkdown from "react-markdown";
-import { cn } from "@/lib/utils";
 
-type Msg = { role: "user" | "assistant"; content: string; courseData?: CourseCreatedData };
-
-interface CourseCreatedData {
-  id: string;
-  title: string;
-  description: string;
-  difficulty: string;
-  points: number;
-  estimated_duration_minutes: number;
-  modules_count: number;
-  questions_count: number;
-  objectives: string[];
-}
+type Msg = { role: "user" | "assistant"; content: string };
 
 const SUGGESTED_QUESTIONS = [
   "¿Cuál es mi progreso en los cursos?",
@@ -33,75 +18,6 @@ const SUGGESTED_QUESTIONS = [
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-training-bot`;
 
-const CourseCreatedCard: React.FC<{ course: CourseCreatedData }> = ({ course }) => {
-  const difficultyLabels: Record<string, string> = {
-    basico: "Básico",
-    intermedio: "Intermedio",
-    avanzado: "Avanzado",
-  };
-  const difficultyColors: Record<string, string> = {
-    basico: "bg-emerald-500",
-    intermedio: "bg-amber-500",
-    avanzado: "bg-red-500",
-  };
-
-  return (
-    <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2.5 mt-2">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20">
-            <BookOpen className="h-4 w-4 text-primary" />
-          </div>
-          <div>
-            <h4 className="text-sm font-semibold leading-tight">{course.title}</h4>
-            <p className="text-xs text-muted-foreground mt-0.5">{course.description}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-1.5">
-        <Badge variant="outline" className={cn("text-xs text-white", difficultyColors[course.difficulty] || "bg-primary")}>
-          {difficultyLabels[course.difficulty] || course.difficulty}
-        </Badge>
-        <Badge variant="outline" className="text-xs">
-          <Clock className="h-3 w-3 mr-1" />
-          {course.estimated_duration_minutes} min
-        </Badge>
-        <Badge variant="outline" className="text-xs">
-          <Trophy className="h-3 w-3 mr-1" />
-          {course.points} pts
-        </Badge>
-        <Badge variant="outline" className="text-xs">
-          <BookOpen className="h-3 w-3 mr-1" />
-          {course.modules_count} módulos
-        </Badge>
-        <Badge variant="outline" className="text-xs">
-          <Target className="h-3 w-3 mr-1" />
-          {course.questions_count} preguntas
-        </Badge>
-      </div>
-
-      {course.objectives && course.objectives.length > 0 && (
-        <div className="space-y-1">
-          <p className="text-xs font-medium text-muted-foreground">Objetivos:</p>
-          {course.objectives.slice(0, 3).map((obj, i) => (
-            <div key={i} className="flex items-start gap-1.5 text-xs">
-              <CheckCircle className="h-3 w-3 text-emerald-500 mt-0.5 shrink-0" />
-              <span>{obj}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="pt-1 border-t border-primary/20">
-        <p className="text-xs text-muted-foreground italic">
-          📋 Curso creado como borrador · Un administrador lo revisará y publicará pronto
-        </p>
-      </div>
-    </div>
-  );
-};
-
 export const AITrainingBot: React.FC = () => {
   const { user } = useAuth();
   const { config, isLoading: configLoading } = useChatbotConfig();
@@ -110,7 +26,6 @@ export const AITrainingBot: React.FC = () => {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isCreatingCourse, setIsCreatingCourse] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -137,7 +52,6 @@ export const AITrainingBot: React.FC = () => {
     setInput("");
     setIsLoading(true);
 
-    // Build conversation history for API (without courseData)
     const apiMessages = [...messages, userMsg].map((m) => ({
       role: m.role,
       content: m.content,
@@ -160,27 +74,23 @@ export const AITrainingBot: React.FC = () => {
 
       const contentType = resp.headers.get("Content-Type") || "";
 
-      // Check if the response is a structured JSON (course creation) or SSE stream
       if (contentType.includes("application/json")) {
         const data = await resp.json();
 
-        if (data.type === "course_created" && data.course) {
-          setIsCreatingCourse(false);
-          setMessages((prev) => [
-            ...prev,
-            {
-              role: "assistant",
-              content: data.message,
-              courseData: data.course,
-            },
-          ]);
-        } else if (data.type === "text") {
+        if (data.type === "text" && data.content) {
           setMessages((prev) => [
             ...prev,
             { role: "assistant", content: data.content },
           ]);
         } else if (data.error) {
           throw new Error(data.error);
+        } else {
+          // Fallback for any other JSON response
+          const content = data.content || data.message || "Respuesta recibida.";
+          setMessages((prev) => [
+            ...prev,
+            { role: "assistant", content },
+          ]);
         }
       } else {
         // SSE streaming response
@@ -272,7 +182,6 @@ export const AITrainingBot: React.FC = () => {
       ]);
     } finally {
       setIsLoading(false);
-      setIsCreatingCourse(false);
     }
   };
 
@@ -351,7 +260,7 @@ export const AITrainingBot: React.FC = () => {
                 <Bot className="h-4 w-4" />
               </div>
               <div className="rounded-xl rounded-tl-sm bg-muted px-3 py-2 text-sm">
-                ¡Hola! 👋 Soy tu asistente de entrenamiento con IA. Puedo ayudarte a revisar tu progreso, recomendarte cursos existentes o <strong>crear cursos nuevos</strong> sobre cualquier tema que necesites. ¿En qué te puedo ayudar?
+                ¡Hola! 👋 Soy tu asistente de entrenamiento con IA. Puedo ayudarte a revisar tu progreso, recomendarte cursos y resolver dudas sobre ventas. ¿En qué te puedo ayudar?
               </div>
             </div>
 
@@ -383,11 +292,8 @@ export const AITrainingBot: React.FC = () => {
                 : "rounded-tl-sm bg-muted"
             }`}>
               {msg.role === "assistant" ? (
-                <div>
-                  <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:m-0 [&>ul]:my-1 [&>ol]:my-1">
-                    <ReactMarkdown>{msg.content}</ReactMarkdown>
-                  </div>
-                  {msg.courseData && <CourseCreatedCard course={msg.courseData} />}
+                <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:m-0 [&>ul]:my-1 [&>ol]:my-1">
+                  <ReactMarkdown>{msg.content}</ReactMarkdown>
                 </div>
               ) : (
                 msg.content
@@ -408,9 +314,7 @@ export const AITrainingBot: React.FC = () => {
                   <span className="h-2 w-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: "150ms" }} />
                   <span className="h-2 w-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: "300ms" }} />
                 </div>
-                <span className="text-xs text-muted-foreground">
-                  {isCreatingCourse ? "Creando curso..." : "Pensando..."}
-                </span>
+                <span className="text-xs text-muted-foreground">Pensando...</span>
               </div>
             </div>
           </div>
@@ -425,7 +329,7 @@ export const AITrainingBot: React.FC = () => {
           ref={inputRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Escribe tu pregunta o pide un curso..."
+          placeholder="Escribe tu pregunta..."
           disabled={isLoading}
           className="flex-1 text-sm"
         />

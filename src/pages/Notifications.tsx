@@ -1,10 +1,11 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Bell, BookOpen, Award, MessageSquare, CheckCircle, Clock, Trash2, Loader2 } from "lucide-react";
+import { Bell, BookOpen, Award, MessageSquare, CheckCircle, Clock, Trash2, Loader2, ExternalLink, Mail } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { useNotifications, Notification } from "@/hooks/useNotifications";
@@ -23,6 +24,10 @@ const Notifications: React.FC = () => {
     switch (type) {
       case "course":
         return <BookOpen className="w-5 h-5 text-primary" />;
+      case "course_ready":
+        return <span className="text-lg">📚</span>;
+      case "course_request":
+        return <span className="text-lg">📬</span>;
       case "badge":
         return <Award className="w-5 h-5 text-addi-yellow" />;
       case "feedback":
@@ -211,7 +216,27 @@ const NotificationsList: React.FC<NotificationsListProps> = ({
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2 mt-3">
+                <div className="flex items-center gap-2 mt-3 flex-wrap">
+                  {/* Action button for course_ready */}
+                  {notification.type === "course_ready" && notification.related_id && (
+                    <Link to={`/courses/${notification.related_id}/edit`}>
+                      <Button size="sm" className="gap-1.5">
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        Revisar curso
+                      </Button>
+                    </Link>
+                  )}
+
+                  {/* Action button for course_request */}
+                  {notification.type === "course_request" && (
+                    <Link to="/courses/create">
+                      <Button size="sm" className="gap-1.5">
+                        <BookOpen className="w-3.5 h-3.5" />
+                        Crear curso
+                      </Button>
+                    </Link>
+                  )}
+
                   {!notification.is_read && (
                     <Button
                       variant="ghost"
