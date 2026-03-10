@@ -8,6 +8,8 @@ import { useQuizAttempts, useSubmitQuizAttempt } from "@/hooks/useQuizAttempts";
 import { useCourseFeedback, useSubmitCourseFeedback } from "@/hooks/useFeedback";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBadgeAwarder } from "@/hooks/useBadgeAwarder";
+import { CourseCompletionCelebration } from "@/components/gamification/CourseCompletionCelebration";
+import { CourseLeaderboard } from "@/components/gamification/CourseLeaderboard";
 import { gradeQuestion } from "@/components/quiz/grading";
 import { isAdvancedType, questionTypeLabels } from "@/components/quiz/types";
 import { MindMapPlayer } from "@/components/quiz/players/MindMapPlayer";
@@ -180,6 +182,7 @@ const CourseDetail: React.FC = () => {
   const [currentMaterialIndex, setCurrentMaterialIndex] = useState<number>(0);
   const [isTimeExpired, setIsTimeExpired] = useState(false);
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
 
   const enrollment = enrollments?.find((e) => e.course_id === id);
   const isCourseExpired = useMemo(() => {
@@ -276,13 +279,8 @@ const CourseDetail: React.FC = () => {
       setShowQuizResults(true);
 
       if (passed) {
-        const pointsMsg = isCourseExpired
-          ? `Obtuviste ${score}% y has ganado ${effectivePoints} puntos (50% por completar fuera del plazo de vencimiento). Podrás verlos reflejados en tu perfil.`
-          : `Obtuviste ${score}% y has ganado ${course?.points || 0} puntos. Podrás verlos reflejados en tu perfil.`;
-        toast({
-          title: "🎉 ¡Felicitaciones! Has aprobado el curso",
-          description: pointsMsg,
-        });
+        // Show celebration with confetti
+        setShowCelebration(true);
         // Small delay to ensure database has updated enrollment status before checking badges
         setTimeout(async () => {
           await checkAndAwardBadges();
@@ -554,7 +552,9 @@ const CourseDetail: React.FC = () => {
             <CardContent className="py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Award className="w-8 h-8 text-success" />
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-success/20 ring-2 ring-success/40 animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_3]">
+                    <Award className="w-6 h-6 text-success" />
+                  </div>
                   <div>
                     <h3 className="font-semibold text-success">¡Curso Completado!</h3>
                     <p className="text-sm text-muted-foreground">
@@ -570,6 +570,9 @@ const CourseDetail: React.FC = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Mini Leaderboard */}
+        {enrollment && <CourseLeaderboard />}
 
         {/* Time expired overlay - blocks content */}
         {isTimeExpired && enrollment?.status !== "completed" && (
@@ -1450,6 +1453,15 @@ const CourseDetail: React.FC = () => {
         </div>
         )}
       </div>
+
+      {/* Celebration overlay */}
+      <CourseCompletionCelebration
+        show={showCelebration}
+        courseName={course.title}
+        points={isCourseExpired ? Math.floor((course.points || 0) / 2) : (course.points || 0)}
+        score={lastQuizScore?.score}
+        onClose={() => setShowCelebration(false)}
+      />
     </DashboardLayout>
   );
 };
