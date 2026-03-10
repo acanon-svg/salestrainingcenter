@@ -552,7 +552,9 @@ const CourseDetail: React.FC = () => {
             <CardContent className="py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Award className="w-8 h-8 text-success" />
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-success/20 ring-2 ring-success/40 animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_3]">
+                    <Award className="w-6 h-6 text-success" />
+                  </div>
                   <div>
                     <h3 className="font-semibold text-success">¡Curso Completado!</h3>
                     <p className="text-sm text-muted-foreground">
@@ -568,6 +570,9 @@ const CourseDetail: React.FC = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Mini Leaderboard */}
+        {enrollment && <CourseLeaderboard />}
 
         {/* Time expired overlay - blocks content */}
         {isTimeExpired && enrollment?.status !== "completed" && (
