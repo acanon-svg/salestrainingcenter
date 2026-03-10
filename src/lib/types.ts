@@ -207,7 +207,7 @@ export const difficultyLabels: Record<DifficultyLevel, string> = {
 // Status display names
 export const statusLabels: Record<CourseStatus, string> = {
   draft: "Borrador",
-  published: "Publicado",
+  published: "Activo",
   archived: "Archivado",
 };
 

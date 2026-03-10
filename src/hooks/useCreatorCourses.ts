@@ -8,6 +8,7 @@ export interface CreatorCourse {
   title: string;
   status: string;
   dimension: string;
+  difficulty: string;
   created_at: string;
   published_at: string | null;
   scheduled_at: string | null;
@@ -16,6 +17,8 @@ export interface CreatorCourse {
   avg_score: number | null;
   order_index: number;
   folder_id: string | null;
+  segment: string | null;
+  category: string | null;
 }
 
 export const useCreatorCourses = () => {
@@ -28,7 +31,7 @@ export const useCreatorCourses = () => {
       // Admins see ALL courses; creators see only their own
       let query = supabase
         .from("courses")
-        .select("id, title, status, dimension, created_at, published_at, scheduled_at, expires_at, order_index, target_teams, folder_id")
+        .select("id, title, status, dimension, difficulty, created_at, published_at, scheduled_at, expires_at, order_index, target_teams, folder_id, segment, category")
         .order("order_index", { ascending: false })
         .order("created_at", { ascending: false });
 

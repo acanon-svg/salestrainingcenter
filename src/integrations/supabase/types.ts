@@ -892,6 +892,7 @@ export type Database = {
           ai_analysis: string | null
           ai_generation_trigger: string | null
           ai_metadata: Json | null
+          category: string | null
           cover_image_url: string | null
           created_at: string
           created_by: string | null
@@ -910,6 +911,7 @@ export type Database = {
           process_id: string | null
           published_at: string | null
           scheduled_at: string | null
+          segment: string | null
           status: Database["public"]["Enums"]["course_status"]
           subtitles_enabled: boolean
           tags: string[] | null
@@ -924,6 +926,7 @@ export type Database = {
           ai_analysis?: string | null
           ai_generation_trigger?: string | null
           ai_metadata?: Json | null
+          category?: string | null
           cover_image_url?: string | null
           created_at?: string
           created_by?: string | null
@@ -942,6 +945,7 @@ export type Database = {
           process_id?: string | null
           published_at?: string | null
           scheduled_at?: string | null
+          segment?: string | null
           status?: Database["public"]["Enums"]["course_status"]
           subtitles_enabled?: boolean
           tags?: string[] | null
@@ -956,6 +960,7 @@ export type Database = {
           ai_analysis?: string | null
           ai_generation_trigger?: string | null
           ai_metadata?: Json | null
+          category?: string | null
           cover_image_url?: string | null
           created_at?: string
           created_by?: string | null
@@ -974,6 +979,7 @@ export type Database = {
           process_id?: string | null
           published_at?: string | null
           scheduled_at?: string | null
+          segment?: string | null
           status?: Database["public"]["Enums"]["course_status"]
           subtitles_enabled?: boolean
           tags?: string[] | null

@@ -16,6 +16,7 @@ import {
 } from "@dnd-kit/sortable";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
 import { BookOpen } from "lucide-react";
 import { CreatorCourse } from "@/hooks/useCreatorCourses";
 import { CourseFolder } from "@/hooks/useCourseFolders";
@@ -32,6 +33,9 @@ interface DraggableCourseListProps {
   publishingId: string | null;
   archivingId: string | null;
   folders?: CourseFolder[];
+  selectedIds?: string[];
+  onToggleSelect?: (id: string) => void;
+  onSelectAll?: () => void;
 }
 
 export const DraggableCourseList: React.FC<DraggableCourseListProps> = ({
@@ -45,6 +49,9 @@ export const DraggableCourseList: React.FC<DraggableCourseListProps> = ({
   publishingId,
   archivingId,
   folders = [],
+  selectedIds = [],
+  onToggleSelect,
+  onSelectAll,
 }) => {
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -99,10 +106,23 @@ export const DraggableCourseList: React.FC<DraggableCourseListProps> = ({
 
   // Sort by order_index descending for display (highest first = top of list)
   const sortedCourses = [...courses].sort((a, b) => b.order_index - a.order_index);
+  const allSelected = sortedCourses.length > 0 && sortedCourses.every((c) => selectedIds.includes(c.id));
 
   return (
     <Card className="border-border/50">
       <CardContent className="p-0">
+        {/* Select all header */}
+        {onToggleSelect && onSelectAll && (
+          <div className="flex items-center gap-3 px-4 py-2 border-b border-border bg-muted/30">
+            <Checkbox
+              checked={allSelected}
+              onCheckedChange={onSelectAll}
+            />
+            <span className="text-xs text-muted-foreground font-medium">
+              {allSelected ? "Deseleccionar todos" : "Seleccionar todos"}
+            </span>
+          </div>
+        )}
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -123,6 +143,8 @@ export const DraggableCourseList: React.FC<DraggableCourseListProps> = ({
                 publishingId={publishingId}
                 archivingId={archivingId}
                 folders={folders}
+                isSelected={selectedIds.includes(course.id)}
+                onToggleSelect={onToggleSelect ? () => onToggleSelect(course.id) : undefined}
               />
             ))}
           </SortableContext>
