@@ -72,10 +72,20 @@ const Courses: React.FC = () => {
     return daysUntilExpiry <= 7 && daysUntilExpiry > 0;
   });
 
-  // Available courses (not enrolled)
-  const availableCourses = allCourses?.filter(
-    (c) => !enrolledCourseIds.has(c.id)
-  ) || [];
+  // Available courses (not enrolled AND not archived AND not globally expired)
+  // Bug #3 & #4: Filter out archived and globally expired courses
+  const availableCourses = allCourses?.filter((c) => {
+    // Already enrolled - skip
+    if (enrolledCourseIds.has(c.id)) return false;
+    // Archived courses should never show
+    if (c.status === "archived") return false;
+    // Only published (active) courses are available
+    if (c.status !== "published") return false;
+    // Course with a global expiration that has passed should not show for new enrollments
+    // Note: individual enrollment expiration is separate and handled differently
+    if (c.expires_at && isPast(new Date(c.expires_at))) return false;
+    return true;
+  }) || [];
 
   // Apply filters
   const filterCourses = (courses: any[]) => {
