@@ -293,10 +293,13 @@ export const FieldSalesCommissions: React.FC = () => {
         totalCommission += adj.bonus;
       } else {
         totalCommission = calc.calculatedCommission;
+        // Add accelerator bonus automatically
+        if (accelResult.eligible && accelResult.totalBonus > 0) {
+          totalCommission += accelResult.totalBonus;
+        }
         if (adj.hasMb) totalCommission *= 1.2;
         totalCommission += adj.bonus;
       }
-      // Accelerator bonus is shown for reference only — leader adds it manually via bonus field
 
       return {
         ...result,
