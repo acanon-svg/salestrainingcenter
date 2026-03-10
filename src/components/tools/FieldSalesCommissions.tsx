@@ -911,6 +911,21 @@ export const FieldSalesCommissions: React.FC = () => {
                       </Button>
                     </div>
                   )}
+                  {/* Reset individual - for approved/rejected */}
+                  {(status === "approved" || status === "rejected") && (
+                    <div className="flex gap-2 justify-end">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleResetIndividual(exec)}
+                        disabled={isProcessing}
+                        className="text-amber-600 hover:bg-amber-500/10"
+                      >
+                        <RotateCcw className="h-4 w-4 mr-1" />
+                        Devolver a pendiente
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             );
