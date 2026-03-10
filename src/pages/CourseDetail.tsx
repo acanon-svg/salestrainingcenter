@@ -1453,6 +1453,15 @@ const CourseDetail: React.FC = () => {
         </div>
         )}
       </div>
+
+      {/* Celebration overlay */}
+      <CourseCompletionCelebration
+        show={showCelebration}
+        courseName={course.title}
+        points={isCourseExpired ? Math.floor((course.points || 0) / 2) : (course.points || 0)}
+        score={lastQuizScore?.score}
+        onClose={() => setShowCelebration(false)}
+      />
     </DashboardLayout>
   );
 };
