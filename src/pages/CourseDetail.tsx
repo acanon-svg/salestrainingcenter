@@ -182,6 +182,7 @@ const CourseDetail: React.FC = () => {
   const [currentMaterialIndex, setCurrentMaterialIndex] = useState<number>(0);
   const [isTimeExpired, setIsTimeExpired] = useState(false);
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
 
   const enrollment = enrollments?.find((e) => e.course_id === id);
   const isCourseExpired = useMemo(() => {
