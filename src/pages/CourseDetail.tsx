@@ -8,6 +8,8 @@ import { useQuizAttempts, useSubmitQuizAttempt } from "@/hooks/useQuizAttempts";
 import { useCourseFeedback, useSubmitCourseFeedback } from "@/hooks/useFeedback";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBadgeAwarder } from "@/hooks/useBadgeAwarder";
+import { CourseCompletionCelebration } from "@/components/gamification/CourseCompletionCelebration";
+import { CourseLeaderboard } from "@/components/gamification/CourseLeaderboard";
 import { gradeQuestion } from "@/components/quiz/grading";
 import { isAdvancedType, questionTypeLabels } from "@/components/quiz/types";
 import { MindMapPlayer } from "@/components/quiz/players/MindMapPlayer";
