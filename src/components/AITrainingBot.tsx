@@ -2,21 +2,105 @@ import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Bot, X, Minimize2, Maximize2, Send, Sparkles, User } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Bot, X, Minimize2, Maximize2, Send, Sparkles, User, BookOpen, Trophy, Clock, Target, CheckCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChatbotConfig } from "@/hooks/useChatbotConfig";
 import ReactMarkdown from "react-markdown";
+import { cn } from "@/lib/utils";
 
-type Msg = { role: "user" | "assistant"; content: string };
+type Msg = { role: "user" | "assistant"; content: string; courseData?: CourseCreatedData };
+
+interface CourseCreatedData {
+  id: string;
+  title: string;
+  description: string;
+  difficulty: string;
+  points: number;
+  estimated_duration_minutes: number;
+  modules_count: number;
+  questions_count: number;
+  objectives: string[];
+}
 
 const SUGGESTED_QUESTIONS = [
   "¿Cuál es mi progreso en los cursos?",
-  "¿Qué me recomiendas estudiar?",
+  "Quiero aprender sobre manejo de objeciones",
   "¿Cómo puedo mejorar mi ranking?",
-  "¿Cuáles son los temas del próximo quiz?",
+  "Necesito un curso de técnicas de cierre",
 ];
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-training-bot`;
+
+const CourseCreatedCard: React.FC<{ course: CourseCreatedData }> = ({ course }) => {
+  const difficultyLabels: Record<string, string> = {
+    basico: "Básico",
+    intermedio: "Intermedio",
+    avanzado: "Avanzado",
+  };
+  const difficultyColors: Record<string, string> = {
+    basico: "bg-emerald-500",
+    intermedio: "bg-amber-500",
+    avanzado: "bg-red-500",
+  };
+
+  return (
+    <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2.5 mt-2">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20">
+            <BookOpen className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold leading-tight">{course.title}</h4>
+            <p className="text-xs text-muted-foreground mt-0.5">{course.description}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        <Badge variant="outline" className={cn("text-xs text-white", difficultyColors[course.difficulty] || "bg-primary")}>
+          {difficultyLabels[course.difficulty] || course.difficulty}
+        </Badge>
+        <Badge variant="outline" className="text-xs">
+          <Clock className="h-3 w-3 mr-1" />
+          {course.estimated_duration_minutes} min
+        </Badge>
+        <Badge variant="outline" className="text-xs">
+          <Trophy className="h-3 w-3 mr-1" />
+          {course.points} pts
+        </Badge>
+        <Badge variant="outline" className="text-xs">
+          <BookOpen className="h-3 w-3 mr-1" />
+          {course.modules_count} módulos
+        </Badge>
+        <Badge variant="outline" className="text-xs">
+          <Target className="h-3 w-3 mr-1" />
+          {course.questions_count} preguntas
+        </Badge>
+      </div>
+
+      {course.objectives && course.objectives.length > 0 && (
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-muted-foreground">Objetivos:</p>
+          {course.objectives.slice(0, 3).map((obj, i) => (
+            <div key={i} className="flex items-start gap-1.5 text-xs">
+              <CheckCircle className="h-3 w-3 text-emerald-500 mt-0.5 shrink-0" />
+              <span>{obj}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="pt-1 border-t border-primary/20">
+        <p className="text-xs text-muted-foreground italic">
+          📋 Curso creado como borrador · Un administrador lo revisará y publicará pronto
+        </p>
+      </div>
+    </div>
+  );
+};
 
 export const AITrainingBot: React.FC = () => {
   const { user } = useAuth();
@@ -26,6 +110,7 @@ export const AITrainingBot: React.FC = () => {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isCreatingCourse, setIsCreatingCourse] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -52,20 +137,11 @@ export const AITrainingBot: React.FC = () => {
     setInput("");
     setIsLoading(true);
 
-    let assistantSoFar = "";
-
-    const upsertAssistant = (chunk: string) => {
-      assistantSoFar += chunk;
-      setMessages((prev) => {
-        const last = prev[prev.length - 1];
-        if (last?.role === "assistant") {
-          return prev.map((m, i) =>
-            i === prev.length - 1 ? { ...m, content: assistantSoFar } : m
-          );
-        }
-        return [...prev, { role: "assistant", content: assistantSoFar }];
-      });
-    };
+    // Build conversation history for API (without courseData)
+    const apiMessages = [...messages, userMsg].map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
 
     try {
       const resp = await fetch(CHAT_URL, {
@@ -74,73 +150,116 @@ export const AITrainingBot: React.FC = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: [...messages, userMsg] }),
+        body: JSON.stringify({ messages: apiMessages }),
       });
 
-      if (!resp.ok || !resp.body) {
+      if (!resp.ok) {
         const errorData = await resp.json().catch(() => null);
         throw new Error(errorData?.error || "Error al conectar con el asistente");
       }
 
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let textBuffer = "";
-      let streamDone = false;
+      const contentType = resp.headers.get("Content-Type") || "";
 
-      while (!streamDone) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        textBuffer += decoder.decode(value, { stream: true });
+      // Check if the response is a structured JSON (course creation) or SSE stream
+      if (contentType.includes("application/json")) {
+        const data = await resp.json();
 
-        let newlineIndex: number;
-        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
-          let line = textBuffer.slice(0, newlineIndex);
-          textBuffer = textBuffer.slice(newlineIndex + 1);
+        if (data.type === "course_created" && data.course) {
+          setIsCreatingCourse(false);
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: data.message,
+              courseData: data.course,
+            },
+          ]);
+        } else if (data.type === "text") {
+          setMessages((prev) => [
+            ...prev,
+            { role: "assistant", content: data.content },
+          ]);
+        } else if (data.error) {
+          throw new Error(data.error);
+        }
+      } else {
+        // SSE streaming response
+        if (!resp.body) throw new Error("No response body");
 
-          if (line.endsWith("\r")) line = line.slice(0, -1);
-          if (line.startsWith(":") || line.trim() === "") continue;
-          if (!line.startsWith("data: ")) continue;
+        let assistantSoFar = "";
 
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr === "[DONE]") {
-            streamDone = true;
-            break;
-          }
+        const upsertAssistant = (chunk: string) => {
+          assistantSoFar += chunk;
+          setMessages((prev) => {
+            const last = prev[prev.length - 1];
+            if (last?.role === "assistant") {
+              return prev.map((m, i) =>
+                i === prev.length - 1 ? { ...m, content: assistantSoFar } : m
+              );
+            }
+            return [...prev, { role: "assistant", content: assistantSoFar }];
+          });
+        };
 
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-            if (content) upsertAssistant(content);
-          } catch {
-            textBuffer = line + "\n" + textBuffer;
-            break;
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let textBuffer = "";
+        let streamDone = false;
+
+        while (!streamDone) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          textBuffer += decoder.decode(value, { stream: true });
+
+          let newlineIndex: number;
+          while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+            let line = textBuffer.slice(0, newlineIndex);
+            textBuffer = textBuffer.slice(newlineIndex + 1);
+
+            if (line.endsWith("\r")) line = line.slice(0, -1);
+            if (line.startsWith(":") || line.trim() === "") continue;
+            if (!line.startsWith("data: ")) continue;
+
+            const jsonStr = line.slice(6).trim();
+            if (jsonStr === "[DONE]") {
+              streamDone = true;
+              break;
+            }
+
+            try {
+              const parsed = JSON.parse(jsonStr);
+              const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+              if (content) upsertAssistant(content);
+            } catch {
+              textBuffer = line + "\n" + textBuffer;
+              break;
+            }
           }
         }
-      }
 
-      // Final flush
-      if (textBuffer.trim()) {
-        for (let raw of textBuffer.split("\n")) {
-          if (!raw) continue;
-          if (raw.endsWith("\r")) raw = raw.slice(0, -1);
-          if (raw.startsWith(":") || raw.trim() === "") continue;
-          if (!raw.startsWith("data: ")) continue;
-          const jsonStr = raw.slice(6).trim();
-          if (jsonStr === "[DONE]") continue;
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-            if (content) upsertAssistant(content);
-          } catch { /* ignore */ }
+        // Final flush
+        if (textBuffer.trim()) {
+          for (let raw of textBuffer.split("\n")) {
+            if (!raw) continue;
+            if (raw.endsWith("\r")) raw = raw.slice(0, -1);
+            if (raw.startsWith(":") || raw.trim() === "") continue;
+            if (!raw.startsWith("data: ")) continue;
+            const jsonStr = raw.slice(6).trim();
+            if (jsonStr === "[DONE]") continue;
+            try {
+              const parsed = JSON.parse(jsonStr);
+              const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+              if (content) upsertAssistant(content);
+            } catch { /* ignore */ }
+          }
         }
-      }
 
-      // If no content was streamed, add fallback
-      if (!assistantSoFar) {
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: "Lo siento, no pude generar una respuesta. Intenta de nuevo." },
-        ]);
+        if (!assistantSoFar) {
+          setMessages((prev) => [
+            ...prev,
+            { role: "assistant", content: "Lo siento, no pude generar una respuesta. Intenta de nuevo." },
+          ]);
+        }
       }
     } catch (e) {
       console.error("AITrainingBot error:", e);
@@ -153,6 +272,7 @@ export const AITrainingBot: React.FC = () => {
       ]);
     } finally {
       setIsLoading(false);
+      setIsCreatingCourse(false);
     }
   };
 
@@ -231,12 +351,12 @@ export const AITrainingBot: React.FC = () => {
                 <Bot className="h-4 w-4" />
               </div>
               <div className="rounded-xl rounded-tl-sm bg-muted px-3 py-2 text-sm">
-                ¡Hola! 👋 Soy tu asistente de entrenamiento con IA. Puedo ayudarte a revisar tu progreso, recomendarte cursos y darte tips para mejorar. ¿En qué te puedo ayudar?
+                ¡Hola! 👋 Soy tu asistente de entrenamiento con IA. Puedo ayudarte a revisar tu progreso, recomendarte cursos existentes o <strong>crear cursos nuevos</strong> sobre cualquier tema que necesites. ¿En qué te puedo ayudar?
               </div>
             </div>
 
             <div className="space-y-2 pl-9">
-              <p className="text-xs text-muted-foreground font-medium">Preguntas sugeridas:</p>
+              <p className="text-xs text-muted-foreground font-medium">Prueba preguntar:</p>
               {SUGGESTED_QUESTIONS.map((q) => (
                 <button
                   key={q}
@@ -263,8 +383,11 @@ export const AITrainingBot: React.FC = () => {
                 : "rounded-tl-sm bg-muted"
             }`}>
               {msg.role === "assistant" ? (
-                <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:m-0 [&>ul]:my-1 [&>ol]:my-1">
-                  <ReactMarkdown>{msg.content}</ReactMarkdown>
+                <div>
+                  <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:m-0 [&>ul]:my-1 [&>ol]:my-1">
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  </div>
+                  {msg.courseData && <CourseCreatedCard course={msg.courseData} />}
                 </div>
               ) : (
                 msg.content
@@ -279,10 +402,15 @@ export const AITrainingBot: React.FC = () => {
               <Bot className="h-4 w-4" />
             </div>
             <div className="rounded-xl rounded-tl-sm bg-muted px-4 py-3">
-              <div className="flex gap-1">
-                <span className="h-2 w-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: "0ms" }} />
-                <span className="h-2 w-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: "150ms" }} />
-                <span className="h-2 w-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: "300ms" }} />
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1">
+                  <span className="h-2 w-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="h-2 w-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="h-2 w-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {isCreatingCourse ? "Creando curso..." : "Pensando..."}
+                </span>
               </div>
             </div>
           </div>
@@ -297,7 +425,7 @@ export const AITrainingBot: React.FC = () => {
           ref={inputRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Escribe tu pregunta..."
+          placeholder="Escribe tu pregunta o pide un curso..."
           disabled={isLoading}
           className="flex-1 text-sm"
         />
