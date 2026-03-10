@@ -276,8 +276,8 @@ export const FieldSalesCommissions: React.FC = () => {
         ? allAccelerators.filter((a) => a.config_id === matchedConfig.id)
         : [];
 
-      // Accelerator bonus is always calculated on the BASE commission (e.g. $1,500,000), not the calculated commission
-      const baseForAccelerator = calc.baseCommission;
+      // Accelerator bonus is calculated on the calculated commission (base × compliance%)
+      const baseForAccelerator = isGuaranteed ? calc.baseCommission : calc.calculatedCommission;
       const accelResult = calculateAcceleratorBonus(
         configAccelerators,
         calc.firmasCompliance,
