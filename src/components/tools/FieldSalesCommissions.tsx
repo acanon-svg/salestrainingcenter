@@ -294,8 +294,8 @@ export const FieldSalesCommissions: React.FC = () => {
       } else {
         totalCommission = calc.calculatedCommission;
         // Add accelerator bonus automatically
-        if (accelResult.qualifies && accelResult.bonusAmount > 0) {
-          totalCommission += accelResult.bonusAmount;
+        if (accelResult.eligible && accelResult.totalBonus > 0) {
+          totalCommission += accelResult.totalBonus;
         }
         if (adj.hasMb) totalCommission *= 1.2;
         totalCommission += adj.bonus;
