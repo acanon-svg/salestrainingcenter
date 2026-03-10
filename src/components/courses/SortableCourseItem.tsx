@@ -4,6 +4,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,12 +41,16 @@ import {
   AlertTriangle,
   FolderInput,
   FolderX,
+  RotateCcw,
+  MoreVertical,
 } from "lucide-react";
 import { statusLabels, dimensionLabels } from "@/lib/types";
+import { segmentLabels, categoryLabels } from "./BulkClassifyDialog";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { CreatorCourse } from "@/hooks/useCreatorCourses";
 import { CourseFolder, useMoveCourseToFolder } from "@/hooks/useCourseFolders";
+import { useBulkReactivateCourses } from "@/hooks/useBulkCourseActions";
 
 interface SortableCourseItemProps {
   course: CreatorCourse;
@@ -56,6 +61,8 @@ interface SortableCourseItemProps {
   publishingId: string | null;
   archivingId: string | null;
   folders?: CourseFolder[];
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
 }
 
 const getStatusBadge = (status: string, scheduled_at?: string | null) => {
@@ -76,21 +83,21 @@ const getStatusBadge = (status: string, scheduled_at?: string | null) => {
       return (
         <Badge className="bg-success text-success-foreground gap-1">
           <CheckCircle className="w-3 h-3" />
-          {statusLabels[status as keyof typeof statusLabels]}
+          Activo
         </Badge>
       );
     case "draft":
       return (
         <Badge variant="outline" className="gap-1 text-warning border-warning">
           <Clock className="w-3 h-3" />
-          {statusLabels[status as keyof typeof statusLabels]}
+          Borrador
         </Badge>
       );
     case "archived":
       return (
-        <Badge variant="secondary" className="gap-1">
+        <Badge variant="secondary" className="gap-1 text-destructive">
           <AlertCircle className="w-3 h-3" />
-          {statusLabels[status as keyof typeof statusLabels]}
+          Archivado
         </Badge>
       );
     default:
@@ -107,8 +114,11 @@ export const SortableCourseItem: React.FC<SortableCourseItemProps> = ({
   publishingId,
   archivingId,
   folders = [],
+  isSelected = false,
+  onToggleSelect,
 }) => {
   const moveCourse = useMoveCourseToFolder();
+  const reactivate = useBulkReactivateCourses();
   const currentFolder = folders.find((f) => f.id === course.folder_id);
   const {
     attributes,
@@ -125,31 +135,52 @@ export const SortableCourseItem: React.FC<SortableCourseItemProps> = ({
     opacity: isDragging ? 0.5 : 1,
   };
 
+  const extCourse = course as CreatorCourse & { segment?: string; category?: string };
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={`flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors border-b border-border last:border-b-0 ${
         isDragging ? "bg-muted/30 shadow-lg z-10" : ""
-      }`}
+      } ${isSelected ? "bg-primary/5" : ""}`}
     >
+      {/* Checkbox */}
+      {onToggleSelect && (
+        <Checkbox
+          checked={isSelected}
+          onCheckedChange={onToggleSelect}
+          className="shrink-0"
+        />
+      )}
+
       {/* Drag handle */}
       <button
         {...attributes}
         {...listeners}
-        className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted touch-none"
+        className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted touch-none shrink-0"
         title="Arrastrar para reordenar"
       >
         <GripVertical className="w-5 h-5 text-muted-foreground" />
       </button>
 
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-3 mb-1 flex-wrap">
+        <div className="flex items-center gap-2 mb-1 flex-wrap">
           <h3 className="font-medium truncate">{course.title}</h3>
-           {getStatusBadge(course.status, course.scheduled_at)}
+          {getStatusBadge(course.status, course.scheduled_at)}
           <Badge variant="outline" className="text-xs">
             {dimensionLabels[course.dimension as keyof typeof dimensionLabels] || course.dimension}
           </Badge>
+          {extCourse.segment && extCourse.segment !== "todos" && (
+            <Badge variant="secondary" className="text-xs">
+              {segmentLabels[extCourse.segment] || extCourse.segment}
+            </Badge>
+          )}
+          {extCourse.category && (
+            <Badge variant="outline" className="text-xs border-primary/30 text-primary">
+              {categoryLabels[extCourse.category] || extCourse.category}
+            </Badge>
+          )}
           {currentFolder && (
             <Badge variant="secondary" className="text-xs gap-1">
               <div className="w-2 h-2 rounded-full" style={{ backgroundColor: currentFolder.color }} />
@@ -202,8 +233,8 @@ export const SortableCourseItem: React.FC<SortableCourseItemProps> = ({
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        {/* Publish button for drafts */}
+      <div className="flex items-center gap-1 shrink-0">
+        {/* Quick actions */}
         {course.status === "draft" && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
@@ -225,7 +256,7 @@ export const SortableCourseItem: React.FC<SortableCourseItemProps> = ({
               <AlertDialogHeader>
                 <AlertDialogTitle>¿Publicar este curso?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  El curso será visible para todos los estudiantes asignados. Asegúrate de que el contenido esté completo.
+                  El curso será visible para todos los estudiantes asignados.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -240,124 +271,85 @@ export const SortableCourseItem: React.FC<SortableCourseItemProps> = ({
             </AlertDialogContent>
           </AlertDialog>
         )}
-        
-        {/* Archive button for published courses */}
-        {course.status === "published" && (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground hover:text-muted-foreground"
-                disabled={archivingId === course.id}
-                title="Archivar curso"
-              >
-                {archivingId === course.id ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Archive className="w-4 h-4" />
-                )}
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>¿Archivar este curso?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  El curso dejará de estar visible para nuevos estudiantes. Los estudiantes ya inscritos podrán seguir accediendo.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={() => onArchive(course.id)}>
-                  Archivar
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+
+        {/* Reactivate for archived */}
+        {course.status === "archived" && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-success hover:text-success"
+            title="Reactivar curso"
+            onClick={() => reactivate.mutate([course.id])}
+          >
+            <RotateCcw className="w-4 h-4" />
+          </Button>
         )}
 
-        {/* Move to folder */}
-        {folders.length > 0 && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" title="Mover a carpeta">
-                <FolderInput className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {folders.map((folder) => (
-                <DropdownMenuItem
-                  key={folder.id}
-                  onClick={() => moveCourse.mutate({ courseId: course.id, folderId: folder.id })}
-                  className={course.folder_id === folder.id ? "bg-muted" : ""}
-                >
-                  <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: folder.color }} />
-                  {folder.name}
-                </DropdownMenuItem>
-              ))}
-              {course.folder_id && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => moveCourse.mutate({ courseId: course.id, folderId: null })}>
-                    <FolderX className="w-3 h-3 mr-2" />
+        {/* 3-dot menu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <MoreVertical className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem asChild>
+              <Link to={`/courses/${course.id}`} className="gap-2">
+                <Eye className="w-4 h-4" />
+                Ver curso
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to={`/courses/${course.id}/edit`} className="gap-2">
+                <Edit className="w-4 h-4" />
+                Editar
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {course.status === "published" && (
+              <DropdownMenuItem onClick={() => onArchive(course.id)} className="gap-2">
+                <Archive className="w-4 h-4" />
+                Archivar
+              </DropdownMenuItem>
+            )}
+            {course.status === "archived" && (
+              <DropdownMenuItem onClick={() => reactivate.mutate([course.id])} className="gap-2">
+                <RotateCcw className="w-4 h-4" />
+                Reactivar
+              </DropdownMenuItem>
+            )}
+            {folders.length > 0 && (
+              <>
+                <DropdownMenuSeparator />
+                {folders.map((folder) => (
+                  <DropdownMenuItem
+                    key={folder.id}
+                    onClick={() => moveCourse.mutate({ courseId: course.id, folderId: folder.id })}
+                    className={`gap-2 ${course.folder_id === folder.id ? "bg-muted" : ""}`}
+                  >
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: folder.color }} />
+                    {folder.name}
+                  </DropdownMenuItem>
+                ))}
+                {course.folder_id && (
+                  <DropdownMenuItem onClick={() => moveCourse.mutate({ courseId: course.id, folderId: null })} className="gap-2">
+                    <FolderX className="w-3 h-3" />
                     Quitar de carpeta
                   </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-
-        <Link to={`/courses/${course.id}`}>
-          <Button variant="ghost" size="icon" title="Ver curso">
-            <Eye className="w-4 h-4" />
-          </Button>
-        </Link>
-        <Link to={`/courses/${course.id}/edit`}>
-          <Button variant="ghost" size="icon" title="Editar curso">
-            <Edit className="w-4 h-4" />
-          </Button>
-        </Link>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-destructive hover:text-destructive"
-              disabled={deletingId === course.id}
-              title="Eliminar curso"
-            >
-              {deletingId === course.id ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Trash2 className="w-4 h-4" />
-              )}
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>¿Eliminar este curso?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta acción no se puede deshacer. Se eliminarán todos los materiales, quizzes e inscripciones
-                asociadas a este curso.
-                {course.enrolled_count > 0 && (
-                  <span className="block mt-2 text-destructive font-medium">
-                    ⚠️ Este curso tiene {course.enrolled_count} estudiantes inscritos.
-                  </span>
                 )}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => onDelete(course.id)}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                Eliminar
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+              </>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => onDelete(course.id)}
+              className="gap-2 text-destructive focus:text-destructive"
+              disabled={deletingId === course.id}
+            >
+              <Trash2 className="w-4 h-4" />
+              Eliminar
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );
