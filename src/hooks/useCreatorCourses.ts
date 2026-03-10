@@ -28,7 +28,7 @@ export const useCreatorCourses = () => {
       // Admins see ALL courses; creators see only their own
       let query = supabase
         .from("courses")
-        .select("id, title, status, dimension, created_at, published_at, scheduled_at, expires_at, order_index, target_teams, folder_id")
+        .select("id, title, status, dimension, difficulty, created_at, published_at, scheduled_at, expires_at, order_index, target_teams, folder_id, segment, category")
         .order("order_index", { ascending: false })
         .order("created_at", { ascending: false });
 
