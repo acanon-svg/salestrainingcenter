@@ -95,6 +95,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({ onNavigate }) =>
   const { configs, isSectionVisibleForUser } = usePortalSectionConfigs();
   const { data: unreadFeedbackCount = 0 } = useUnreadCourseFeedbackCount();
   const { data: rejectedCommissionCount = 0 } = useRejectedCommissionCount();
+  const { unreadCount: notificationUnreadCount } = useNotifications();
 
   const isActive = (href: string) => {
     const questionMark = href.indexOf("?");
