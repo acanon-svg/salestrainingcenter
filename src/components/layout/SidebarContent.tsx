@@ -196,7 +196,12 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({ onNavigate }) =>
       {/* Navigation */}
       <ScrollArea className="flex-1 px-3 py-4">
         <nav className="space-y-1">
-          {visibleNavItems.map((item) => renderNavLink(item))}
+          {visibleNavItems.map((item) => {
+            const badgeCount = item.showBadge && item.sectionKey === "notifications"
+              ? notificationUnreadCount
+              : 0;
+            return renderNavLink(item, badgeCount);
+          })}
 
           {visibleCreatorItems.length > 0 && (
             <>
