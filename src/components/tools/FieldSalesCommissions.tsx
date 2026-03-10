@@ -355,8 +355,7 @@ export const FieldSalesCommissions: React.FC = () => {
       if (adj.hasMb) total *= 1.2;
       total += adj.bonus;
     }
-    // Add accelerator bonus from exec data
-    total += exec.accelerator?.totalBonus || 0;
+    // Accelerator bonus is informational only — not auto-added
 
     return {
       user_email: exec.user_email,
@@ -377,7 +376,7 @@ export const FieldSalesCommissions: React.FC = () => {
       base_commission: calc.baseCommission,
       calculated_commission: isGuaranteed ? calc.baseCommission : calc.calculatedCommission,
       has_mb_income: adj.hasMb,
-      indicator_bonus: adj.bonus + (exec.accelerator?.totalBonus || 0),
+      indicator_bonus: adj.bonus,
       total_commission: total,
     };
   };
