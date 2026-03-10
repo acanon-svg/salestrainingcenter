@@ -32,6 +32,7 @@ import addiTrainingLogo from "@/assets/addi-training-logo.svg";
 import { usePortalSectionConfigs } from "@/hooks/usePortalSectionConfigs";
 import { useUnreadCourseFeedbackCount } from "@/hooks/useFeedback";
 import { useRejectedCommissionCount } from "@/hooks/useCommissionReviews";
+import { useNotifications } from "@/hooks/useNotifications";
 
 interface SidebarContentProps {
   onNavigate?: () => void;
