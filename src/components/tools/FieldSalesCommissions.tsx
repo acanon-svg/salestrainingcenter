@@ -558,20 +558,18 @@ export const FieldSalesCommissions: React.FC = () => {
         onYearChange={setSelectedYear}
       />
 
-      {/* Reset button for creators */}
-      {isCreator && (
-        <div className="flex justify-end">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setResetDialogOpen(true)}
-            className="text-destructive hover:bg-destructive/10 border-destructive/30"
-          >
-            <RotateCcw className="h-4 w-4 mr-1" />
-            Reiniciar Comisiones
-          </Button>
-        </div>
-      )}
+      {/* Reset button for creators and leaders */}
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setResetDialogOpen(true)}
+          className="text-destructive hover:bg-destructive/10 border-destructive/30"
+        >
+          <RotateCcw className="h-4 w-4 mr-1" />
+          Reiniciar Comisiones
+        </Button>
+      </div>
 
       {/* Summary */}
       <div className="grid gap-4 sm:grid-cols-3">
