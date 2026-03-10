@@ -94,11 +94,11 @@ const calculateAcceleratorBonus = (
   const applied: { min_firmas: number; bonus_percentage: number; description: string | null; amount: number }[] = [];
 
   // Find the highest applicable accelerator
-  // min_firmas is an ABSOLUTE number of signatures required (e.g. 61, 66, 72, 77)
-  // Compare actual firmas count against the threshold
+  // min_firmas is a PERCENTAGE threshold (e.g. 110 means 110% compliance of firmas)
+  // Compare the executive's firmas compliance % against the configured threshold %
   let bestAccelerator: CommissionAccelerator | null = null;
   accelerators.forEach((acc) => {
-    if (firmasReal >= acc.min_firmas) {
+    if (firmasCompliancePct >= acc.min_firmas) {
       if (!bestAccelerator || acc.min_firmas > bestAccelerator.min_firmas) {
         bestAccelerator = acc;
       }
