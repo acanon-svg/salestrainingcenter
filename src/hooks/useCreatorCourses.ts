@@ -8,6 +8,7 @@ export interface CreatorCourse {
   title: string;
   status: string;
   dimension: string;
+  difficulty: string;
   created_at: string;
   published_at: string | null;
   scheduled_at: string | null;
@@ -16,6 +17,8 @@ export interface CreatorCourse {
   avg_score: number | null;
   order_index: number;
   folder_id: string | null;
+  segment: string | null;
+  category: string | null;
 }
 
 export const useCreatorCourses = () => {
