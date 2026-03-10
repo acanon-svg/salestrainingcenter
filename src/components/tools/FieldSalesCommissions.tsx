@@ -490,6 +490,35 @@ export const FieldSalesCommissions: React.FC = () => {
     }
   };
 
+  const handleResetIndividual = async (exec: (typeof executiveData)[0]) => {
+    if (!exec.review?.id) return;
+    setProcessingEmail(exec.user_email);
+    try {
+      const { error } = await db()
+        .from("commission_reviews")
+        .delete()
+        .eq("id", exec.review.id);
+
+      if (error) throw error;
+
+      // Clear local adjustment for this user
+      setAdjustments((prev) => {
+        const next = { ...prev };
+        delete next[exec.user_email];
+        return next;
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["commission-reviews"] });
+      queryClient.invalidateQueries({ queryKey: ["approved-commissions"] });
+      queryClient.invalidateQueries({ queryKey: ["rejected-commission-count"] });
+      toast.success(`Comisión de ${exec.name} reiniciada`);
+    } catch (err: any) {
+      toast.error(`Error al reiniciar: ${err.message}`);
+    } finally {
+      setProcessingEmail(null);
+    }
+  };
+
   const updateAdj = (
     email: string,
     field: "hasMb" | "bonus",
