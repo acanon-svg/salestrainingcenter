@@ -32,6 +32,7 @@ import addiTrainingLogo from "@/assets/addi-training-logo.svg";
 import { usePortalSectionConfigs } from "@/hooks/usePortalSectionConfigs";
 import { useUnreadCourseFeedbackCount } from "@/hooks/useFeedback";
 import { useRejectedCommissionCount } from "@/hooks/useCommissionReviews";
+import { useNotifications } from "@/hooks/useNotifications";
 
 interface SidebarContentProps {
   onNavigate?: () => void;
@@ -56,7 +57,7 @@ const defaultNavItems: NavItem[] = [
   { label: "Ranking", icon: Trophy, href: "/ranking", sectionKey: "ranking" },
   { label: "Insignias", icon: Award, href: "/badges", sectionKey: "badges" },
   { label: "Seguimientos", icon: ClipboardCheck, href: "/followups", sectionKey: "followups" },
-  { label: "Notificaciones", icon: Bell, href: "/notifications", sectionKey: "notifications" },
+  { label: "Notificaciones", icon: Bell, href: "/notifications", sectionKey: "notifications", showBadge: true },
   { label: "Feedback", icon: MessageSquare, href: "/feedback", sectionKey: "feedback" },
 ];
 
@@ -94,6 +95,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({ onNavigate }) =>
   const { configs, isSectionVisibleForUser } = usePortalSectionConfigs();
   const { data: unreadFeedbackCount = 0 } = useUnreadCourseFeedbackCount();
   const { data: rejectedCommissionCount = 0 } = useRejectedCommissionCount();
+  const { unreadCount: notificationUnreadCount } = useNotifications();
 
   const isActive = (href: string) => {
     const questionMark = href.indexOf("?");
@@ -194,7 +196,12 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({ onNavigate }) =>
       {/* Navigation */}
       <ScrollArea className="flex-1 px-3 py-4">
         <nav className="space-y-1">
-          {visibleNavItems.map((item) => renderNavLink(item))}
+          {visibleNavItems.map((item) => {
+            const badgeCount = item.showBadge && item.sectionKey === "notifications"
+              ? notificationUnreadCount
+              : 0;
+            return renderNavLink(item, badgeCount);
+          })}
 
           {visibleCreatorItems.length > 0 && (
             <>
