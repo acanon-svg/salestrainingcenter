@@ -57,7 +57,7 @@ const defaultNavItems: NavItem[] = [
   { label: "Ranking", icon: Trophy, href: "/ranking", sectionKey: "ranking" },
   { label: "Insignias", icon: Award, href: "/badges", sectionKey: "badges" },
   { label: "Seguimientos", icon: ClipboardCheck, href: "/followups", sectionKey: "followups" },
-  { label: "Notificaciones", icon: Bell, href: "/notifications", sectionKey: "notifications" },
+  { label: "Notificaciones", icon: Bell, href: "/notifications", sectionKey: "notifications", showBadge: true },
   { label: "Feedback", icon: MessageSquare, href: "/feedback", sectionKey: "feedback" },
 ];
 
