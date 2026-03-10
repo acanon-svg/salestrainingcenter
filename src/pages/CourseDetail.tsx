@@ -279,13 +279,8 @@ const CourseDetail: React.FC = () => {
       setShowQuizResults(true);
 
       if (passed) {
-        const pointsMsg = isCourseExpired
-          ? `Obtuviste ${score}% y has ganado ${effectivePoints} puntos (50% por completar fuera del plazo de vencimiento). Podrás verlos reflejados en tu perfil.`
-          : `Obtuviste ${score}% y has ganado ${course?.points || 0} puntos. Podrás verlos reflejados en tu perfil.`;
-        toast({
-          title: "🎉 ¡Felicitaciones! Has aprobado el curso",
-          description: pointsMsg,
-        });
+        // Show celebration with confetti
+        setShowCelebration(true);
         // Small delay to ensure database has updated enrollment status before checking badges
         setTimeout(async () => {
           await checkAndAwardBadges();
