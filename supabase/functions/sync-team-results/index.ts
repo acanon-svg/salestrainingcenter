@@ -293,7 +293,7 @@ serve(async (req) => {
         .eq('user_id', userData.user.id);
 
       const userRoles = roles?.map((r: { role: string }) => r.role) || [];
-      const hasAccess = userRoles.includes('creator') || userRoles.includes('admin');
+      const hasAccess = userRoles.includes('creator') || userRoles.includes('admin') || userRoles.includes('lider');
 
       if (!hasAccess) {
         return new Response(
