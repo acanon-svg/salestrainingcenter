@@ -92,12 +92,29 @@ export const FollowupsDashboard: React.FC = () => {
     return quality.filter(d => d.hunter_email === profile?.email);
   }, [quality, hasMacroAccess, isLeaderOrAbove, teamEmails, profile?.email]);
 
-  // All regionals
+  // All regionals (normalized: Bogotá Norte + Bogota Norte = Bogota Norte)
+  const normalizeRegional = (reg: string) => reg
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
   const allRegionals = useMemo(() => {
     const regs = new Set<string>();
     filteredAccompaniments.forEach(d => regs.add(d.regional));
     filteredFeedback.forEach(d => regs.add(d.regional));
-    return [...regs].sort();
+    // Return normalized unique regionals
+    const uniqueNorms = new Set<string>();
+    const result: string[] = [];
+    [...regs].forEach(r => {
+      const norm = normalizeRegional(r);
+      if (!uniqueNorms.has(norm)) {
+        uniqueNorms.add(norm);
+        result.push(norm);
+      }
+    });
+    return result.sort();
   }, [filteredAccompaniments, filteredFeedback]);
 
   // Data filtered by regional selection
