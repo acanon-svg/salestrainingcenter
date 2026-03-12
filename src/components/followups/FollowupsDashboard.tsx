@@ -101,13 +101,6 @@ export const FollowupsDashboard: React.FC = () => {
   }, [quality, hasMacroAccess, isLeaderOrAbove, teamEmails, profile?.email]);
 
   // All regionals (normalized: Bogotá Norte + Bogota Norte = Bogota Norte)
-  const normalizeRegional = (reg: string) => reg
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-
   const allRegionals = useMemo(() => {
     const regs = new Set<string>();
     filteredAccompaniments.forEach(d => regs.add(d.regional));
@@ -125,13 +118,22 @@ export const FollowupsDashboard: React.FC = () => {
     return result.sort();
   }, [filteredAccompaniments, filteredFeedback]);
 
-  // Data filtered by regional selection
-  const accByRegional = useMemo(() => selectedRegional === "all" ? filteredAccompaniments : filteredAccompaniments.filter(d => d.regional === selectedRegional), [filteredAccompaniments, selectedRegional]);
-  const fbByRegional = useMemo(() => selectedRegional === "all" ? filteredFeedback : filteredFeedback.filter(d => d.regional === selectedRegional), [filteredFeedback, selectedRegional]);
-  const qualByRegional = useMemo(() => selectedRegional === "all" ? filteredQuality : filteredQuality.filter(d => {
-    // Quality doesn't have regional directly, match via accompaniments regional
-    return true;
-  }), [filteredQuality, selectedRegional]);
+  // Data filtered by regional selection (using original names, normalized for comparison)
+  const accByRegional = useMemo(() => {
+    if (selectedRegional === "all") return filteredAccompaniments;
+    return filteredAccompaniments.filter(d => normalizeRegional(d.regional) === selectedRegional);
+  }, [filteredAccompaniments, selectedRegional]);
+  
+  const fbByRegional = useMemo(() => {
+    if (selectedRegional === "all") return filteredFeedback;
+    return filteredFeedback.filter(d => normalizeRegional(d.regional) === selectedRegional);
+  }, [filteredFeedback, selectedRegional]);
+  
+  const qualByRegional = useMemo(() => {
+    if (selectedRegional === "all") return filteredQuality;
+    // Quality doesn't have regional directly, return all for now
+    return filteredQuality;
+  }, [filteredQuality, selectedRegional]);
 
   // === SUMMARY CARDS ===
   const totalFeedbacks = fbByRegional.length;
