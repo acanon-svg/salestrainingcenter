@@ -234,19 +234,11 @@ export const FollowupsDashboard: React.FC = () => {
   }, [fbByRegional, accByRegional, filteredAccompaniments, feedbackTypeFilter, allRegionals, selectedRegional]);
 
   const chartColors = ["#8b5cf6", "#f59e0b", "#10b981", "#3b82f6", "#ef4444", "#ec4899", "#06b6d4", "#84cc16"];
-  
-  // Normalize regional names for display
-  const normalizeRegional = (reg: string) => reg
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
 
   const chartConfig = useMemo(() => {
     const regs = selectedRegional !== "all" 
-      ? [normalizeRegional(selectedRegional)] 
-      : Array.from(new Set(allRegionals.map(r => normalizeRegional(r))));
+      ? [selectedRegional] 
+      : Array.from(new Set(allRegionals.map(r => r)));
     const config: any = {};
     regs.forEach((r, i) => { config[r] = { label: r, color: chartColors[i % chartColors.length] }; });
     return config;
