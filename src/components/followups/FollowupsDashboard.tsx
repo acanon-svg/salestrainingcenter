@@ -171,14 +171,37 @@ export const FollowupsDashboard: React.FC = () => {
     }
 
     const months = Object.keys(monthMap).sort((a, b) => {
-      const da = new Date(a); const db = new Date(b);
-      return da.getTime() - db.getTime();
+      const getSortVal = (mk: string) => {
+        // Find first data point with this month to get the year
+        const firstPoint = source.find(d => formatMonth(d.timestamp) === mk);
+        return firstPoint ? parseMonthKey(firstPoint.timestamp).sort : 0;
+      };
+      return getSortVal(a) - getSortVal(b);
     });
 
-    const regs = selectedRegional !== "all" ? [selectedRegional] : allRegionals;
+    // Normalize regionals: "Bogotá Norte" -> "Bogota Norte", "Bogotá Sur" -> "Bogota Sur"
+    const normalizeRegional = (reg: string) => reg
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    // Collect unique normalized regionals
+    const uniqueRegionals = Array.from(new Set(
+      (selectedRegional !== "all" ? [selectedRegional] : allRegionals)
+        .map(r => normalizeRegional(r))
+    ));
+
     return months.map(m => {
       const row: any = { month: m };
-      regs.forEach(r => { row[r] = monthMap[m]?.[r] || 0; });
+      // For each normalized regional, sum counts from all original variants
+      uniqueRegionals.forEach(normReg => {
+        const count = Object.entries(monthMap[m] || {})
+          .filter(([origReg]) => normalizeRegional(origReg) === normReg)
+          .reduce((sum, [, c]) => sum + c, 0);
+        row[normReg] = count;
+      });
       return row;
     });
   }, [fbByRegional, accByRegional, filteredAccompaniments, feedbackTypeFilter, allRegionals, selectedRegional]);
