@@ -38,6 +38,14 @@ const formatMonth = (ts: string): string => {
   return parseMonthKey(ts).key;
 };
 
+// Normalize regional names: "Bogotá Norte" -> "Bogota Norte"
+const normalizeRegional = (reg: string) => reg
+  .toLowerCase()
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "")
+  .replace(/\s+/g, " ")
+  .trim();
+
 // Compute avg craft score for an accompaniment
 const avgCraftScore = (item: any) => {
   const crafts = [item.craft_negociacion, item.craft_manejo_objeciones, item.craft_persuasion, item.craft_herramientas, item.craft_conocimiento_productos];
