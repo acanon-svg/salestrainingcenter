@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mail, Lock, User, Loader2 } from "lucide-react";
+import { Mail, Lock, User, Loader2, Chrome } from "lucide-react";
 import addiTrainingLogo from "@/assets/addi-training-logo.svg";
 import { ForgotPasswordDialog } from "@/components/auth/ForgotPasswordDialog";
 
