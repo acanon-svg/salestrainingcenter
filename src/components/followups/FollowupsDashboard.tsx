@@ -266,7 +266,12 @@ export const FollowupsDashboard: React.FC = () => {
       if (d.oportunidades_trabajar) execMap[key].observations.push(d.oportunidades_trabajar);
     });
 
-    return Object.values(execMap)
+    // Filter out test users
+    const testEmails = ["prueba@test.com", "test@test.com"];
+    const filteredExecs = Object.values(execMap)
+      .filter(e => !testEmails.includes(e.email) && e.name !== "Jose Luis Morales");
+
+    return filteredExecs
       .map(e => ({ ...e, avgScore: e.totalScore / (e.count || 1) }))
       .sort((a, b) => showTopPerformers ? b.avgScore - a.avgScore : a.avgScore - b.avgScore)
       .slice(0, 10);
