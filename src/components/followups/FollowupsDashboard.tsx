@@ -24,10 +24,27 @@ const formatDate = (ts: string) => {
   return d.toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" });
 };
 
-const formatMonth = (ts: string) => {
+const parseMonthKey = (ts: string): { key: string; sort: number } => {
   const d = new Date(ts);
-  return d.toLocaleDateString("es-CO", { month: "short", year: "2-digit" });
+  const year = d.getFullYear();
+  const month = d.getMonth(); // 0-11
+  return {
+    key: d.toLocaleDateString("es-CO", { month: "short", year: "2-digit" }),
+    sort: year * 12 + month
+  };
 };
+
+const formatMonth = (ts: string): string => {
+  return parseMonthKey(ts).key;
+};
+
+// Normalize regional names: "Bogotá Norte" -> "Bogota Norte"
+const normalizeRegional = (reg: string) => reg
+  .toLowerCase()
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "")
+  .replace(/\s+/g, " ")
+  .trim();
 
 // Compute avg craft score for an accompaniment
 const avgCraftScore = (item: any) => {
@@ -83,21 +100,40 @@ export const FollowupsDashboard: React.FC = () => {
     return quality.filter(d => d.hunter_email === profile?.email);
   }, [quality, hasMacroAccess, isLeaderOrAbove, teamEmails, profile?.email]);
 
-  // All regionals
+  // All regionals (normalized: Bogotá Norte + Bogota Norte = Bogota Norte)
   const allRegionals = useMemo(() => {
     const regs = new Set<string>();
     filteredAccompaniments.forEach(d => regs.add(d.regional));
     filteredFeedback.forEach(d => regs.add(d.regional));
-    return [...regs].sort();
+    // Return normalized unique regionals
+    const uniqueNorms = new Set<string>();
+    const result: string[] = [];
+    [...regs].forEach(r => {
+      const norm = normalizeRegional(r);
+      if (!uniqueNorms.has(norm)) {
+        uniqueNorms.add(norm);
+        result.push(norm);
+      }
+    });
+    return result.sort();
   }, [filteredAccompaniments, filteredFeedback]);
 
-  // Data filtered by regional selection
-  const accByRegional = useMemo(() => selectedRegional === "all" ? filteredAccompaniments : filteredAccompaniments.filter(d => d.regional === selectedRegional), [filteredAccompaniments, selectedRegional]);
-  const fbByRegional = useMemo(() => selectedRegional === "all" ? filteredFeedback : filteredFeedback.filter(d => d.regional === selectedRegional), [filteredFeedback, selectedRegional]);
-  const qualByRegional = useMemo(() => selectedRegional === "all" ? filteredQuality : filteredQuality.filter(d => {
-    // Quality doesn't have regional directly, match via accompaniments regional
-    return true;
-  }), [filteredQuality, selectedRegional]);
+  // Data filtered by regional selection (using original names, normalized for comparison)
+  const accByRegional = useMemo(() => {
+    if (selectedRegional === "all") return filteredAccompaniments;
+    return filteredAccompaniments.filter(d => normalizeRegional(d.regional) === selectedRegional);
+  }, [filteredAccompaniments, selectedRegional]);
+  
+  const fbByRegional = useMemo(() => {
+    if (selectedRegional === "all") return filteredFeedback;
+    return filteredFeedback.filter(d => normalizeRegional(d.regional) === selectedRegional);
+  }, [filteredFeedback, selectedRegional]);
+  
+  const qualByRegional = useMemo(() => {
+    if (selectedRegional === "all") return filteredQuality;
+    // Quality doesn't have regional directly, return all for now
+    return filteredQuality;
+  }, [filteredQuality, selectedRegional]);
 
   // === SUMMARY CARDS ===
   const totalFeedbacks = fbByRegional.length;
@@ -162,21 +198,47 @@ export const FollowupsDashboard: React.FC = () => {
     }
 
     const months = Object.keys(monthMap).sort((a, b) => {
-      const da = new Date(a); const db = new Date(b);
-      return da.getTime() - db.getTime();
+      const getSortVal = (mk: string) => {
+        // Find first data point with this month to get the year
+        const firstPoint = source.find(d => formatMonth(d.timestamp) === mk);
+        return firstPoint ? parseMonthKey(firstPoint.timestamp).sort : 0;
+      };
+      return getSortVal(a) - getSortVal(b);
     });
 
-    const regs = selectedRegional !== "all" ? [selectedRegional] : allRegionals;
+    // Normalize regionals: "Bogotá Norte" -> "Bogota Norte", "Bogotá Sur" -> "Bogota Sur"
+    const normalizeRegional = (reg: string) => reg
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    // Collect unique normalized regionals
+    const uniqueRegionals = Array.from(new Set(
+      (selectedRegional !== "all" ? [selectedRegional] : allRegionals)
+        .map(r => normalizeRegional(r))
+    ));
+
     return months.map(m => {
       const row: any = { month: m };
-      regs.forEach(r => { row[r] = monthMap[m]?.[r] || 0; });
+      // For each normalized regional, sum counts from all original variants
+      uniqueRegionals.forEach(normReg => {
+        const count = Object.entries(monthMap[m] || {})
+          .filter(([origReg]) => normalizeRegional(origReg) === normReg)
+          .reduce((sum, [, c]) => sum + c, 0);
+        row[normReg] = count;
+      });
       return row;
     });
   }, [fbByRegional, accByRegional, filteredAccompaniments, feedbackTypeFilter, allRegionals, selectedRegional]);
 
   const chartColors = ["#8b5cf6", "#f59e0b", "#10b981", "#3b82f6", "#ef4444", "#ec4899", "#06b6d4", "#84cc16"];
+
   const chartConfig = useMemo(() => {
-    const regs = selectedRegional !== "all" ? [selectedRegional] : allRegionals;
+    const regs = selectedRegional !== "all" 
+      ? [selectedRegional] 
+      : Array.from(new Set(allRegionals.map(r => r)));
     const config: any = {};
     regs.forEach((r, i) => { config[r] = { label: r, color: chartColors[i % chartColors.length] }; });
     return config;
