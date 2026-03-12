@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { useSyncFollowups } from "@/hooks/useFollowups";
 import { AccompanimentsSection } from "@/components/followups/AccompanimentsSection";
 import { UniversalFeedbackSection } from "@/components/followups/UniversalFeedbackSection";
 import { QualitySection } from "@/components/followups/QualitySection";
+import { FollowupsDashboard } from "@/components/followups/FollowupsDashboard";
 
 const Followups: React.FC = () => {
   const { hasRole } = useAuth();
@@ -39,13 +40,17 @@ const Followups: React.FC = () => {
           )}
         </div>
 
-        <Tabs defaultValue="accompaniments" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3">
+        <Tabs defaultValue="dashboard" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="dashboard">Informe General</TabsTrigger>
             <TabsTrigger value="accompaniments">Acompañamientos</TabsTrigger>
             <TabsTrigger value="universal">Feedback Universal</TabsTrigger>
             <TabsTrigger value="quality">Calidad</TabsTrigger>
           </TabsList>
 
+          <TabsContent value="dashboard">
+            <FollowupsDashboard />
+          </TabsContent>
           <TabsContent value="accompaniments">
             <AccompanimentsSection />
           </TabsContent>
