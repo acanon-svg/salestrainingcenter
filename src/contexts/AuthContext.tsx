@@ -245,17 +245,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signInWithGoogle = async () => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: window.location.origin,
-          queryParams: {
-            hd: "addi.com", // Restrict to addi.com domain
-          },
+      const { lovable } = await import("@/integrations/lovable/index");
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+        extraParams: {
+          hd: "addi.com",
         },
       });
 
-      if (error) throw error;
+      if (result?.error) {
+        throw result.error;
+      }
     } catch (error: any) {
       toast({
         title: "Error al iniciar sesión",
