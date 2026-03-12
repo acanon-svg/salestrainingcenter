@@ -11,7 +11,7 @@ import addiTrainingLogo from "@/assets/addi-training-logo.svg";
 import { ForgotPasswordDialog } from "@/components/auth/ForgotPasswordDialog";
 
 export const LoginForm: React.FC = () => {
-  const { signInWithEmail, signUpWithEmail } = useAuth();
+  const { signInWithEmail, signUpWithEmail, signInWithGoogle } = useAuth();
   const { getSetting, isLoading: settingsLoading } = useAppSettings();
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
