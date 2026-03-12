@@ -24,9 +24,18 @@ const formatDate = (ts: string) => {
   return d.toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" });
 };
 
-const formatMonth = (ts: string) => {
+const parseMonthKey = (ts: string): { key: string; sort: number } => {
   const d = new Date(ts);
-  return d.toLocaleDateString("es-CO", { month: "short", year: "2-digit" });
+  const year = d.getFullYear();
+  const month = d.getMonth(); // 0-11
+  return {
+    key: d.toLocaleDateString("es-CO", { month: "short", year: "2-digit" }),
+    sort: year * 12 + month
+  };
+};
+
+const formatMonth = (ts: string): string => {
+  return parseMonthKey(ts).key;
 };
 
 // Compute avg craft score for an accompaniment
