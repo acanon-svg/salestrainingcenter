@@ -37,7 +37,7 @@ const Badges: React.FC = () => {
             Insignias
           </h1>
           <p className="text-muted-foreground">
-            Logros y reconocimientos por tu desempeño
+            Logros y reconocimientos por tu desempeño - by Alexandra Cañon
           </p>
         </div>
 

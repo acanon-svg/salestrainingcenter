@@ -126,7 +126,7 @@ const Team: React.FC = () => {
               Mi Equipo
             </h1>
             <p className="text-muted-foreground mt-1">
-              Supervisa el progreso de tu equipo y líderes subordinados
+              Supervisa el progreso de tu equipo y líderes subordinados - by Alexandra Cañon
             </p>
           </div>
           {leaderTeam && (

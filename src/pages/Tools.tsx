@@ -466,7 +466,7 @@ const Tools: React.FC = () => {
               Herramientas
             </h1>
             <p className="text-muted-foreground mt-1">
-              Herramientas de apoyo para el equipo comercial
+              Herramientas de apoyo para el equipo comercial - by Alexandra Cañon
             </p>
           </div>
           {isCreator && (

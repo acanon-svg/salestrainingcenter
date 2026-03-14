@@ -305,7 +305,7 @@ const Ranking: React.FC = () => {
               Ranking
             </h1>
             <p className="text-muted-foreground">
-              Clasificación por puntuación compuesta del equipo
+              Clasificación por puntuación compuesta del equipo - by Alexandra Cañon
             </p>
           </div>
 
