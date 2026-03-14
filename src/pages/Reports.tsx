@@ -430,7 +430,7 @@ const Reports: React.FC = () => {
           <div>
             <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
               <BarChart3 className="w-8 h-8 text-primary" />
-              Reportes y Estadísticas
+              Reportes y Estadísticas by Alexandra Cañon
             </h1>
             <p className="text-muted-foreground">
               {viewMode === "leader"

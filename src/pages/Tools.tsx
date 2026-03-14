@@ -405,7 +405,7 @@ const Tools: React.FC = () => {
               Volver
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">Comisiones Rechazadas</h1>
+              <h1 className="text-2xl font-bold">Comisiones Rechazadas by Alexandra Cañon</h1>
               <p className="text-muted-foreground">Revisa los motivos de rechazo y envía las comisiones corregidas a revisión</p>
             </div>
           </div>
