@@ -264,7 +264,7 @@ const UserManagement: React.FC = () => {
               Administración
             </h1>
             <p className="text-muted-foreground mt-1">
-              Gestiona usuarios, configuraciones y el chatbot de la plataforma
+              Gestiona usuarios, configuraciones y el chatbot de la plataforma - by Alexandra Cañon
             </p>
           </div>
           <Badge variant="outline" className="text-lg px-4 py-2">

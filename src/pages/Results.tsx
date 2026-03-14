@@ -53,10 +53,10 @@ const Results: React.FC = () => {
           </h1>
           <p className="text-muted-foreground">
             {isCreatorOrAdmin
-              ? "Gestiona y visualiza los resultados del equipo"
+              ? "Gestiona y visualiza los resultados del equipo - by Alexandra Cañon"
               : isLeader
-              ? "Visualiza los resultados de tu equipo"
-              : "Visualiza tus resultados de desempeño"}
+              ? "Visualiza los resultados de tu equipo - by Alexandra Cañon"
+              : "Visualiza tus resultados de desempeño - by Alexandra Cañon"}
           </p>
         </div>
 
