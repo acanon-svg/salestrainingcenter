@@ -284,7 +284,7 @@ const CreateCourse: React.FC = () => {
               Crear Curso
             </h1>
             <p className="text-muted-foreground">
-              Diseña un nuevo curso con materiales y evaluaciones
+              Diseña un nuevo curso con materiales y evaluaciones by Alexandra Cañon
             </p>
           </div>
 
