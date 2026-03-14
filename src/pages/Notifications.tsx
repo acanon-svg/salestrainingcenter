@@ -72,7 +72,7 @@ const Notifications: React.FC = () => {
               Notificaciones
             </h1>
             <p className="text-muted-foreground">
-              Mantente al día con las novedades
+              Mantente al día con las novedades - by Alexandra Cañon
             </p>
           </div>
 

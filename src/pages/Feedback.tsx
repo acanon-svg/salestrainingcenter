@@ -166,8 +166,8 @@ const Feedback: React.FC = () => {
             </h1>
             <p className="text-muted-foreground">
               {isCreatorOrAdmin 
-                ? "Revisa y gestiona las sugerencias de los usuarios" 
-                : "Ayúdanos a mejorar la plataforma con tus ideas"}
+                ? "Revisa y gestiona las sugerencias de los usuarios - by Alexandra Cañon" 
+                : "Ayúdanos a mejorar la plataforma con tus ideas - by Alexandra Cañon"}
             </p>
           </div>
 
