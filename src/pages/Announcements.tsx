@@ -14,7 +14,7 @@ const Announcements: React.FC = () => {
             Anuncios y Banners
           </h1>
           <p className="text-muted-foreground">
-            Crea y gestiona comunicaciones para el equipo comercial
+            Crea y gestiona comunicaciones para el equipo comercial - by Alexandra Cañon
           </p>
         </div>
 

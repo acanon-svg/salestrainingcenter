@@ -144,7 +144,7 @@ const TeamFeedbackForms: React.FC = () => {
               Feedbacks al Equipo
             </h1>
             <p className="text-muted-foreground mt-1">
-              Gestiona formularios de feedback para los equipos
+              Gestiona formularios de feedback para los equipos - by Alexandra Cañon
             </p>
           </div>
           <Button onClick={openCreateDialog}>
