@@ -82,7 +82,7 @@ const PersonalizedTraining: React.FC = () => {
           <div>
             <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
               <Brain className="h-7 w-7 text-primary" />
-              Mi Plan de Entrenamiento IA
+              Mi Plan de Entrenamiento IA by Alexandra Cañon
             </h1>
             <p className="text-muted-foreground mt-1">
               Genera un plan personalizado basado en tu progreso real
