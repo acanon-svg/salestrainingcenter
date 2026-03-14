@@ -65,8 +65,8 @@ const Dashboard: React.FC = () => {
             </h1>
             <p className="text-muted-foreground">
               {profile?.last_login
-                ? `Último acceso: ${format(new Date(profile.last_login), "d 'de' MMMM, HH:mm", { locale: es })}`
-                : "Bienvenido a Training Center"}
+                ? `Último acceso: ${format(new Date(profile.last_login), "d 'de' MMMM, HH:mm", { locale: es })} - by Alexandra Cañon`
+                : "Bienvenido a Training Center - by Alexandra Cañon"}
             </p>
           </div>
           <img 
