@@ -22,16 +22,6 @@ export const Watermark: React.FC = () => {
           </div>
         ))}
       </div>
-
-      {/* Badge discreto esquina inferior */}
-      <div 
-        className="fixed bottom-2 right-3 pointer-events-none z-40 opacity-20 hover:opacity-30 transition-opacity"
-        aria-hidden="true"
-      >
-        <span className="text-[10px] text-muted-foreground font-normal italic">
-          by Alexandra Cañon
-        </span>
-      </div>
     </>
   );
 };

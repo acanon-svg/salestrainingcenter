@@ -67,6 +67,7 @@ const Dashboard: React.FC = () => {
               {profile?.last_login
                 ? `Último acceso: ${format(new Date(profile.last_login), "d 'de' MMMM, HH:mm", { locale: es })}`
                 : "Bienvenido a Training Center"}
+              <span className="ml-2 text-muted-foreground/50 text-sm italic">— by Alexandra Cañon</span>
             </p>
           </div>
           <img 
