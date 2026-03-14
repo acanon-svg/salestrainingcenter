@@ -29,7 +29,7 @@ export const Watermark: React.FC = () => {
         aria-hidden="true"
       >
         <span className="text-[10px] text-muted-foreground font-normal italic">
-          by A. Cañon
+          by Alexandra Cañon
         </span>
       </div>
     </>
