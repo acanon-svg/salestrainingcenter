@@ -374,6 +374,18 @@ const Dashboard: React.FC = () => {
             ))}
           </div>
         )}
+
+        {/* Footer con créditos */}
+        <footer className="mt-12 pt-8 border-t border-border/50">
+          <div className="flex flex-col items-center justify-center gap-2 text-center">
+            <p className="text-sm text-muted-foreground">
+              © {new Date().getFullYear()} Addi Training Center. Todos los derechos reservados.
+            </p>
+            <p className="text-sm font-medium text-primary">
+              Creado por Alexandra Cañon 💙
+            </p>
+          </div>
+        </footer>
       </div>
     </DashboardLayout>
   );
