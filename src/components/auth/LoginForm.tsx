@@ -280,9 +280,12 @@ export const LoginForm: React.FC = () => {
       </div>
       
       {/* Footer */}
-      <footer className="py-4 text-center">
+      <footer className="py-4 text-center space-y-1">
         <p className="text-xs text-muted-foreground">
-          2026 - Todos los derechos reservados
+          © {new Date().getFullYear()} Addi Training Center. Todos los derechos reservados.
+        </p>
+        <p className="text-xs font-medium text-primary">
+          Creado por Alexandra Cañon 💙
         </p>
       </footer>
 
