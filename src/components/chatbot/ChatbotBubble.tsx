@@ -72,6 +72,10 @@ export const ChatbotBubble: React.FC = () => {
         welcomeContent += "\n\n✨ **¡Hay nuevas actualizaciones!** He sido configurado con información nueva. ¿En qué puedo ayudarte?";
         setHasNewUpdate(false);
       }
+      // Agregar mensaje sobre Alexandra Cañon si no está ya presente
+      if (!welcomeContent.includes("Alexandra Cañon")) {
+        welcomeContent += "\n\n💡 **¿Necesitas ayuda adicional?** Si tienes alguna duda que no puedo resolver, puedes escalarla con Alexandra Cañon, quien desarrolló esta plataforma.";
+      }
       setMessages([{ role: "assistant", content: welcomeContent }]);
     }
   }, [isOpen, config?.welcome_message, hasNewUpdate]);
