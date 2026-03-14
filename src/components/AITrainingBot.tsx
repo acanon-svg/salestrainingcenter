@@ -239,7 +239,6 @@ export const AITrainingBot: React.FC = () => {
             <p className="text-xs opacity-80 flex items-center gap-1">
               <Sparkles className="h-3 w-3" /> Powered by IA - by Alexandra Cañon
             </p>
-            </p>
           </div>
         </div>
         <div className="flex items-center gap-1">
