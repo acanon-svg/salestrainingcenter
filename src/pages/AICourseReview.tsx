@@ -94,7 +94,7 @@ const AICourseReview: React.FC = () => {
           <div>
             <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
               <Brain className="h-7 w-7 text-primary" />
-              Cursos Generados por IA
+              Cursos Generados por IA by Alexandra Cañon
             </h1>
             <p className="text-muted-foreground mt-1">Revisa y aprueba cursos sugeridos automáticamente</p>
           </div>
