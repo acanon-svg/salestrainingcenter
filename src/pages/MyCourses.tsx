@@ -150,7 +150,7 @@ const MyCourses: React.FC = () => {
               Mis Creaciones
             </h1>
             <p className="text-muted-foreground">
-              Gestiona los cursos que has creado • Arrastra para reordenar
+              Gestiona los cursos que has creado • Arrastra para reordenar - by Alexandra Cañon
             </p>
           </div>
           <div className="flex gap-2">
