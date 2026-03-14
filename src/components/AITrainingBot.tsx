@@ -237,7 +237,7 @@ export const AITrainingBot: React.FC = () => {
           <div>
             <h3 className="text-sm font-semibold leading-tight">Asistente de Entrenamiento</h3>
             <p className="text-xs opacity-80 flex items-center gap-1">
-              <Sparkles className="h-3 w-3" /> Powered by IA
+              <Sparkles className="h-3 w-3" /> Powered by IA - by Alexandra Cañon
             </p>
           </div>
         </div>
