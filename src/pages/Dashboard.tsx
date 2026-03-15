@@ -382,6 +382,9 @@ const Dashboard: React.FC = () => {
             © {new Date().getFullYear()} Addi Training Center · Todos los derechos reservados · Creado por Alexandra Cañon
           </p>
         </footer>
+
+        {/* Onboarding for new users */}
+        <OnboardingFlow />
       </div>
     </DashboardLayout>
   );
