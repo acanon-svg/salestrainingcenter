@@ -26,27 +26,33 @@ serve(async (req) => {
     if (!user) throw new Error("User not authenticated");
 
     // Fetch all user data in parallel
-    const [profileRes, enrollmentsRes, quizRes, badgesRes] = await Promise.all([
+    const [profileRes, enrollmentsRes, quizRes, badgesRes, allCoursesRes] = await Promise.all([
       supabase.from("profiles").select("full_name, email, points, badges_count, team, regional, company_role").eq("user_id", user.id).single(),
-      supabase.from("course_enrollments").select("status, progress_percentage, score, completed_at, courses(title, difficulty, dimension, points)").eq("user_id", user.id),
+      supabase.from("course_enrollments").select("status, progress_percentage, score, completed_at, course_id, courses(title, difficulty, dimension, points)").eq("user_id", user.id),
       supabase.from("quiz_attempts").select("score, passed, completed_at, quizzes(title, passing_score, courses(title))").eq("user_id", user.id).order("completed_at", { ascending: false }),
       supabase.from("user_badges").select("earned_at, badges(name, description, criteria_type)").eq("user_id", user.id),
+      supabase.from("courses").select("id, title, difficulty, dimension, points, description, estimated_duration_minutes").eq("status", "published"),
     ]);
 
     const profile = profileRes.data;
     const enrollments = enrollmentsRes.data || [];
     const quizAttempts = quizRes.data || [];
     const userBadges = badgesRes.data || [];
+    const allCourses = allCoursesRes.data || [];
+
+    // Identify courses user is NOT enrolled in
+    const enrolledCourseIds = new Set(enrollments.map((e: any) => e.course_id));
+    const availableCourses = allCourses.filter((c: any) => !enrolledCourseIds.has(c.id));
+    const inProgressCourses = enrollments.filter((e: any) => e.status !== "completed");
 
     const completed = enrollments.filter((e: any) => e.status === "completed");
-    const inProgress = enrollments.filter((e: any) => e.status !== "completed");
     const avgQuizScore = quizAttempts.length > 0
       ? Math.round(quizAttempts.reduce((sum: number, q: any) => sum + q.score, 0) / quizAttempts.length)
       : 0;
 
     const enrollmentDetails = enrollments.map((e: any) => {
       const c = e.courses;
-      return `- ${c?.title || "Sin título"}: ${e.status}, progreso ${e.progress_percentage}%, dificultad ${c?.difficulty || "N/A"}, dimensión ${c?.dimension || "N/A"}${e.score != null ? `, nota ${e.score}` : ""}`;
+      return `- [ID: ${e.course_id}] ${c?.title || "Sin título"}: ${e.status}, progreso ${e.progress_percentage}%, dificultad ${c?.difficulty || "N/A"}, dimensión ${c?.dimension || "N/A"}${e.score != null ? `, nota ${e.score}` : ""}`;
     }).join("\n");
 
     const quizDetails = quizAttempts.slice(0, 15).map((q: any) => {
@@ -54,6 +60,14 @@ serve(async (req) => {
     }).join("\n");
 
     const badgeDetails = userBadges.map((b: any) => `- ${b.badges?.name}: ${b.badges?.description || ""}`).join("\n");
+
+    const availableCoursesDetails = availableCourses.slice(0, 20).map((c: any) => {
+      return `- [ID: ${c.id}] "${c.title}" (${c.difficulty}, ${c.dimension}, ${c.points} pts${c.estimated_duration_minutes ? `, ${c.estimated_duration_minutes} min` : ""})`;
+    }).join("\n");
+
+    const inProgressDetails = inProgressCourses.map((e: any) => {
+      return `- [ID: ${e.course_id}] "${e.courses?.title}" progreso: ${e.progress_percentage}%`;
+    }).join("\n");
 
     const prompt = `Analiza el siguiente perfil de un vendedor en entrenamiento y genera un plan de entrenamiento personalizado.
 
@@ -66,8 +80,14 @@ PERFIL:
 - Cursos completados: ${completed.length} de ${enrollments.length} total
 - Promedio en quizzes: ${avgQuizScore}%
 
-DETALLE DE CURSOS:
+DETALLE DE CURSOS INSCRITOS:
 ${enrollmentDetails || "Sin cursos"}
+
+CURSOS EN PROGRESO (sin completar):
+${inProgressDetails || "Ninguno"}
+
+CURSOS DISPONIBLES (NO inscritos):
+${availableCoursesDetails || "Sin cursos disponibles"}
 
 ÚLTIMOS QUIZZES:
 ${quizDetails || "Sin intentos"}
@@ -75,7 +95,12 @@ ${quizDetails || "Sin intentos"}
 INSIGNIAS OBTENIDAS:
 ${badgeDetails || "Sin insignias"}
 
-Genera un plan de entrenamiento semanal personalizado.`;
+INSTRUCCIONES IMPORTANTES:
+- Genera un plan de entrenamiento semanal personalizado con 5 acciones.
+- CRÍTICO: Para cada acción que recomiende un curso, incluye el campo "courseId" con el ID exacto del curso (UUID). Usa los IDs de la lista de cursos disponibles o en progreso.
+- Prioriza cursos donde el usuario tenga bajo rendimiento en quizzes o cursos que complementen sus debilidades.
+- Si el usuario no está inscrito en un curso recomendado, usa el ID de la lista de "CURSOS DISPONIBLES" para que pueda inscribirse directamente.
+- Si el usuario ya está inscrito pero no ha terminado, usa el ID de "CURSOS EN PROGRESO".`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -88,7 +113,7 @@ Genera un plan de entrenamiento semanal personalizado.`;
         messages: [
           {
             role: "system",
-            content: "Eres un coach de entrenamiento de ventas experto. Responde SIEMPRE en español. Analiza el progreso del vendedor y genera recomendaciones accionables."
+            content: "Eres un coach de entrenamiento de ventas experto. Responde SIEMPRE en español. Analiza el progreso del vendedor y genera recomendaciones accionables. Siempre incluye courseId cuando recomiendes un curso específico."
           },
           { role: "user", content: prompt }
         ],
@@ -120,12 +145,13 @@ Genera un plan de entrenamiento semanal personalizado.`;
                       action: { type: "string", description: "Acción concreta a realizar" },
                       reason: { type: "string", description: "Por qué es importante" },
                       estimatedTime: { type: "string", description: "Tiempo estimado, ej: 30 min, 1 hora" },
-                      impact: { type: "string", description: "Impacto esperado" }
+                      impact: { type: "string", description: "Impacto esperado" },
+                      courseId: { type: "string", description: "UUID del curso relacionado. Obligatorio si la acción se refiere a un curso específico." }
                     },
                     required: ["priority", "action", "reason", "estimatedTime", "impact"],
                     additionalProperties: false
                   },
-                  description: "5 acciones para la semana"
+                  description: "5 acciones para la semana, cada una con courseId si aplica"
                 },
                 motivationalMessage: { type: "string", description: "Mensaje motivacional personalizado con emojis" }
               },
@@ -160,7 +186,10 @@ Genera un plan de entrenamiento semanal personalizado.`;
 
     const plan = JSON.parse(toolCall.function.arguments);
 
-    // Include metrics in response
+    // Build a map of enrolled course IDs for the frontend
+    const enrolledMap: Record<string, boolean> = {};
+    enrollments.forEach((e: any) => { enrolledMap[e.course_id] = true; });
+
     const result = {
       plan,
       metrics: {
@@ -169,6 +198,7 @@ Genera un plan de entrenamiento semanal personalizado.`;
         avgQuizScore,
         badgesCount: userBadges.length,
       },
+      enrolledCourseIds: Object.keys(enrolledMap),
     };
 
     return new Response(JSON.stringify(result), {
