@@ -32,7 +32,22 @@ export const useCourses = (filters?: { status?: string; dimension?: string }) =>
       // 2. User's team is in target_teams
       // 3. User's ID is in target_users
       // Creators also see only courses targeted to their team
+      // Check if user has admin or creator role (bypass targeting)
+      let isAdminOrCreator = false;
+      if (user?.id) {
+        const { data: userRoles } = await client
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id);
+        isAdminOrCreator = userRoles?.some(
+          (r) => r.role === "admin" || r.role === "creator"
+        ) ?? false;
+      }
+
       const filteredCourses = (data as Course[]).filter((course) => {
+        // Admins and creators see all courses regardless of targeting
+        if (isAdminOrCreator) return true;
+
         const hasNoTargeting =
           (!course.target_teams || course.target_teams.length === 0) &&
           (!course.target_users || course.target_users.length === 0);
