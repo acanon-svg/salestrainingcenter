@@ -31,6 +31,7 @@ import {
 import { useRankingCompetitor } from "@/hooks/useRanking";
 import { Link } from "react-router-dom";
 import AIDashboardInsights from "@/components/AIDashboardInsights";
+import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 
 const Dashboard: React.FC = () => {
   const { user, profile, roles } = useAuth();
