@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import {
   Rocket,
   BookOpen,
   Sparkles,
   BarChart3,
-  CalendarCheck,
-  GraduationCap,
   ArrowRight,
   ArrowLeft,
   Check,
@@ -17,9 +14,13 @@ import {
   Calculator,
   MessageSquare,
   Zap,
+  GraduationCap,
+  CalendarCheck,
+  Trophy,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const ONBOARDING_KEY = "addi_onboarding_completed";
 
@@ -27,101 +28,65 @@ interface OnboardingStep {
   icon: React.ReactNode;
   title: string;
   subtitle: string;
-  description: string;
-  features: { icon: React.ReactNode; text: string }[];
+  bullets: { icon: React.ReactNode; title: string; desc: string }[];
   gradient: string;
-  illustration: string;
+  emoji: string;
 }
 
 const steps: OnboardingStep[] = [
   {
-    icon: <Rocket className="h-8 w-8" />,
-    title: "¡Bienvenido al Training Center!",
-    subtitle: "Tu plataforma de entrenamiento comercial",
-    description:
-      "Esta es tu herramienta principal para crecer profesionalmente. Aquí encontrarás todo lo que necesitas para mejorar tus habilidades de venta, conocer nuestros productos y alcanzar tus metas.",
-    features: [
-      { icon: <GraduationCap className="h-4 w-4" />, text: "Cursos interactivos con quizzes y certificaciones" },
-      { icon: <Target className="h-4 w-4" />, text: "Contenido personalizado para tu equipo y rol" },
-      { icon: <TrendingUp className="h-4 w-4" />, text: "Seguimiento de tu progreso y crecimiento" },
+    icon: <Rocket className="h-7 w-7" />,
+    title: "Tu plataforma de crecimiento",
+    subtitle: "Todo lo que necesitas para ser el mejor en tu rol, en un solo lugar.",
+    bullets: [
+      { icon: <GraduationCap className="h-4 w-4" />, title: "Cursos y materiales", desc: "Contenido práctico organizado por tema para consultar en cualquier momento del día." },
+      { icon: <Target className="h-4 w-4" />, title: "Personalizado para ti", desc: "El contenido se adapta a tu equipo, rol y necesidades específicas." },
+      { icon: <Trophy className="h-4 w-4" />, title: "Gamificación", desc: "Gana puntos, badges y compite en el ranking completando cursos y quizzes." },
     ],
     gradient: "from-primary to-blue-600",
-    illustration: "🚀",
+    emoji: "🚀",
   },
   {
-    icon: <BookOpen className="h-8 w-8" />,
-    title: "Contenidos para tu día a día",
-    subtitle: "Material de consulta y formación continua",
-    description:
-      "Accede a materiales de entrenamiento, guías de producto y recursos diseñados para resolver dudas en tiempo real durante tu jornada. Todo el conocimiento que necesitas, disponible cuando lo necesites.",
-    features: [
-      { icon: <BookOpen className="h-4 w-4" />, text: "Materiales de consulta rápida organizados por categoría" },
-      { icon: <MessageSquare className="h-4 w-4" />, text: "Chatbot inteligente que responde tus dudas al instante" },
-      { icon: <GraduationCap className="h-4 w-4" />, text: "Cursos con contenido práctico aplicable inmediatamente" },
-    ],
-    gradient: "from-emerald-500 to-teal-600",
-    illustration: "📚",
-  },
-  {
-    icon: <Sparkles className="h-8 w-8" />,
-    title: "Inteligencia Artificial a tu servicio",
-    subtitle: "IA que potencia tu aprendizaje",
-    description:
-      "La plataforma usa IA para personalizar tu experiencia: genera planes de entrenamiento adaptados a tus necesidades, identifica brechas de conocimiento y sugiere cursos de refuerzo automáticamente.",
-    features: [
-      { icon: <Sparkles className="h-4 w-4" />, text: "Plan de entrenamiento personalizado con IA" },
-      { icon: <Zap className="h-4 w-4" />, text: "Andy, tu asistente IA para resolver dudas complejas" },
-      { icon: <Target className="h-4 w-4" />, text: "Sugerencias inteligentes basadas en tu desempeño" },
+    icon: <Sparkles className="h-7 w-7" />,
+    title: "IA + Resultados a tu alcance",
+    subtitle: "Inteligencia artificial que te guía y métricas claras para medir tu impacto.",
+    bullets: [
+      { icon: <Zap className="h-4 w-4" />, title: "Andy, tu asistente IA", desc: "Resuelve dudas, genera planes de entrenamiento y sugiere cursos de refuerzo." },
+      { icon: <BarChart3 className="h-4 w-4" />, title: "KPIs y seguimientos", desc: "Consulta tus indicadores de desempeño, calidad y acompañamientos de campo." },
+      { icon: <Calculator className="h-4 w-4" />, title: "Calculadora de comisiones", desc: "Proyecta tus ingresos con metas personalizadas y aceleradores." },
     ],
     gradient: "from-violet-500 to-purple-600",
-    illustration: "🤖",
+    emoji: "🤖",
   },
   {
-    icon: <BarChart3 className="h-8 w-8" />,
-    title: "Tus resultados e indicadores",
-    subtitle: "Mide tu desempeño y calcula tus comisiones",
-    description:
-      "Consulta tus KPIs de desempeño comercial, revisa el cumplimiento de metas y utiliza la calculadora de comisiones para proyectar tus ingresos. Todo en un solo lugar para que tengas claridad total.",
-    features: [
-      { icon: <BarChart3 className="h-4 w-4" />, text: "Dashboard con indicadores clave de rendimiento (KPIs)" },
-      { icon: <Calculator className="h-4 w-4" />, text: "Calculadora de comisiones con metas personalizadas" },
-      { icon: <TrendingUp className="h-4 w-4" />, text: "Seguimientos de calidad y acompañamientos de campo" },
+    icon: <CalendarCheck className="h-7 w-7" />,
+    title: "Úsalo todos los días",
+    subtitle: "El Training Center está diseñado para acompañarte en cada momento de tu jornada.",
+    bullets: [
+      { icon: <BookOpen className="h-4 w-4" />, title: "Antes de una reunión", desc: "Consulta materiales y guías de producto para llegar preparado." },
+      { icon: <MessageSquare className="h-4 w-4" />, title: "Cuando tengas una duda", desc: "Pregúntale a Andy o busca en el catálogo de materiales." },
+      { icon: <TrendingUp className="h-4 w-4" />, title: "Al final del día", desc: "Revisa tu progreso, completa un curso pendiente y sigue subiendo de nivel." },
     ],
     gradient: "from-orange-500 to-amber-600",
-    illustration: "📊",
+    emoji: "📆",
   },
   {
-    icon: <CalendarCheck className="h-8 w-8" />,
-    title: "Tu herramienta del día a día",
-    subtitle: "Haz del Training Center un hábito",
-    description:
-      "Esta plataforma está diseñada para acompañarte todos los días. Revisa tus cursos pendientes, consulta materiales antes de una reunión, verifica tus metas y gana puntos por cada logro. ¡Tu crecimiento comienza hoy!",
-    features: [
-      { icon: <CalendarCheck className="h-4 w-4" />, text: "Revisa tu dashboard cada mañana para ver pendientes" },
-      { icon: <Target className="h-4 w-4" />, text: "Completa cursos y quizzes para ganar puntos y badges" },
-      { icon: <TrendingUp className="h-4 w-4" />, text: "Compite en el ranking y sube de nivel constantemente" },
+    icon: <Check className="h-7 w-7" />,
+    title: "¿Por dónde empezar?",
+    subtitle: "Te sugerimos estos primeros pasos para sacarle el máximo provecho:",
+    bullets: [
+      { icon: <GraduationCap className="h-4 w-4" />, title: "1. Explora tus cursos", desc: "Ve a Cursos y empieza con el que más te interese o el que tengas asignado." },
+      { icon: <Sparkles className="h-4 w-4" />, title: "2. Genera tu plan IA", desc: "Abre 'Mi Plan IA' en el menú y obtén una hoja de ruta personalizada." },
+      { icon: <BarChart3 className="h-4 w-4" />, title: "3. Revisa tu dashboard", desc: "Tu dashboard muestra pendientes, progreso y logros. Consúltalo cada mañana." },
     ],
-    gradient: "from-pink-500 to-rose-600",
-    illustration: "🏆",
-  },
-  {
-    icon: <Check className="h-8 w-8" />,
-    title: "¡Estás listo para comenzar!",
-    subtitle: "Tu camino de crecimiento empieza ahora",
-    description:
-      "Ya conoces las herramientas principales de la plataforma. Explora a tu ritmo, completa cursos, consulta materiales y no olvides revisar tu plan de entrenamiento personalizado. ¡Éxito! 💪",
-    features: [
-      { icon: <Rocket className="h-4 w-4" />, text: "Explora el catálogo de cursos disponibles" },
-      { icon: <Sparkles className="h-4 w-4" />, text: "Genera tu plan de entrenamiento con IA" },
-      { icon: <BarChart3 className="h-4 w-4" />, text: "Revisa tu dashboard y empieza a crecer" },
-    ],
-    gradient: "from-primary to-cyan-500",
-    illustration: "🎉",
+    gradient: "from-emerald-500 to-teal-600",
+    emoji: "🎯",
   },
 ];
 
 export const OnboardingFlow: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
 
@@ -130,16 +95,16 @@ export const OnboardingFlow: React.FC = () => {
     const key = `${ONBOARDING_KEY}_${user.id}`;
     const completed = localStorage.getItem(key);
     if (!completed) {
-      // Small delay so dashboard renders first
-      const timer = setTimeout(() => setOpen(true), 800);
+      const timer = setTimeout(() => setOpen(true), 600);
       return () => clearTimeout(timer);
     }
   }, [user]);
 
-  const handleComplete = () => {
+  const handleComplete = (navigateTo?: string) => {
     if (!user) return;
     localStorage.setItem(`${ONBOARDING_KEY}_${user.id}`, "true");
     setOpen(false);
+    if (navigateTo) navigate(navigateTo);
   };
 
   const handleNext = () => {
@@ -154,142 +119,136 @@ export const OnboardingFlow: React.FC = () => {
     if (currentStep > 0) setCurrentStep((s) => s - 1);
   };
 
-  const handleSkip = () => {
-    handleComplete();
-  };
-
   const step = steps[currentStep];
-  const progress = ((currentStep + 1) / steps.length) * 100;
+  const isLast = currentStep === steps.length - 1;
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) handleSkip(); }}>
-      <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden border-none shadow-2xl [&>button]:hidden">
-        {/* Header gradient */}
-        <div className={`relative bg-gradient-to-br ${step.gradient} p-6 pb-10 text-white`}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium">
-              Paso {currentStep + 1} de {steps.length}
+    <Dialog open={open} onOpenChange={(v) => { if (!v) handleComplete(); }}>
+      <DialogContent className="max-w-md p-0 gap-0 overflow-hidden border-none shadow-2xl [&>button]:hidden">
+        {/* Header */}
+        <div className={`relative bg-gradient-to-br ${step.gradient} p-5 pb-8 text-white`}>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-1.5 bg-white/20 backdrop-blur-sm rounded-full px-2.5 py-0.5 text-xs font-medium">
+              {currentStep + 1} / {steps.length}
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-white/70 hover:text-white hover:bg-white/10 text-xs"
-              onClick={handleSkip}
-            >
-              Omitir
-            </Button>
+            {!isLast && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-white/60 hover:text-white hover:bg-white/10 text-xs h-7"
+                onClick={() => handleComplete()}
+              >
+                Omitir
+              </Button>
+            )}
           </div>
 
           <AnimatePresence mode="wait">
             <motion.div
               key={currentStep}
-              initial={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, x: 15 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25 }}
+              exit={{ opacity: 0, x: -15 }}
+              transition={{ duration: 0.2 }}
+              className="flex items-start gap-3"
             >
-              <div className="flex items-center gap-3 mb-2">
-                <div className="bg-white/20 backdrop-blur-sm rounded-xl p-2.5">
-                  {step.icon}
-                </div>
-                <div className="text-5xl">{step.illustration}</div>
+              <div className="text-4xl mt-0.5">{step.emoji}</div>
+              <div>
+                <h2 className="text-lg font-bold leading-tight">{step.title}</h2>
+                <p className="text-xs text-white/80 mt-1 leading-relaxed">{step.subtitle}</p>
               </div>
-              <h2 className="text-xl font-bold mt-3">{step.title}</h2>
-              <p className="text-sm text-white/80 mt-1">{step.subtitle}</p>
             </motion.div>
           </AnimatePresence>
 
-          {/* Progress bar */}
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20">
-            <motion.div
-              className="h-full bg-white/80 rounded-r-full"
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.3 }}
-            />
+          {/* Progress */}
+          <div className="absolute bottom-0 left-0 right-0 flex gap-1 px-5 -mb-0.5">
+            {steps.map((_, i) => (
+              <div key={i} className="flex-1 h-1 rounded-full overflow-hidden bg-white/20">
+                <motion.div
+                  className="h-full bg-white/90 rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: i <= currentStep ? "100%" : "0%" }}
+                  transition={{ duration: 0.3, delay: i === currentStep ? 0.1 : 0 }}
+                />
+              </div>
+            ))}
           </div>
         </div>
 
         {/* Body */}
-        <div className="p-6">
+        <div className="p-5">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentStep}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.25, delay: 0.05 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-2.5"
             >
-              <p className="text-sm text-muted-foreground leading-relaxed mb-5">
-                {step.description}
-              </p>
-
-              <div className="space-y-3">
-                {step.features.map((feature, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.1 + i * 0.08 }}
-                    className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 border border-border/50"
-                  >
-                    <div className={`mt-0.5 bg-gradient-to-br ${step.gradient} text-white rounded-md p-1.5 shrink-0`}>
-                      {feature.icon}
-                    </div>
-                    <span className="text-sm text-foreground">{feature.text}</span>
-                  </motion.div>
-                ))}
-              </div>
+              {step.bullets.map((b, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.05 + i * 0.07 }}
+                  className="flex items-start gap-3 p-2.5 rounded-lg bg-muted/50 border border-border/40"
+                >
+                  <div className={`mt-0.5 bg-gradient-to-br ${step.gradient} text-white rounded-md p-1.5 shrink-0`}>
+                    {b.icon}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground leading-tight">{b.title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{b.desc}</p>
+                  </div>
+                </motion.div>
+              ))}
             </motion.div>
           </AnimatePresence>
 
-          {/* Step indicators */}
-          <div className="flex items-center justify-center gap-1.5 mt-6 mb-4">
-            {steps.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setCurrentStep(i)}
-                className={`h-1.5 rounded-full transition-all duration-300 ${
-                  i === currentStep
-                    ? "w-6 bg-primary"
-                    : i < currentStep
-                    ? "w-1.5 bg-primary/40"
-                    : "w-1.5 bg-border"
-                }`}
-              />
-            ))}
-          </div>
-
           {/* Navigation */}
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center justify-between gap-3 mt-5">
             <Button
               variant="outline"
               size="sm"
               onClick={handlePrev}
               disabled={currentStep === 0}
-              className="gap-1.5"
+              className="gap-1"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
               Anterior
             </Button>
 
-            <Button
-              size="sm"
-              onClick={handleNext}
-              className={`gap-1.5 bg-gradient-to-r ${step.gradient} text-white border-none hover:opacity-90`}
-            >
-              {currentStep === steps.length - 1 ? (
-                <>
-                  ¡Comenzar!
+            {isLast ? (
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleComplete("/courses")}
+                  className="gap-1 text-xs"
+                >
+                  <GraduationCap className="h-3.5 w-3.5" />
+                  Ir a Cursos
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => handleComplete()}
+                  className={`gap-1 bg-gradient-to-r ${step.gradient} text-white border-none hover:opacity-90`}
+                >
+                  ¡Entendido!
                   <Check className="h-3.5 w-3.5" />
-                </>
-              ) : (
-                <>
-                  Siguiente
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </>
-              )}
-            </Button>
+                </Button>
+              </div>
+            ) : (
+              <Button
+                size="sm"
+                onClick={handleNext}
+                className={`gap-1 bg-gradient-to-r ${step.gradient} text-white border-none hover:opacity-90`}
+              >
+                Siguiente
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>
