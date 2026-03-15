@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Trophy, Target, Award, Brain, Loader2, Sparkles, CheckCircle2, AlertTriangle, ArrowUp, Clock, Zap } from "lucide-react";
+import { BookOpen, Trophy, Target, Award, Brain, Loader2, Sparkles, CheckCircle2, AlertTriangle, ArrowUp, Clock, Zap, UserPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 interface WeeklyAction {
   priority: "alta" | "media" | "baja";
@@ -13,6 +14,7 @@ interface WeeklyAction {
   reason: string;
   estimatedTime: string;
   impact: string;
+  courseId?: string;
 }
 
 interface TrainingPlan {
@@ -38,20 +40,23 @@ const priorityConfig = {
 
 const PersonalizedTraining: React.FC = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [plan, setPlan] = useState<TrainingPlan | null>(null);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [enrolledCourseIds, setEnrolledCourseIds] = useState<Set<string>>(new Set());
+  const [enrollingCourseId, setEnrollingCourseId] = useState<string | null>(null);
 
   const generatePlan = async () => {
     setIsGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke("generate-training-plan");
-
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
       setPlan(data.plan);
       setMetrics(data.metrics);
+      setEnrolledCourseIds(new Set(data.enrolledCourseIds || []));
       toast({ title: "¡Plan generado!", description: "Tu plan de entrenamiento personalizado está listo." });
     } catch (e) {
       console.error(e);
@@ -62,6 +67,37 @@ const PersonalizedTraining: React.FC = () => {
       });
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleEnroll = async (courseId: string) => {
+    setEnrollingCourseId(courseId);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No autenticado");
+
+      const { error } = await supabase.from("course_enrollments").insert({
+        user_id: user.id,
+        course_id: courseId,
+        status: "enrolled",
+        progress_percentage: 0,
+      });
+
+      if (error) throw error;
+
+      setEnrolledCourseIds(prev => new Set([...prev, courseId]));
+      toast({ title: "¡Inscrito!", description: "Te has inscrito exitosamente. Redirigiendo al curso..." });
+      
+      setTimeout(() => navigate(`/courses/${courseId}`), 1000);
+    } catch (e) {
+      console.error(e);
+      toast({
+        title: "Error",
+        description: e instanceof Error ? e.message : "No se pudo inscribir",
+        variant: "destructive",
+      });
+    } finally {
+      setEnrollingCourseId(null);
     }
   };
 
@@ -221,6 +257,9 @@ const PersonalizedTraining: React.FC = () => {
                 {plan.weeklyPlan.map((item, i) => {
                   const config = priorityConfig[item.priority];
                   const Icon = config.icon;
+                  const isEnrolled = item.courseId ? enrolledCourseIds.has(item.courseId) : false;
+                  const isEnrolling = enrollingCourseId === item.courseId;
+
                   return (
                     <Card key={i} className={`border ${config.color}`}>
                       <CardContent className="pt-5 pb-4">
@@ -244,6 +283,37 @@ const PersonalizedTraining: React.FC = () => {
                                 <Zap className="h-3 w-3" /> {item.impact}
                               </span>
                             </div>
+
+                            {/* Course action button */}
+                            {item.courseId && (
+                              <div className="mt-3">
+                                {isEnrolled ? (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="gap-2"
+                                    onClick={() => navigate(`/courses/${item.courseId}`)}
+                                  >
+                                    <BookOpen className="h-3.5 w-3.5" />
+                                    Ir al curso
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    className="gap-2"
+                                    disabled={isEnrolling}
+                                    onClick={() => handleEnroll(item.courseId!)}
+                                  >
+                                    {isEnrolling ? (
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    ) : (
+                                      <UserPlus className="h-3.5 w-3.5" />
+                                    )}
+                                    {isEnrolling ? "Inscribiendo..." : "Inscribirme ahora"}
+                                  </Button>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </CardContent>
