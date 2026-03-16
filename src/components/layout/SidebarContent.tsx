@@ -87,6 +87,7 @@ const analistaItems: NavItem[] = [
 const adminItems: NavItem[] = [
   { label: "Usuarios", icon: Users, href: "/users", roles: ["admin"], sectionKey: "users" },
   { label: "Reportes", icon: BarChart3, href: "/reports", roles: ["admin"], sectionKey: "reports" },
+  { label: "Impact Dashboard", icon: TrendingUp, href: "/impact", roles: ["admin", "lider"], sectionKey: "impact_dashboard" },
 ];
 
 export const SidebarContent: React.FC<SidebarContentProps> = ({ onNavigate }) => {
