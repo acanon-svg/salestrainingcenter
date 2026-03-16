@@ -33,6 +33,7 @@ import {
   FileText,
   ChevronDown,
   UserCheck,
+  Eye,
   Building,
 } from "lucide-react";
 import {
@@ -69,6 +70,7 @@ import {
   type ExportFormat,
 } from "@/lib/exportUtils";
 import { toast } from "sonner";
+import { SectionUsageReport } from "@/components/reports/SectionUsageReport";
 import { useTeamResults } from "@/hooks/useTeamResults";
 
 // Leader-specific reports view
@@ -695,11 +697,15 @@ const Reports: React.FC = () => {
 
             {/* Detailed Reports Tabs */}
             <Tabs defaultValue="regional" className="w-full">
-              <TabsList>
+              <TabsList className="flex-wrap">
                 <TabsTrigger value="regional">Por Regional</TabsTrigger>
                 <TabsTrigger value="teams">Por Equipo</TabsTrigger>
                 <TabsTrigger value="courses">Por Curso</TabsTrigger>
                 <TabsTrigger value="compliance">Compliance</TabsTrigger>
+                <TabsTrigger value="portal-usage">
+                  <Eye className="w-3 h-3 mr-1" />
+                  Uso del Portal
+                </TabsTrigger>
               </TabsList>
 
               {/* Regional Tab */}
@@ -1079,6 +1085,11 @@ const Reports: React.FC = () => {
                     </CardContent>
                   </Card>
                 </div>
+              </TabsContent>
+
+              {/* Portal Usage Tab */}
+              <TabsContent value="portal-usage" className="mt-6">
+                <SectionUsageReport dateRange={parseInt(dateRange)} />
               </TabsContent>
             </Tabs>
           </>

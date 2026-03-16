@@ -2071,6 +2071,36 @@ export type Database = {
           },
         ]
       }
+      section_visits: {
+        Row: {
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          section_key: string
+          section_label: string
+          user_id: string
+          visited_at: string
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          section_key: string
+          section_label: string
+          user_id: string
+          visited_at?: string
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          section_key?: string
+          section_label?: string
+          user_id?: string
+          visited_at?: string
+        }
+        Relationships: []
+      }
       sheets_sync_log: {
         Row: {
           completed_at: string | null
