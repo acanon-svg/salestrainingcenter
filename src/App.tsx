@@ -36,6 +36,7 @@ import Followups from "@/pages/Followups";
 import ResetPassword from "@/pages/ResetPassword";
 import PersonalizedTraining from "@/pages/PersonalizedTraining";
 import AICourseReview from "@/pages/AICourseReview";
+import ImpactDashboard from "@/pages/ImpactDashboard";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
