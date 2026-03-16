@@ -138,6 +138,7 @@ const MyCourses: React.FC = () => {
     folders,
     selectedIds,
     onToggleSelect: toggleSelect,
+    groupByProcess,
   };
 
   return (
