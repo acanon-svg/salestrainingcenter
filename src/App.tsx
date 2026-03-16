@@ -357,6 +357,14 @@ const AppRoutes = () => {
           </RoleRoute>
         }
       />
+      <Route
+        path="/impact"
+        element={
+          <RoleRoute allowedRoles={["admin", "lider"]}>
+            <ImpactDashboard />
+          </RoleRoute>
+        }
+      />
       
       {/* Catch-all */}
       <Route path="*" element={<NotFound />} />
