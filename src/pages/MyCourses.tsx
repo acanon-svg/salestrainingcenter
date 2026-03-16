@@ -220,6 +220,15 @@ const MyCourses: React.FC = () => {
                   ))}
                 </SelectContent>
               </Select>
+              <Button
+                variant={groupByProcess ? "default" : "outline"}
+                size="sm"
+                className="gap-1.5 whitespace-nowrap"
+                onClick={() => setGroupByProcess(!groupByProcess)}
+              >
+                <Layers className="w-4 h-4" />
+                Agrupar por proceso
+              </Button>
             </div>
           </CardContent>
         </Card>
