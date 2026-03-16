@@ -47,17 +47,15 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
   const [indicator, setIndicator] = useState<"firmas" | "originaciones" | "gmv">("firmas");
   const hasTeamResults = teamResults && teamResults.length > 0;
 
-  // Aggregate team results by month
-  const teamMonthlyData = useMemo(() => {
+  // Aggregate team results by day
+  const teamDailyData = useMemo(() => {
     if (!teamResults || teamResults.length === 0) return new Map<string, { real: number; meta: number }>();
 
     const map = new Map<string, { real: number; meta: number }>();
 
     teamResults.forEach((r) => {
       const d = new Date(r.period_date + "T00:00:00");
-      const month = d.getMonth();
-      const year = d.getFullYear();
-      const key = `${MONTH_NAMES[month]} ${year}`;
+      const key = format(d, "dd MMM", { locale: es });
 
       if (!map.has(key)) map.set(key, { real: 0, meta: 0 });
       const entry = map.get(key)!;
