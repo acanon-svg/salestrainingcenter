@@ -6,6 +6,7 @@ import { Watermark } from "@/components/Watermark";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { useSectionTracking } from "@/hooks/useSectionTracking";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -13,6 +14,7 @@ interface DashboardLayoutProps {
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const { profile } = useAuth();
+  useSectionTracking();
   
   const lastLogin = profile?.last_login
     ? format(new Date(profile.last_login), "d 'de' MMMM, HH:mm", { locale: es })

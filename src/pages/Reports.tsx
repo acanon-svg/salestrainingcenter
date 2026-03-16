@@ -695,11 +695,15 @@ const Reports: React.FC = () => {
 
             {/* Detailed Reports Tabs */}
             <Tabs defaultValue="regional" className="w-full">
-              <TabsList>
+              <TabsList className="flex-wrap">
                 <TabsTrigger value="regional">Por Regional</TabsTrigger>
                 <TabsTrigger value="teams">Por Equipo</TabsTrigger>
                 <TabsTrigger value="courses">Por Curso</TabsTrigger>
                 <TabsTrigger value="compliance">Compliance</TabsTrigger>
+                <TabsTrigger value="portal-usage">
+                  <Eye className="w-3 h-3 mr-1" />
+                  Uso del Portal
+                </TabsTrigger>
               </TabsList>
 
               {/* Regional Tab */}
