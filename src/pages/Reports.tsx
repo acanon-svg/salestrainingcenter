@@ -70,6 +70,7 @@ import {
   type ExportFormat,
 } from "@/lib/exportUtils";
 import { toast } from "sonner";
+import { SectionUsageReport } from "@/components/reports/SectionUsageReport";
 import { useTeamResults } from "@/hooks/useTeamResults";
 
 // Leader-specific reports view
