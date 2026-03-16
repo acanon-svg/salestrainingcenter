@@ -153,10 +153,11 @@ const ImpactDashboard: React.FC = () => {
                   "Quiz promedio": u.quiz_avg_score,
                   Insignias: u.badges_earned,
                   "Días activos": u.days_active,
-                  "GMV mensual": u.gmv_month,
-                  "Firmas mensuales": u.signatures_month,
-                  "Originaciones mensuales": u.originations_month,
-                  "Tasa conversión": u.conversion_rate,
+                  "Firmas promedio/mes": u.signatures_month,
+                  "Originaciones promedio/mes": u.originations_month,
+                  "GMV promedio/mes": u.gmv_month,
+                  "Cumplimiento Firmas %": u.cumplimiento_firmas,
+                  "Cumplimiento GMV %": u.cumplimiento_gmv,
                 })), "impact-correlation")}
               />
             </div>
