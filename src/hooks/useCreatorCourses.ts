@@ -19,6 +19,8 @@ export interface CreatorCourse {
   folder_id: string | null;
   segment: string | null;
   category: string | null;
+  process_id: string | null;
+  process: { id: string; name: string } | null;
 }
 
 export const useCreatorCourses = () => {
