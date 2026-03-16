@@ -14,14 +14,15 @@ export interface UserTrainingData {
   courses_count: number;
   materials_count: number;
   ai_plan_usage: number;
-  // Business metrics (mock for now)
-  signatures_week: number;
+  // Business metrics (real data from hunter_business_metrics)
   signatures_month: number;
-  originations_week: number;
   originations_month: number;
-  gmv_week: number;
   gmv_month: number;
   conversion_rate: number;
+  cumplimiento_firmas: number;
+  cumplimiento_originados: number;
+  cumplimiento_gmv: number;
+  has_real_business_data: boolean;
 }
 
 export interface FeatureUsageStat {
@@ -30,7 +31,7 @@ export interface FeatureUsageStat {
   total_uses: number;
   unique_users: number;
   pct_active_users: number;
-  trend_7d: number[]; // last 7 days counts
+  trend_7d: number[];
   is_dead: boolean;
 }
 
@@ -44,6 +45,15 @@ const teamClassifier = (team: string | null): string => {
   return "Otro";
 };
 
+// Normalize names for matching: lowercase, trim, remove accents
+const normalizeName = (name: string): string => {
+  return name
+    .toLowerCase()
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+};
+
 export const useImpactDashboardData = (teamFilter: string, periodDays: number) => {
   return useQuery({
     queryKey: ["impact-dashboard", teamFilter, periodDays],
@@ -52,14 +62,15 @@ export const useImpactDashboardData = (teamFilter: string, periodDays: number) =
       since.setDate(since.getDate() - periodDays);
       const sinceISO = since.toISOString();
 
-      // Fetch profiles, enrollments, quiz attempts, badges, section visits in parallel
-      const [profilesRes, enrollmentsRes, quizRes, badgesRes, visitsRes, coursesRes] = await Promise.all([
+      // Fetch all data in parallel including real business metrics
+      const [profilesRes, enrollmentsRes, quizRes, badgesRes, visitsRes, coursesRes, businessRes] = await Promise.all([
         supabase.from("profiles").select("user_id, email, full_name, team"),
         supabase.from("course_enrollments").select("user_id, course_id, status, completed_at").gte("created_at", sinceISO),
         supabase.from("quiz_attempts").select("user_id, score, completed_at").gte("created_at", sinceISO),
         supabase.from("user_badges").select("user_id, earned_at").gte("earned_at", sinceISO),
         supabase.from("section_visits").select("user_id, section_key, section_label, visited_at, duration_seconds").gte("visited_at", sinceISO),
         supabase.from("courses").select("id").eq("status", "published"),
+        supabase.from("hunter_business_metrics" as any).select("*"),
       ]);
 
       const profiles = profilesRes.data || [];
@@ -68,6 +79,43 @@ export const useImpactDashboardData = (teamFilter: string, periodDays: number) =
       const userBadges = badgesRes.data || [];
       const visits = visitsRes.data || [];
       const totalCourses = (coursesRes.data || []).length || 1;
+      const businessMetrics = (businessRes.data || []) as any[];
+
+      // Build a lookup of business metrics by normalized hunter name
+      // Aggregate across months: sum firmas, originados, gmv; average cumplimiento
+      const businessByName = new Map<string, {
+        totalFirmas: number;
+        totalOriginados: number;
+        totalGmv: number;
+        avgCumplFirmas: number;
+        avgCumplOrig: number;
+        avgCumplGmv: number;
+        months: number;
+      }>();
+
+      businessMetrics.forEach((bm: any) => {
+        const key = normalizeName(bm.hunter_name);
+        const existing = businessByName.get(key);
+        if (existing) {
+          existing.totalFirmas += bm.cierres_realizados || 0;
+          existing.totalOriginados += bm.originados || 0;
+          existing.totalGmv += bm.gmv_usd || 0;
+          existing.avgCumplFirmas += bm.cumplimiento_firmas || 0;
+          existing.avgCumplOrig += bm.cumplimiento_originados || 0;
+          existing.avgCumplGmv += bm.cumplimiento_gmv || 0;
+          existing.months += 1;
+        } else {
+          businessByName.set(key, {
+            totalFirmas: bm.cierres_realizados || 0,
+            totalOriginados: bm.originados || 0,
+            totalGmv: bm.gmv_usd || 0,
+            avgCumplFirmas: bm.cumplimiento_firmas || 0,
+            avgCumplOrig: bm.cumplimiento_originados || 0,
+            avgCumplGmv: bm.cumplimiento_gmv || 0,
+            months: 1,
+          });
+        }
+      });
 
       // Build user map
       const userMap = new Map<string, UserTrainingData>();
@@ -75,6 +123,10 @@ export const useImpactDashboardData = (teamFilter: string, periodDays: number) =
       profiles.forEach((p: any) => {
         const classified = teamClassifier(p.team);
         if (teamFilter !== "all" && classified !== teamFilter) return;
+
+        // Try to match profile name to business metrics
+        const profileName = normalizeName(p.full_name || "");
+        const biz = businessByName.get(profileName);
 
         userMap.set(p.user_id, {
           user_id: p.user_id,
@@ -89,14 +141,53 @@ export const useImpactDashboardData = (teamFilter: string, periodDays: number) =
           courses_count: 0,
           materials_count: 0,
           ai_plan_usage: 0,
-          signatures_week: 0,
-          signatures_month: 0,
-          originations_week: 0,
-          originations_month: 0,
-          gmv_week: 0,
-          gmv_month: 0,
-          conversion_rate: 0,
+          signatures_month: biz ? Math.round(biz.totalFirmas / biz.months) : 0,
+          originations_month: biz ? Math.round(biz.totalOriginados / biz.months) : 0,
+          gmv_month: biz ? Math.round(biz.totalGmv / biz.months) : 0,
+          conversion_rate: biz ? Math.round((biz.avgCumplFirmas / biz.months) * 10) / 10 : 0,
+          cumplimiento_firmas: biz ? Math.round((biz.avgCumplFirmas / biz.months) * 10) / 10 : 0,
+          cumplimiento_originados: biz ? Math.round((biz.avgCumplOrig / biz.months) * 10) / 10 : 0,
+          cumplimiento_gmv: biz ? Math.round((biz.avgCumplGmv / biz.months) * 10) / 10 : 0,
+          has_real_business_data: !!biz,
         });
+      });
+
+      // Also add hunters from business data not matched to profiles
+      businessByName.forEach((biz, normalizedName) => {
+        const alreadyMatched = Array.from(userMap.values()).some(
+          u => normalizeName(u.user_name) === normalizedName
+        );
+        if (!alreadyMatched) {
+          // Find original name from business metrics
+          const originalRecord = businessMetrics.find(
+            (bm: any) => normalizeName(bm.hunter_name) === normalizedName
+          );
+          if (originalRecord) {
+            const fakeId = `biz-${normalizedName}`;
+            userMap.set(fakeId, {
+              user_id: fakeId,
+              user_name: originalRecord.hunter_name,
+              user_email: "",
+              team: "Hunters",
+              modules_completed: 0,
+              total_modules: totalCourses,
+              quiz_avg_score: 0,
+              badges_earned: 0,
+              days_active: 0,
+              courses_count: 0,
+              materials_count: 0,
+              ai_plan_usage: 0,
+              signatures_month: Math.round(biz.totalFirmas / biz.months),
+              originations_month: Math.round(biz.totalOriginados / biz.months),
+              gmv_month: Math.round(biz.totalGmv / biz.months),
+              conversion_rate: Math.round((biz.avgCumplFirmas / biz.months) * 10) / 10,
+              cumplimiento_firmas: Math.round((biz.avgCumplFirmas / biz.months) * 10) / 10,
+              cumplimiento_originados: Math.round((biz.avgCumplOrig / biz.months) * 10) / 10,
+              cumplimiento_gmv: Math.round((biz.avgCumplGmv / biz.months) * 10) / 10,
+              has_real_business_data: true,
+            });
+          }
+        }
       });
 
       // Aggregate enrollments
@@ -140,25 +231,7 @@ export const useImpactDashboardData = (teamFilter: string, periodDays: number) =
         if (u) u.days_active = days.size;
       });
 
-      // Generate realistic mock business metrics
       const users = Array.from(userMap.values());
-      const rng = (seed: number) => {
-        let s = seed;
-        return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
-      };
-
-      users.forEach((u, i) => {
-        const r = rng(i * 1000 + 42);
-        const trainingIntensity = (u.modules_completed / Math.max(u.total_modules, 1));
-        const base = 0.3 + trainingIntensity * 0.5;
-        u.signatures_week = Math.round((3 + r() * 15) * (0.5 + base));
-        u.signatures_month = u.signatures_week * 4 + Math.round(r() * 10);
-        u.originations_week = Math.round((1 + r() * 8) * (0.5 + base));
-        u.originations_month = u.originations_week * 4 + Math.round(r() * 5);
-        u.gmv_week = Math.round((500 + r() * 5000) * (0.5 + base));
-        u.gmv_month = u.gmv_week * 4 + Math.round(r() * 3000);
-        u.conversion_rate = Math.round((5 + r() * 30 + trainingIntensity * 20) * 10) / 10;
-      });
 
       // --- Feature usage stats ---
       const featureMap: Record<string, { label: string; users: Set<string>; total: number; daily: Record<string, number> }> = {};

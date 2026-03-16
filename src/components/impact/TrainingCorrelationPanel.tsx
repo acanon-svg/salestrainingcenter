@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, TrendingUp, TrendingDown, ArrowUpRight, ChevronRight, Medal } from "lucide-react";
+import { Download, TrendingUp, TrendingDown, ArrowUpRight, ChevronRight, Medal, Database, AlertCircle } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import type { UserTrainingData } from "@/hooks/useImpactDashboardData";
 
@@ -14,13 +14,14 @@ interface Props {
   onExport: () => void;
 }
 
-type MetricKey = "gmv_month" | "signatures_month" | "originations_month" | "conversion_rate";
+type MetricKey = "gmv_month" | "signatures_month" | "originations_month" | "cumplimiento_firmas" | "cumplimiento_gmv";
 
 const metricOptions: { value: MetricKey; label: string; shortLabel: string; format: (v: number) => string }[] = [
-  { value: "gmv_month", label: "GMV Mensual (USD)", shortLabel: "GMV", format: (v) => `$${v.toLocaleString()}` },
-  { value: "signatures_month", label: "Firmas Mensuales", shortLabel: "Firmas", format: (v) => v.toLocaleString() },
-  { value: "originations_month", label: "Originaciones Mensuales", shortLabel: "Orig.", format: (v) => v.toLocaleString() },
-  { value: "conversion_rate", label: "Tasa de Conversión (%)", shortLabel: "Conv.", format: (v) => `${v}%` },
+  { value: "gmv_month", label: "GMV Mensual Promedio (USD)", shortLabel: "GMV", format: (v) => `$${v.toLocaleString()}` },
+  { value: "signatures_month", label: "Firmas Promedio/Mes", shortLabel: "Firmas", format: (v) => v.toLocaleString() },
+  { value: "originations_month", label: "Originaciones Promedio/Mes", shortLabel: "Orig.", format: (v) => v.toLocaleString() },
+  { value: "cumplimiento_firmas", label: "Cumplimiento Firmas (%)", shortLabel: "Cumpl. Firmas", format: (v) => `${v}%` },
+  { value: "cumplimiento_gmv", label: "Cumplimiento GMV (%)", shortLabel: "Cumpl. GMV", format: (v) => `${v}%` },
 ];
 
 export const TrainingCorrelationPanel: React.FC<Props> = ({ users, onExport }) => {
@@ -29,20 +30,28 @@ export const TrainingCorrelationPanel: React.FC<Props> = ({ users, onExport }) =
 
   const selectedMetric = metricOptions.find(m => m.value === metric)!;
 
+  // Only users with real business data for the correlation
+  const usersWithBizData = useMemo(() => {
+    return users.filter(u => (u as any).has_real_business_data);
+  }, [users]);
+
+  const dataSource = usersWithBizData.length > 0 ? usersWithBizData : users;
+  const hasRealData = usersWithBizData.length > 0;
+
   // Sort users by training intensity
   const rankedUsers = useMemo(() => {
-    return [...users]
+    return [...dataSource]
       .map(u => ({
         ...u,
         pct: Math.round((u.modules_completed / Math.max(u.total_modules, 1)) * 100),
       }))
       .sort((a, b) => b.modules_completed - a.modules_completed);
-  }, [users]);
+  }, [dataSource]);
 
   // Top 25% vs Bottom 25% summary
   const summary = useMemo(() => {
-    if (users.length < 4) return null;
-    const sorted = [...users].sort((a, b) => b.modules_completed - a.modules_completed);
+    if (dataSource.length < 4) return null;
+    const sorted = [...dataSource].sort((a, b) => b.modules_completed - a.modules_completed);
     const q = Math.max(1, Math.floor(sorted.length * 0.25));
     const top25 = sorted.slice(0, q);
     const bottom25 = sorted.slice(-q);
@@ -50,12 +59,12 @@ export const TrainingCorrelationPanel: React.FC<Props> = ({ users, onExport }) =
     const avgBottom = bottom25.reduce((s, u) => s + u[metric], 0) / bottom25.length;
     const delta = avgBottom > 0 ? Math.round(((avgTop - avgBottom) / avgBottom) * 100) : 0;
     return { avgTop, avgBottom, delta, topCount: top25.length, bottomCount: bottom25.length, top25, bottom25 };
-  }, [users, metric]);
+  }, [dataSource, metric]);
 
   // Bar chart data: top 15 users
   const barData = useMemo(() => {
     return rankedUsers.slice(0, 15).map(u => ({
-      name: u.user_name.length > 18 ? u.user_name.substring(0, 16) + "…" : u.user_name,
+      name: u.user_name.length > 20 ? u.user_name.substring(0, 18) + "…" : u.user_name,
       fullName: u.user_name,
       training: u.modules_completed,
       business: u[metric],
@@ -86,6 +95,21 @@ export const TrainingCorrelationPanel: React.FC<Props> = ({ users, onExport }) =
 
   return (
     <div className="space-y-4">
+      {/* Data source indicator */}
+      <div className="flex items-center gap-2">
+        {hasRealData ? (
+          <Badge variant="outline" className="gap-1 text-xs bg-green-500/10 text-green-700 border-green-300">
+            <Database className="h-3 w-3" />
+            Datos reales — {usersWithBizData.length} hunters con métricas de negocio (Dic 2025 – Feb 2026)
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="gap-1 text-xs bg-amber-500/10 text-amber-700 border-amber-300">
+            <AlertCircle className="h-3 w-3" />
+            Sin datos de negocio cargados — mostrando datos simulados
+          </Badge>
+        )}
+      </div>
+
       {/* Summary Card */}
       {summary && (
         <Card
@@ -129,7 +153,7 @@ export const TrainingCorrelationPanel: React.FC<Props> = ({ users, onExport }) =
       {/* Metric selector + export */}
       <div className="flex items-center gap-2 justify-end">
         <Select value={metric} onValueChange={(v) => setMetric(v as MetricKey)}>
-          <SelectTrigger className="w-[220px]">
+          <SelectTrigger className="w-[250px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -154,7 +178,7 @@ export const TrainingCorrelationPanel: React.FC<Props> = ({ users, onExport }) =
               <BarChart data={barData} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" className="opacity-30" horizontal={false} />
                 <XAxis type="number" />
-                <YAxis dataKey="name" type="category" width={130} tick={{ fontSize: 11 }} />
+                <YAxis dataKey="name" type="category" width={150} tick={{ fontSize: 11 }} />
                 <Tooltip
                   content={({ payload }) => {
                     if (!payload?.length) return null;
@@ -205,6 +229,8 @@ export const TrainingCorrelationPanel: React.FC<Props> = ({ users, onExport }) =
                   <TableHead className="text-right">Módulos</TableHead>
                   <TableHead className="text-right">Avance</TableHead>
                   <TableHead className="text-right">Quiz Avg</TableHead>
+                  <TableHead className="text-right">Firmas/Mes</TableHead>
+                  <TableHead className="text-right">GMV/Mes</TableHead>
                   <TableHead className="text-right">{selectedMetric.shortLabel}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -227,13 +253,20 @@ export const TrainingCorrelationPanel: React.FC<Props> = ({ users, onExport }) =
                         {i + 1}
                         {isTop25 && <Medal className="h-3 w-3 inline ml-1 text-primary" />}
                       </TableCell>
-                      <TableCell className="font-medium">{u.user_name}</TableCell>
+                      <TableCell className="font-medium">
+                        {u.user_name}
+                        {!(u as any).has_real_business_data && u.gmv_month === 0 && (
+                          <span className="text-xs text-muted-foreground ml-1">(sin datos biz)</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-xs">{u.team}</Badge>
                       </TableCell>
                       <TableCell className="text-right">{u.modules_completed}</TableCell>
                       <TableCell className="text-right">{u.pct}%</TableCell>
                       <TableCell className="text-right">{u.quiz_avg_score}%</TableCell>
+                      <TableCell className="text-right">{u.signatures_month}</TableCell>
+                      <TableCell className="text-right">${u.gmv_month.toLocaleString()}</TableCell>
                       <TableCell className="text-right font-semibold">
                         {selectedMetric.format(u[metric])}
                       </TableCell>
