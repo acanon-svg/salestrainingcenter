@@ -1086,6 +1086,11 @@ const Reports: React.FC = () => {
                   </Card>
                 </div>
               </TabsContent>
+
+              {/* Portal Usage Tab */}
+              <TabsContent value="portal-usage" className="mt-6">
+                <SectionUsageReport dateRange={parseInt(dateRange)} />
+              </TabsContent>
             </Tabs>
           </>
         )}
