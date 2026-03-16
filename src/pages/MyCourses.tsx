@@ -43,6 +43,7 @@ const MyCourses: React.FC = () => {
   const [segmentFilter, setSegmentFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [levelFilter, setLevelFilter] = useState<string>("all");
+  const [groupByProcess, setGroupByProcess] = useState(false);
 
   const handleDelete = async (courseId: string) => {
     setDeletingId(courseId);
