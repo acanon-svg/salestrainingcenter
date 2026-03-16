@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BookOpen, Plus, Users, BarChart, CheckCircle, Timer, Folder, Search, Filter } from "lucide-react";
+import { BookOpen, Plus, Users, BarChart, CheckCircle, Timer, Folder, Search, Filter, Layers } from "lucide-react";
 import { AICourseGeneratorDialog } from "@/components/courses/AICoursGeneratorDialog";
 import {
   useCreatorCourses,
@@ -43,6 +43,7 @@ const MyCourses: React.FC = () => {
   const [segmentFilter, setSegmentFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [levelFilter, setLevelFilter] = useState<string>("all");
+  const [groupByProcess, setGroupByProcess] = useState(false);
 
   const handleDelete = async (courseId: string) => {
     setDeletingId(courseId);
@@ -137,6 +138,7 @@ const MyCourses: React.FC = () => {
     folders,
     selectedIds,
     onToggleSelect: toggleSelect,
+    groupByProcess,
   };
 
   return (
@@ -219,6 +221,15 @@ const MyCourses: React.FC = () => {
                   ))}
                 </SelectContent>
               </Select>
+              <Button
+                variant={groupByProcess ? "default" : "outline"}
+                size="sm"
+                className="gap-1.5 whitespace-nowrap"
+                onClick={() => setGroupByProcess(!groupByProcess)}
+              >
+                <Layers className="w-4 h-4" />
+                Agrupar por proceso
+              </Button>
             </div>
           </CardContent>
         </Card>

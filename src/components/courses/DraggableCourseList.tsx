@@ -17,7 +17,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Layers } from "lucide-react";
 import { CreatorCourse } from "@/hooks/useCreatorCourses";
 import { CourseFolder } from "@/hooks/useCourseFolders";
 import { SortableCourseItem } from "./SortableCourseItem";
@@ -36,6 +36,7 @@ interface DraggableCourseListProps {
   selectedIds?: string[];
   onToggleSelect?: (id: string) => void;
   onSelectAll?: () => void;
+  groupByProcess?: boolean;
 }
 
 export const DraggableCourseList: React.FC<DraggableCourseListProps> = ({
@@ -52,6 +53,7 @@ export const DraggableCourseList: React.FC<DraggableCourseListProps> = ({
   selectedIds = [],
   onToggleSelect,
   onSelectAll,
+  groupByProcess = false,
 }) => {
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -104,25 +106,103 @@ export const DraggableCourseList: React.FC<DraggableCourseListProps> = ({
     );
   }
 
-  // Sort by order_index descending for display (highest first = top of list)
   const sortedCourses = [...courses].sort((a, b) => b.order_index - a.order_index);
   const allSelected = sortedCourses.length > 0 && sortedCourses.every((c) => selectedIds.includes(c.id));
+
+  const renderCourseItem = (course: CreatorCourse) => (
+    <SortableCourseItem
+      key={course.id}
+      course={course}
+      onDelete={onDelete}
+      onPublish={onPublish}
+      onArchive={onArchive}
+      deletingId={deletingId}
+      publishingId={publishingId}
+      archivingId={archivingId}
+      folders={folders}
+      isSelected={selectedIds.includes(course.id)}
+      onToggleSelect={onToggleSelect ? () => onToggleSelect(course.id) : undefined}
+    />
+  );
+
+  const renderSelectAllHeader = () => {
+    if (!onToggleSelect || !onSelectAll) return null;
+    return (
+      <div className="flex items-center gap-3 px-4 py-2 border-b border-border bg-muted/30">
+        <Checkbox checked={allSelected} onCheckedChange={onSelectAll} />
+        <span className="text-xs text-muted-foreground font-medium">
+          {allSelected ? "Deseleccionar todos" : "Seleccionar todos"}
+        </span>
+      </div>
+    );
+  };
+
+  // Grouped by process view
+  if (groupByProcess) {
+    const groups: Record<string, { name: string; courses: CreatorCourse[] }> = {};
+    const ungrouped: CreatorCourse[] = [];
+
+    sortedCourses.forEach((course) => {
+      if (course.process_id && course.process) {
+        if (!groups[course.process_id]) {
+          groups[course.process_id] = { name: course.process.name, courses: [] };
+        }
+        groups[course.process_id].courses.push(course);
+      } else {
+        ungrouped.push(course);
+      }
+    });
+
+    const sortedGroups = Object.entries(groups).sort(([, a], [, b]) => a.name.localeCompare(b.name));
+
+    return (
+      <div className="space-y-4">
+        {renderSelectAllHeader() && (
+          <Card className="border-border/50">
+            <CardContent className="p-0">{renderSelectAllHeader()}</CardContent>
+          </Card>
+        )}
+        {sortedGroups.map(([processId, group]) => (
+          <Card key={processId} className="border-border/50 overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 bg-primary/10 border-b border-border">
+              <Layers className="w-4 h-4 text-primary" />
+              <span className="font-semibold text-sm text-foreground">{group.name}</span>
+              <span className="text-xs text-muted-foreground ml-1">({group.courses.length} cursos)</span>
+            </div>
+            <CardContent className="p-0">
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={group.courses.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+                  {group.courses.map(renderCourseItem)}
+                </SortableContext>
+              </DndContext>
+            </CardContent>
+          </Card>
+        ))}
+
+        {ungrouped.length > 0 && (
+          <Card className="border-border/50 overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b border-border">
+              <BookOpen className="w-4 h-4 text-muted-foreground" />
+              <span className="font-semibold text-sm text-muted-foreground">Sin proceso asignado</span>
+              <span className="text-xs text-muted-foreground ml-1">({ungrouped.length} cursos)</span>
+            </div>
+            <CardContent className="p-0">
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={ungrouped.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+                  {ungrouped.map(renderCourseItem)}
+                </SortableContext>
+              </DndContext>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  }
 
   return (
     <Card className="border-border/50">
       <CardContent className="p-0">
-        {/* Select all header */}
-        {onToggleSelect && onSelectAll && (
-          <div className="flex items-center gap-3 px-4 py-2 border-b border-border bg-muted/30">
-            <Checkbox
-              checked={allSelected}
-              onCheckedChange={onSelectAll}
-            />
-            <span className="text-xs text-muted-foreground font-medium">
-              {allSelected ? "Deseleccionar todos" : "Seleccionar todos"}
-            </span>
-          </div>
-        )}
+        {renderSelectAllHeader()}
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -132,21 +212,7 @@ export const DraggableCourseList: React.FC<DraggableCourseListProps> = ({
             items={sortedCourses.map((c) => c.id)}
             strategy={verticalListSortingStrategy}
           >
-            {sortedCourses.map((course) => (
-              <SortableCourseItem
-                key={course.id}
-                course={course}
-                onDelete={onDelete}
-                onPublish={onPublish}
-                onArchive={onArchive}
-                deletingId={deletingId}
-                publishingId={publishingId}
-                archivingId={archivingId}
-                folders={folders}
-                isSelected={selectedIds.includes(course.id)}
-                onToggleSelect={onToggleSelect ? () => onToggleSelect(course.id) : undefined}
-              />
-            ))}
+            {sortedCourses.map(renderCourseItem)}
           </SortableContext>
         </DndContext>
       </CardContent>
