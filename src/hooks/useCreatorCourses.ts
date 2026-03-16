@@ -76,6 +76,8 @@ export const useCreatorCourses = () => {
             order_index: course.order_index || 0,
             enrolled_count: courseEnrollments.length,
             avg_score: scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null,
+            process_id: course.process_id || null,
+            process: Array.isArray(course.process) ? course.process[0] || null : course.process || null,
           };
         }) || [];
 
