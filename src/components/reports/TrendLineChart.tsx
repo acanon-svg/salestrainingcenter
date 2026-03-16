@@ -89,33 +89,21 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
     return data;
   }, [data]);
 
-  // Combined chart data by month when team results exist
+  // Combined chart data by day when team results exist
   const combinedChartData = useMemo(() => {
     if (!hasTeamResults) return null;
 
-    // Aggregate training data by month too
-    const trainingMonthly = new Map<string, { enrollments: number; completions: number }>();
+    const days = [...teamDailyData.keys()];
 
-    if (data) {
-      data.forEach((point) => {
-        // point.date is formatted like "dd MMM" — we need to map to month
-        // Since we only have partial date info, we'll aggregate all training data by the month label
-        // The training trend data covers `dateRange` days, so let's re-parse from raw
-      });
-    }
-
-    // Build combined from team results months
-    const months = [...teamMonthlyData.keys()];
-
-    return months.map((monthLabel) => {
-      const team = teamMonthlyData.get(monthLabel) || { real: 0, meta: 0 };
+    return days.map((dayLabel) => {
+      const team = teamDailyData.get(dayLabel) || { real: 0, meta: 0 };
       return {
-        date: monthLabel,
+        date: dayLabel,
         real: team.real,
         meta: team.meta,
       };
     });
-  }, [hasTeamResults, teamMonthlyData, data]);
+  }, [hasTeamResults, teamDailyData]);
 
   // Also build training-only view with team results overlay per month
   const mergedChartData = useMemo(() => {
