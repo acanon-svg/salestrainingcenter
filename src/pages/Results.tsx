@@ -61,16 +61,16 @@ const Results: React.FC = () => {
         </div>
 
         {isCreatorOrAdmin ? (
-          <Tabs defaultValue="upload">
+          <Tabs defaultValue="view">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <TabsList>
-                <TabsTrigger value="upload" className="gap-2">
-                  <Upload className="h-4 w-4" />
-                  Cargar Resultados
-                </TabsTrigger>
                 <TabsTrigger value="view" className="gap-2">
                   <BarChart3 className="h-4 w-4" />
                   Ver Resultados
+                </TabsTrigger>
+                <TabsTrigger value="upload" className="gap-2">
+                  <Upload className="h-4 w-4" />
+                  Cargar Resultados
                 </TabsTrigger>
               </TabsList>
               <Button
@@ -88,12 +88,12 @@ const Results: React.FC = () => {
                 Sincronizar ahora
               </Button>
             </div>
-            <TabsContent value="upload" className="mt-6">
-              <TeamResultsUpload />
-            </TabsContent>
             <TabsContent value="view" className="mt-6 space-y-8">
               <ResultsSection showTeamChart showTimePeriodFilter />
               <ResultsTimelineSection />
+            </TabsContent>
+            <TabsContent value="upload" className="mt-6">
+              <TeamResultsUpload />
             </TabsContent>
           </Tabs>
         ) : isLeader ? (

@@ -32,10 +32,6 @@ const INDICATOR_LABELS: Record<string, string> = {
   gmv: "GMV (USD)",
 };
 
-const MONTH_NAMES = [
-  "Ene", "Feb", "Mar", "Abr", "May", "Jun",
-  "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
-];
 
 export const TrendLineChart: React.FC<TrendLineChartProps> = ({
   data,
@@ -47,17 +43,15 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
   const [indicator, setIndicator] = useState<"firmas" | "originaciones" | "gmv">("firmas");
   const hasTeamResults = teamResults && teamResults.length > 0;
 
-  // Aggregate team results by month
-  const teamMonthlyData = useMemo(() => {
+  // Aggregate team results by day
+  const teamDailyData = useMemo(() => {
     if (!teamResults || teamResults.length === 0) return new Map<string, { real: number; meta: number }>();
 
     const map = new Map<string, { real: number; meta: number }>();
 
     teamResults.forEach((r) => {
       const d = new Date(r.period_date + "T00:00:00");
-      const month = d.getMonth();
-      const year = d.getFullYear();
-      const key = `${MONTH_NAMES[month]} ${year}`;
+      const key = format(d, "dd MMM", { locale: es });
 
       if (!map.has(key)) map.set(key, { real: 0, meta: 0 });
       const entry = map.get(key)!;
@@ -91,33 +85,21 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
     return data;
   }, [data]);
 
-  // Combined chart data by month when team results exist
+  // Combined chart data by day when team results exist
   const combinedChartData = useMemo(() => {
     if (!hasTeamResults) return null;
 
-    // Aggregate training data by month too
-    const trainingMonthly = new Map<string, { enrollments: number; completions: number }>();
+    const days = [...teamDailyData.keys()];
 
-    if (data) {
-      data.forEach((point) => {
-        // point.date is formatted like "dd MMM" — we need to map to month
-        // Since we only have partial date info, we'll aggregate all training data by the month label
-        // The training trend data covers `dateRange` days, so let's re-parse from raw
-      });
-    }
-
-    // Build combined from team results months
-    const months = [...teamMonthlyData.keys()];
-
-    return months.map((monthLabel) => {
-      const team = teamMonthlyData.get(monthLabel) || { real: 0, meta: 0 };
+    return days.map((dayLabel) => {
+      const team = teamDailyData.get(dayLabel) || { real: 0, meta: 0 };
       return {
-        date: monthLabel,
+        date: dayLabel,
         real: team.real,
         meta: team.meta,
       };
     });
-  }, [hasTeamResults, teamMonthlyData, data]);
+  }, [hasTeamResults, teamDailyData]);
 
   // Also build training-only view with team results overlay per month
   const mergedChartData = useMemo(() => {
