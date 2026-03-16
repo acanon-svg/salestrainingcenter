@@ -33,7 +33,7 @@ import {
   FileText,
   ChevronDown,
   UserCheck,
-  Building,
+  Eye,
 } from "lucide-react";
 import {
   useOverviewStats,
