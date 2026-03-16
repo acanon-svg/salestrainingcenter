@@ -1463,6 +1463,60 @@ export type Database = {
         }
         Relationships: []
       }
+      hunter_business_metrics: {
+        Row: {
+          cierres_realizados: number
+          created_at: string
+          cumplimiento_firmas: number | null
+          cumplimiento_gmv: number | null
+          cumplimiento_originados: number | null
+          dia_meta: number
+          gmv_usd: number
+          hunter_name: string
+          id: string
+          meta_firmas_mes: number | null
+          meta_gmv_usd_mes: number | null
+          meta_originados_mes: number | null
+          originados: number
+          period_month: string
+          supervisor: string
+        }
+        Insert: {
+          cierres_realizados?: number
+          created_at?: string
+          cumplimiento_firmas?: number | null
+          cumplimiento_gmv?: number | null
+          cumplimiento_originados?: number | null
+          dia_meta?: number
+          gmv_usd?: number
+          hunter_name: string
+          id?: string
+          meta_firmas_mes?: number | null
+          meta_gmv_usd_mes?: number | null
+          meta_originados_mes?: number | null
+          originados?: number
+          period_month: string
+          supervisor: string
+        }
+        Update: {
+          cierres_realizados?: number
+          created_at?: string
+          cumplimiento_firmas?: number | null
+          cumplimiento_gmv?: number | null
+          cumplimiento_originados?: number | null
+          dia_meta?: number
+          gmv_usd?: number
+          hunter_name?: string
+          id?: string
+          meta_firmas_mes?: number | null
+          meta_gmv_usd_mes?: number | null
+          meta_originados_mes?: number | null
+          originados?: number
+          period_month?: string
+          supervisor?: string
+        }
+        Relationships: []
+      }
       impersonation_audit_log: {
         Row: {
           created_at: string
