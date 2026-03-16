@@ -32,10 +32,6 @@ const INDICATOR_LABELS: Record<string, string> = {
   gmv: "GMV (USD)",
 };
 
-const MONTH_NAMES = [
-  "Ene", "Feb", "Mar", "Abr", "May", "Jun",
-  "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
-];
 
 export const TrendLineChart: React.FC<TrendLineChartProps> = ({
   data,
