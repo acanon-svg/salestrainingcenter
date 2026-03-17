@@ -85,7 +85,7 @@ const ImpactDashboard: React.FC = () => {
         ) : (
           <>
             {/* Quick stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <Card>
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-3">
@@ -105,7 +105,7 @@ const ImpactDashboard: React.FC = () => {
                       <p className="text-2xl font-bold">
                         {users.length > 0 ? Math.round(users.reduce((s, u) => s + u.modules_completed, 0) / users.length) : 0}
                       </p>
-                      <p className="text-xs text-muted-foreground">Promedio módulos completados</p>
+                      <p className="text-xs text-muted-foreground">Prom. módulos completados</p>
                     </div>
                   </div>
                 </CardContent>
@@ -118,7 +118,7 @@ const ImpactDashboard: React.FC = () => {
                       <p className="text-2xl font-bold">
                         {users.length > 0 ? Math.round(users.reduce((s, u) => s + u.quiz_avg_score, 0) / users.length) : 0}%
                       </p>
-                      <p className="text-xs text-muted-foreground">Promedio quiz score</p>
+                      <p className="text-xs text-muted-foreground">Prom. quiz score</p>
                     </div>
                   </div>
                 </CardContent>
@@ -131,7 +131,20 @@ const ImpactDashboard: React.FC = () => {
                       <p className="text-2xl font-bold">
                         {users.length > 0 ? Math.round(users.reduce((s, u) => s + u.days_active, 0) / users.length) : 0}
                       </p>
-                      <p className="text-xs text-muted-foreground">Promedio días activos</p>
+                      <p className="text-xs text-muted-foreground">Prom. días activos</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <Activity className="h-5 w-5 text-primary" />
+                    <div>
+                      <p className="text-2xl font-bold">
+                        {users.length > 0 ? Math.round(users.reduce((s, u) => s + u.engagement_score, 0) / users.length) : 0}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Prom. engagement score</p>
                     </div>
                   </div>
                 </CardContent>
