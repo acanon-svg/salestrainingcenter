@@ -178,7 +178,34 @@ const ImpactDashboard: React.FC = () => {
 
             <Separator />
 
-            {/* Question 2 */}
+            {/* Question 2: Engagement vs Results */}
+            <div>
+              <h2 className="text-lg font-semibold mb-1">¿Los usuarios más activos en la plataforma tienen mejores resultados?</h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Correlación entre nivel de engagement (días activos, visitas, tiempo) y KPIs de negocio
+              </p>
+              <EngagementCorrelationPanel
+                users={users}
+                onExport={() => exportCSV(users.map(u => ({
+                  Nombre: u.user_name,
+                  Email: u.user_email,
+                  Equipo: u.team,
+                  "Engagement Score": u.engagement_score,
+                  "Días activos": u.days_active,
+                  "Total visitas": u.total_visits,
+                  "Tiempo total (min)": u.total_time_minutes,
+                  "Secciones visitadas": u.sections_visited,
+                  "Firmas promedio/mes": u.signatures_month,
+                  "GMV promedio/mes": u.gmv_month,
+                  "Cumplimiento Firmas %": u.cumplimiento_firmas,
+                  "Cumplimiento GMV %": u.cumplimiento_gmv,
+                })), "engagement-correlation")}
+              />
+            </div>
+
+            <Separator />
+
+            {/* Question 3 */}
             <div>
               <h2 className="text-lg font-semibold mb-1">¿Qué funcionalidades de la plataforma se usan realmente?</h2>
               <p className="text-sm text-muted-foreground mb-4">
