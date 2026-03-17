@@ -39,22 +39,19 @@ serve(async (req) => {
       if (user) {
         userId = user.id;
 
-        // Fetch user roles
-        const { data: userRoles } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id);
+        // Fetch user roles, profile, enrollments in parallel
+        const [rolesRes, profileRes, enrollmentsRes, quizRes, coursesRes] = await Promise.all([
+          supabase.from("user_roles").select("role").eq("user_id", user.id),
+          supabase.from("profiles").select("full_name, email, points, badges_count, team, regional, company_role").eq("user_id", user.id).single(),
+          supabase.from("course_enrollments").select("status, progress_percentage, score, completed_at, courses(title)").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(10),
+          supabase.from("quiz_attempts").select("score, passed, completed_at, quizzes(title)").eq("user_id", user.id).order("completed_at", { ascending: false }).limit(10),
+          supabase.from("courses").select("title").eq("status", "published").limit(100),
+        ]);
 
-        const roles = (userRoles || []).map((r: any) => r.role);
+        const roles = (rolesRes.data || []).map((r: any) => r.role);
         isAdmin = roles.includes("admin");
         isCreator = roles.includes("creator");
-
-        // Fetch profile
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("full_name, email, points, badges_count, team, regional, company_role")
-          .eq("user_id", user.id)
-          .single();
+        const profile = profileRes.data;
 
         userTeam = profile?.team || null;
         userFullName = profile?.full_name || profile?.email || "Usuario";
@@ -73,44 +70,23 @@ serve(async (req) => {
           }
         }
 
-        // Fetch enrollments with course titles
-        const { data: enrollments } = await supabase
-          .from("course_enrollments")
-          .select("status, progress_percentage, score, completed_at, courses(title)")
-          .eq("user_id", user.id)
-          .order("updated_at", { ascending: false })
-          .limit(10);
+        existingCourseTitles = (coursesRes.data || []).map((c: any) => c.title);
 
-        // Fetch quiz attempts
-        const { data: quizAttempts } = await supabase
-          .from("quiz_attempts")
-          .select("score, passed, completed_at, quizzes(title)")
-          .eq("user_id", user.id)
-          .order("completed_at", { ascending: false })
-          .limit(10);
+        const enrollments = enrollmentsRes.data || [];
+        const quizAttempts = quizRes.data || [];
 
-        // Fetch existing published course titles
-        const { data: publishedCourses } = await supabase
-          .from("courses")
-          .select("title")
-          .eq("status", "published")
-          .limit(100);
-
-        existingCourseTitles = (publishedCourses || []).map((c: any) => c.title);
-
-        // Build context summary
-        const enrollmentSummary = (enrollments || []).map((e: any) => {
+        const enrollmentSummary = enrollments.map((e: any) => {
           const title = e.courses?.title || "Sin título";
           return `- ${title}: ${e.status}, progreso ${e.progress_percentage}%${e.score != null ? `, nota ${e.score}` : ""}`;
         }).join("\n");
 
-        const quizSummary = (quizAttempts || []).map((q: any) => {
+        const quizSummary = quizAttempts.map((q: any) => {
           const title = q.quizzes?.title || "Sin título";
           return `- ${title}: ${q.passed ? "Aprobado" : "No aprobado"}, nota ${q.score}%`;
         }).join("\n");
 
-        const completed = (enrollments || []).filter((e: any) => e.status === "completed").length;
-        const inProgress = (enrollments || []).filter((e: any) => e.status !== "completed").length;
+        const completed = enrollments.filter((e: any) => e.status === "completed").length;
+        const inProgress = enrollments.filter((e: any) => e.status !== "completed").length;
 
         userContext = `
 CONTEXTO DEL USUARIO:
@@ -225,7 +201,7 @@ ${userContext}`;
       });
     }
 
-    // First AI call with tool definition
+    // Single AI call — non-streaming to handle potential tool calls
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -233,7 +209,7 @@ ${userContext}`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
           ...messages,
@@ -271,7 +247,6 @@ ${userContext}`;
 
       const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
-      // Find all admin/creator users to notify
       const { data: adminRoles } = await supabaseAdmin
         .from("user_roles")
         .select("user_id")
@@ -279,7 +254,6 @@ ${userContext}`;
 
       const adminUserIds = [...new Set((adminRoles || []).map((r: any) => r.user_id))];
 
-      // Insert notification for each admin
       for (const adminId of adminUserIds) {
         await supabaseAdmin.from("notifications").insert({
           user_id: adminId,
@@ -291,7 +265,6 @@ ${userContext}`;
         });
       }
 
-      // Return text-only response — no course content in chat
       return new Response(JSON.stringify({
         type: "text",
         content: `✅ ¡Listo! He enviado tu solicitud al administrador. Le notifiqué que necesitas un curso sobre **"${topic}"**. Te avisaré cuando esté disponible. 💪`,
@@ -320,11 +293,9 @@ ${userContext}`;
         avanzado: "avanzado",
       };
 
-      // Return confirmation immediately — course generation happens in background
-      // We use a fire-and-forget pattern: return the text response first
       const confirmationMessage = `✅ Entendido. Voy a generar el curso **"${topic}"** para el segmento **${segment}**.\n\n📩 Lo encontrarás listo para revisar en tus **notificaciones** en unos segundos. Una vez lo apruebes, quedará disponible para asignar.`;
 
-      // Start async course generation (fire-and-forget)
+      // Fire and forget async course generation
       const generateCourseAsync = async () => {
         try {
           console.log(`Generating course async: "${topic}" for segment "${segment}"`);
@@ -485,7 +456,6 @@ Incluye módulos prácticos con contenido extenso, ejemplos y evaluación.`,
 
           console.log("Course created:", course.id);
 
-          // Insert materials
           let materialsInserted = 0;
           if (courseContent.materials?.length > 0) {
             const materialsToInsert = courseContent.materials.map((m: any, idx: number) => ({
@@ -503,7 +473,6 @@ Incluye módulos prácticos con contenido extenso, ejemplos y evaluación.`,
             else materialsInserted = materialsToInsert.length;
           }
 
-          // Insert quiz
           let questionsInserted = 0;
           if (courseContent.quiz_questions?.length > 0) {
             const { data: quiz, error: quizError } = await supabaseAdmin
@@ -535,7 +504,6 @@ Incluye módulos prácticos con contenido extenso, ejemplos y evaluación.`,
 
           console.log(`Course creation complete: ${materialsInserted} materials, ${questionsInserted} questions`);
 
-          // Send notification to the admin who requested it
           await supabaseAdmin.from("notifications").insert({
             user_id: userId,
             title: "📚 Nuevo curso listo para revisión",
@@ -551,10 +519,8 @@ Incluye módulos prácticos con contenido extenso, ejemplos y evaluación.`,
         }
       };
 
-      // Fire and forget — don't await
       generateCourseAsync();
 
-      // Return immediate confirmation — no course content in chat
       return new Response(JSON.stringify({
         type: "text",
         content: confirmationMessage,
@@ -563,34 +529,26 @@ Incluye módulos prácticos con contenido extenso, ejemplos y evaluación.`,
       });
     }
 
-    // No tool call — regular streaming response
-    const streamResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...messages,
-        ],
-        stream: true,
-      }),
-    });
-
-    if (!streamResponse.ok) {
-      const t = await streamResponse.text();
-      console.error("Stream error:", streamResponse.status, t);
-      return new Response(JSON.stringify({ error: "Error al conectar con la IA" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // No tool call — return the text content directly from the single call
+    const textContent = choice?.message?.content || "";
+    
+    if (textContent) {
+      return new Response(JSON.stringify({
+        type: "text",
+        content: textContent,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    return new Response(streamResponse.body, {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+    // Fallback if somehow no content
+    return new Response(JSON.stringify({
+      type: "text",
+      content: "Lo siento, no pude generar una respuesta. Intenta de nuevo. 🙏",
+    }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+
   } catch (e) {
     console.error("ai-training-bot error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Error desconocido" }), {
