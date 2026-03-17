@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Bot, X, Minimize2, Maximize2, Send, Sparkles, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChatbotConfig } from "@/hooks/useChatbotConfig";
+import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
 
 type Msg = { role: "user" | "assistant"; content: string };
