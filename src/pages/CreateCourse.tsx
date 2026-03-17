@@ -36,6 +36,7 @@ import {
   UserPlus,
   Search,
   Timer,
+  Sparkles,
 } from "lucide-react";
 import { dimensionLabels, difficultyLabels, TrainingDimension, DifficultyLevel } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
