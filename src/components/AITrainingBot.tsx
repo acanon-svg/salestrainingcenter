@@ -199,7 +199,7 @@ export const AITrainingBot: React.FC = () => {
         aria-label="Abrir asistente de entrenamiento"
       >
         <Bot className="h-5 w-5" />
-        <span className="text-sm font-medium hidden sm:inline">Asistente IA</span>
+        <span className="text-sm font-medium hidden sm:inline">Andy IA</span>
         <span className="relative flex h-2.5 w-2.5">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
           <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
@@ -213,7 +213,7 @@ export const AITrainingBot: React.FC = () => {
     return (
       <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-primary-foreground shadow-lg">
         <Bot className="h-5 w-5" />
-        <span className="text-sm font-medium">Asistente IA</span>
+        <span className="text-sm font-medium">Andy IA</span>
         <button onClick={() => setIsMinimized(false)} className="ml-1 hover:opacity-80">
           <Maximize2 className="h-4 w-4" />
         </button>
