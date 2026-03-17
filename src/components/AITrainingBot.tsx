@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Bot, X, Minimize2, Maximize2, Send, Sparkles, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChatbotConfig } from "@/hooks/useChatbotConfig";
+import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
 
 type Msg = { role: "user" | "assistant"; content: string };
@@ -58,11 +59,15 @@ export const AITrainingBot: React.FC = () => {
     }));
 
     try {
+      // Get the user's actual JWT for proper auth context
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ messages: apiMessages }),
       });
@@ -72,105 +77,17 @@ export const AITrainingBot: React.FC = () => {
         throw new Error(errorData?.error || "Error al conectar con el asistente");
       }
 
-      const contentType = resp.headers.get("Content-Type") || "";
+      const data = await resp.json();
 
-      if (contentType.includes("application/json")) {
-        const data = await resp.json();
-
-        if (data.type === "text" && data.content) {
-          setMessages((prev) => [
-            ...prev,
-            { role: "assistant", content: data.content },
-          ]);
-        } else if (data.error) {
-          throw new Error(data.error);
-        } else {
-          // Fallback for any other JSON response
-          const content = data.content || data.message || "Respuesta recibida.";
-          setMessages((prev) => [
-            ...prev,
-            { role: "assistant", content },
-          ]);
-        }
-      } else {
-        // SSE streaming response
-        if (!resp.body) throw new Error("No response body");
-
-        let assistantSoFar = "";
-
-        const upsertAssistant = (chunk: string) => {
-          assistantSoFar += chunk;
-          setMessages((prev) => {
-            const last = prev[prev.length - 1];
-            if (last?.role === "assistant") {
-              return prev.map((m, i) =>
-                i === prev.length - 1 ? { ...m, content: assistantSoFar } : m
-              );
-            }
-            return [...prev, { role: "assistant", content: assistantSoFar }];
-          });
-        };
-
-        const reader = resp.body.getReader();
-        const decoder = new TextDecoder();
-        let textBuffer = "";
-        let streamDone = false;
-
-        while (!streamDone) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          textBuffer += decoder.decode(value, { stream: true });
-
-          let newlineIndex: number;
-          while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
-            let line = textBuffer.slice(0, newlineIndex);
-            textBuffer = textBuffer.slice(newlineIndex + 1);
-
-            if (line.endsWith("\r")) line = line.slice(0, -1);
-            if (line.startsWith(":") || line.trim() === "") continue;
-            if (!line.startsWith("data: ")) continue;
-
-            const jsonStr = line.slice(6).trim();
-            if (jsonStr === "[DONE]") {
-              streamDone = true;
-              break;
-            }
-
-            try {
-              const parsed = JSON.parse(jsonStr);
-              const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-              if (content) upsertAssistant(content);
-            } catch {
-              textBuffer = line + "\n" + textBuffer;
-              break;
-            }
-          }
-        }
-
-        // Final flush
-        if (textBuffer.trim()) {
-          for (let raw of textBuffer.split("\n")) {
-            if (!raw) continue;
-            if (raw.endsWith("\r")) raw = raw.slice(0, -1);
-            if (raw.startsWith(":") || raw.trim() === "") continue;
-            if (!raw.startsWith("data: ")) continue;
-            const jsonStr = raw.slice(6).trim();
-            if (jsonStr === "[DONE]") continue;
-            try {
-              const parsed = JSON.parse(jsonStr);
-              const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-              if (content) upsertAssistant(content);
-            } catch { /* ignore */ }
-          }
-        }
-
-        if (!assistantSoFar) {
-          setMessages((prev) => [
-            ...prev,
-            { role: "assistant", content: "Lo siento, no pude generar una respuesta. Intenta de nuevo." },
-          ]);
-        }
+      if (data.error) {
+        throw new Error(data.error);
       }
+
+      const content = data.content || data.message || "Respuesta recibida.";
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content },
+      ]);
     } catch (e) {
       console.error("AITrainingBot error:", e);
       setMessages((prev) => [
