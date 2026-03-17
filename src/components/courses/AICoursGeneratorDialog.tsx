@@ -1,10 +1,11 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Sparkles, Loader2, CheckCircle2, BookOpen, HelpCircle, FileText, Plus, Trash2, ArrowRight, ArrowLeft, Link, Globe, Upload, File } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Sparkles, Loader2, CheckCircle2, BookOpen, HelpCircle, FileText, Plus, Trash2, ArrowRight, ArrowLeft, Globe, Upload, File, Search, Layers, PenTool, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -18,6 +19,13 @@ interface MaterialInput {
   fileName?: string;
 }
 
+const PROGRESS_STAGES = [
+  { label: "Buscando fuentes externas...", icon: Search, progress: 15 },
+  { label: "Estructurando el curso...", icon: Layers, progress: 40 },
+  { label: "Generando contenido de módulos...", icon: PenTool, progress: 70 },
+  { label: "Guardando curso...", icon: Save, progress: 90 },
+];
+
 export const AICourseGeneratorDialog: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -26,17 +34,29 @@ export const AICourseGeneratorDialog: React.FC = () => {
     { id: crypto.randomUUID(), title: "", type: "text", content: "" },
   ]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [progressStage, setProgressStage] = useState(0);
   const [result, setResult] = useState<any>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const progressInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
+  // Progress stage cycling
+  useEffect(() => {
+    if (isGenerating) {
+      setProgressStage(0);
+      progressInterval.current = setInterval(() => {
+        setProgressStage((prev) => (prev < PROGRESS_STAGES.length - 1 ? prev + 1 : prev));
+      }, 15000);
+    } else {
+      if (progressInterval.current) clearInterval(progressInterval.current);
+    }
+    return () => { if (progressInterval.current) clearInterval(progressInterval.current); };
+  }, [isGenerating]);
+
   const addMaterial = () => {
-    setMaterials((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), title: "", type: "text", content: "" },
-    ]);
+    setMaterials((prev) => [...prev, { id: crypto.randomUUID(), title: "", type: "text", content: "" }]);
   };
 
   const removeMaterial = (id: string) => {
@@ -45,52 +65,28 @@ export const AICourseGeneratorDialog: React.FC = () => {
   };
 
   const updateMaterial = (id: string, field: keyof MaterialInput, value: string) => {
-    setMaterials((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, [field]: value } : m))
-    );
+    setMaterials((prev) => prev.map((m) => (m.id === id ? { ...m, [field]: value } : m)));
   };
 
   const handleFileUpload = async (materialId: string, file: globalThis.File) => {
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
       toast({ title: "Error", description: "El archivo debe ser menor a 10MB.", variant: "destructive" });
       return;
     }
-
-    const allowedTypes = [
-      "text/plain", "text/csv", "text/markdown",
-      "application/pdf",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "application/msword",
-    ];
     const isText = file.type.startsWith("text/") || file.name.endsWith(".md") || file.name.endsWith(".txt") || file.name.endsWith(".csv") || file.name.endsWith(".html") || file.name.endsWith(".htm");
-
     if (isText) {
       const text = await file.text();
-      setMaterials((prev) =>
-        prev.map((m) => m.id === materialId ? { ...m, content: text, fileName: file.name, title: m.title || file.name } : m)
-      );
+      setMaterials((prev) => prev.map((m) => m.id === materialId ? { ...m, content: text, fileName: file.name, title: m.title || file.name } : m));
       toast({ title: "Archivo cargado", description: `"${file.name}" fue leído correctamente.` });
-    } else if (allowedTypes.includes(file.type)) {
-      // Read as base64 for non-text files and send to edge function for parsing
+    } else {
       const reader = new FileReader();
       reader.onload = () => {
         const base64 = (reader.result as string).split(",")[1];
-        setMaterials((prev) =>
-          prev.map((m) => m.id === materialId ? { 
-            ...m, 
-            content: `[ARCHIVO: ${file.name}]\n\nContenido del archivo en base64 (el sistema lo procesará automáticamente):\n${base64.substring(0, 50000)}`,
-            fileName: file.name,
-            title: m.title || file.name 
-          } : m)
-        );
+        setMaterials((prev) => prev.map((m) => m.id === materialId ? { ...m, content: `[ARCHIVO: ${file.name}]\n${base64.substring(0, 50000)}`, fileName: file.name, title: m.title || file.name } : m));
         toast({ title: "Archivo cargado", description: `"${file.name}" fue adjuntado correctamente.` });
       };
       reader.readAsDataURL(file);
-    } else {
-      toast({ title: "Formato no soportado", description: "Usa archivos TXT, CSV, MD, HTML, PDF, DOCX, PPTX o XLSX.", variant: "destructive" });
     }
   };
 
@@ -100,25 +96,19 @@ export const AICourseGeneratorDialog: React.FC = () => {
       return;
     }
 
-    // Validate materials have content
-    const validMaterials = materials.filter((m) => m.content.trim());
-    if (validMaterials.length === 0) {
-      toast({ title: "Error", description: "Agrega al menos un material o recurso de contenido.", variant: "destructive" });
-      return;
-    }
-
     setIsGenerating(true);
     setResult(null);
 
     try {
+      const validMaterials = materials.filter((m) => m.content.trim());
       const { data, error } = await supabase.functions.invoke("create-ai-course", {
         body: {
           prompt: prompt.trim(),
-          provided_materials: validMaterials.map((m) => ({
+          provided_materials: validMaterials.length > 0 ? validMaterials.map((m) => ({
             title: m.title || "Material sin título",
             type: m.type,
             content: m.content,
-          })),
+          })) : undefined,
         },
       });
 
@@ -129,18 +119,10 @@ export const AICourseGeneratorDialog: React.FC = () => {
       setStep(3);
       queryClient.invalidateQueries({ queryKey: ["creator-courses"] });
       queryClient.invalidateQueries({ queryKey: ["courses"] });
-
-      toast({
-        title: "¡Curso generado exitosamente!",
-        description: `"${data.title}" fue creado como borrador.`,
-      });
+      toast({ title: "¡Curso generado exitosamente!", description: `"${data.title}" fue creado como borrador.` });
     } catch (err: any) {
       console.error("AI course generation error:", err);
-      toast({
-        title: "Error al generar curso",
-        description: err.message || "Intenta de nuevo más tarde.",
-        variant: "destructive",
-      });
+      toast({ title: "Error al generar curso", description: err.message || "Intenta de nuevo más tarde.", variant: "destructive" });
     } finally {
       setIsGenerating(false);
     }
@@ -162,7 +144,6 @@ export const AICourseGeneratorDialog: React.FC = () => {
   };
 
   const canProceedToStep2 = prompt.trim().length > 0;
-  const canGenerate = materials.some((m) => m.content.trim());
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); else setOpen(true); }}>
@@ -180,7 +161,7 @@ export const AICourseGeneratorDialog: React.FC = () => {
           </DialogTitle>
           <DialogDescription>
             {step === 1 && "Paso 1: Describe el curso que necesitas."}
-            {step === 2 && "Paso 2: Agrega los materiales y recursos que la IA usará para crear el contenido."}
+            {step === 2 && "Paso 2: Materiales opcionales para enriquecer el contenido."}
             {step === 3 && "¡Curso generado exitosamente!"}
           </DialogDescription>
         </DialogHeader>
@@ -189,16 +170,14 @@ export const AICourseGeneratorDialog: React.FC = () => {
         <div className="flex items-center gap-2 mb-2">
           {[1, 2, 3].map((s) => (
             <div key={s} className="flex items-center gap-1">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-                step >= s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-              }`}>
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${step >= s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
                 {s === 3 && step === 3 ? "✓" : s}
               </div>
               {s < 3 && <div className={`w-8 h-0.5 ${step > s ? "bg-primary" : "bg-muted"}`} />}
             </div>
           ))}
           <span className="text-xs text-muted-foreground ml-2">
-            {step === 1 ? "Descripción" : step === 2 ? "Materiales" : "Resultado"}
+            {step === 1 ? "Descripción" : step === 2 ? "Materiales (opcional)" : "Resultado"}
           </span>
         </div>
 
@@ -230,20 +209,21 @@ export const AICourseGeneratorDialog: React.FC = () => {
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={handleClose}>Cancelar</Button>
               <Button onClick={() => setStep(2)} disabled={!canProceedToStep2} className="gap-2">
-                Siguiente: Agregar Materiales
+                Siguiente: Materiales (opcional)
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </div>
           </div>
         )}
 
-        {/* Step 2: Materials */}
+        {/* Step 2: Materials (Optional) */}
         {step === 2 && (
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Agrega el contenido que la IA utilizará como base para crear los módulos, materiales y quiz del curso. 
-              Puedes pegar texto directamente o agregar URLs de documentos/recursos.
-            </p>
+            <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
+              <p className="text-sm text-foreground">
+                🔍 <strong>La IA buscará fuentes externas automáticamente.</strong> Puedes enriquecer el resultado agregando tus propios materiales (opcional).
+              </p>
+            </div>
 
             <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-1">
               {materials.map((material, index) => (
@@ -251,28 +231,13 @@ export const AICourseGeneratorDialog: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Material {index + 1}</span>
                     <div className="flex items-center gap-1">
-                      <Button
-                        variant={material.type === "text" ? "default" : "outline"}
-                        size="sm"
-                        className="h-7 text-xs gap-1"
-                        onClick={() => updateMaterial(material.id, "type", "text")}
-                      >
+                      <Button variant={material.type === "text" ? "default" : "outline"} size="sm" className="h-7 text-xs gap-1" onClick={() => updateMaterial(material.id, "type", "text")}>
                         <FileText className="w-3 h-3" /> Texto
                       </Button>
-                      <Button
-                        variant={material.type === "url" ? "default" : "outline"}
-                        size="sm"
-                        className="h-7 text-xs gap-1"
-                        onClick={() => updateMaterial(material.id, "type", "url")}
-                      >
+                      <Button variant={material.type === "url" ? "default" : "outline"} size="sm" className="h-7 text-xs gap-1" onClick={() => updateMaterial(material.id, "type", "url")}>
                         <Globe className="w-3 h-3" /> URL
                       </Button>
-                      <Button
-                        variant={material.type === "file" ? "default" : "outline"}
-                        size="sm"
-                        className="h-7 text-xs gap-1"
-                        onClick={() => updateMaterial(material.id, "type", "file")}
-                      >
+                      <Button variant={material.type === "file" ? "default" : "outline"} size="sm" className="h-7 text-xs gap-1" onClick={() => updateMaterial(material.id, "type", "file")}>
                         <Upload className="w-3 h-3" /> Archivo
                       </Button>
                       {materials.length > 1 && (
@@ -283,60 +248,23 @@ export const AICourseGeneratorDialog: React.FC = () => {
                     </div>
                   </div>
 
-                  <Input
-                    placeholder="Título del material (opcional)"
-                    value={material.title}
-                    onChange={(e) => updateMaterial(material.id, "title", e.target.value)}
-                    className="h-8 text-sm"
-                  />
+                  <Input placeholder="Título del material (opcional)" value={material.title} onChange={(e) => updateMaterial(material.id, "title", e.target.value)} className="h-8 text-sm" />
 
                   {material.type === "text" ? (
-                    <Textarea
-                      placeholder="Pega aquí el contenido del material: texto de documentos, guías, manuales, información del producto, procesos, etc."
-                      value={material.content}
-                      onChange={(e) => updateMaterial(material.id, "content", e.target.value)}
-                      rows={4}
-                      className="resize-none text-sm"
-                    />
+                    <Textarea placeholder="Pega aquí el contenido del material..." value={material.content} onChange={(e) => updateMaterial(material.id, "content", e.target.value)} rows={4} className="resize-none text-sm" />
                   ) : material.type === "url" ? (
-                    <Input
-                      placeholder="URL del recurso (Google Docs, página web, etc.)"
-                      value={material.content}
-                      onChange={(e) => updateMaterial(material.id, "content", e.target.value)}
-                      className="h-8 text-sm"
-                    />
+                    <Input placeholder="URL del recurso (Google Docs, página web, etc.)" value={material.content} onChange={(e) => updateMaterial(material.id, "content", e.target.value)} className="h-8 text-sm" />
                   ) : (
                     <div className="space-y-2">
-                      <input
-                        ref={(el) => { fileInputRefs.current[material.id] = el; }}
-                        type="file"
-                        accept=".txt,.csv,.md,.html,.htm,.pdf,.docx,.pptx,.xlsx,.doc"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleFileUpload(material.id, file);
-                          e.target.value = "";
-                        }}
-                      />
+                      <input ref={(el) => { fileInputRefs.current[material.id] = el; }} type="file" accept=".txt,.csv,.md,.html,.htm,.pdf,.docx,.pptx,.xlsx,.doc" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(material.id, file); e.target.value = ""; }} />
                       {material.fileName ? (
                         <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 border border-border">
                           <File className="w-4 h-4 text-primary shrink-0" />
                           <span className="text-sm truncate flex-1">{material.fileName}</span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 text-xs"
-                            onClick={() => fileInputRefs.current[material.id]?.click()}
-                          >
-                            Cambiar
-                          </Button>
+                          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => fileInputRefs.current[material.id]?.click()}>Cambiar</Button>
                         </div>
                       ) : (
-                        <Button
-                          variant="outline"
-                          className="w-full border-dashed border-2 h-16 flex flex-col gap-1"
-                          onClick={() => fileInputRefs.current[material.id]?.click()}
-                        >
+                        <Button variant="outline" className="w-full border-dashed border-2 h-16 flex flex-col gap-1" onClick={() => fileInputRefs.current[material.id]?.click()}>
                           <Upload className="w-4 h-4" />
                           <span className="text-xs">Seleccionar archivo (TXT, CSV, MD, PDF, DOCX, PPTX, XLSX)</span>
                         </Button>
@@ -351,46 +279,35 @@ export const AICourseGeneratorDialog: React.FC = () => {
               <Plus className="w-4 h-4" /> Agregar otro material
             </Button>
 
-            <div className="bg-muted/50 rounded-lg p-3">
-              <p className="text-xs text-muted-foreground">
-                📌 La IA usará estos materiales para estructurar los módulos del curso, generar contenido educativo enriquecido y crear preguntas de evaluación relevantes. Entre más información proporciones, mejor será el resultado.
-              </p>
-            </div>
-
             <div className="flex justify-between gap-2">
               <Button variant="outline" onClick={() => setStep(1)} className="gap-2" disabled={isGenerating}>
                 <ArrowLeft className="w-4 h-4" /> Atrás
               </Button>
-              <Button onClick={handleGenerate} disabled={isGenerating || !canGenerate} className="gap-2">
+              <Button onClick={handleGenerate} disabled={isGenerating} className="gap-2">
                 {isGenerating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Generando curso...
-                  </>
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Generando...</>
                 ) : (
-                  <>
-                    <Sparkles className="w-4 h-4" />
-                    Generar Curso con IA
-                  </>
+                  <><Sparkles className="w-4 h-4" /> Generar Curso con IA</>
                 )}
               </Button>
             </div>
 
             {isGenerating && (
-              <div className="text-center space-y-2 py-2">
-                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Esto puede tomar 30-60 segundos...
+              <div className="space-y-3 py-2">
+                <Progress value={PROGRESS_STAGES[progressStage]?.progress || 10} className="h-2" />
+                <div className="flex items-center justify-center gap-2 text-sm text-primary font-medium">
+                  {React.createElement(PROGRESS_STAGES[progressStage]?.icon || Loader2, { className: "w-4 h-4 animate-pulse" })}
+                  {PROGRESS_STAGES[progressStage]?.label}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  La IA está analizando tus materiales y creando contenido, quiz e imagen de portada
+                <p className="text-xs text-center text-muted-foreground">
+                  Esto puede tomar 1-2 minutos. La IA está buscando fuentes y generando contenido completo.
                 </p>
               </div>
             )}
           </div>
         )}
 
-        {/* Step 3: Result */}
+        {/* Step 3: Result with module previews */}
         {step === 3 && result && (
           <div className="space-y-4">
             <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-4 space-y-3">
@@ -400,20 +317,26 @@ export const AICourseGeneratorDialog: React.FC = () => {
               </div>
               <p className="text-sm font-medium text-foreground">{result.title}</p>
               <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <FileText className="w-3 h-3" />
-                  {result.materials_count} materiales
-                </span>
-                <span className="flex items-center gap-1">
-                  <HelpCircle className="w-3 h-3" />
-                  {result.questions_count} preguntas
-                </span>
-                <span className="flex items-center gap-1">
-                  <BookOpen className="w-3 h-3" />
-                  {result.has_cover_image ? "Con imagen" : "Sin imagen"}
-                </span>
+                <span className="flex items-center gap-1"><FileText className="w-3 h-3" />{result.materials_count} módulos</span>
+                <span className="flex items-center gap-1"><HelpCircle className="w-3 h-3" />{result.questions_count} preguntas</span>
+                <span className="flex items-center gap-1"><BookOpen className="w-3 h-3" />{result.has_cover_image ? "Con imagen" : "Sin imagen"}</span>
               </div>
             </div>
+
+            {/* Module previews */}
+            {result.module_previews && result.module_previews.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">📚 Módulos generados:</p>
+                <div className="space-y-2 max-h-[30vh] overflow-y-auto pr-1">
+                  {result.module_previews.map((mod: any, idx: number) => (
+                    <div key={idx} className="border rounded-lg p-3 bg-muted/30">
+                      <p className="text-sm font-medium text-foreground">{idx + 1}. {mod.title}</p>
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{mod.preview}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <p className="text-sm text-muted-foreground">
               El curso fue guardado como <strong>borrador</strong>. Edítalo para agregar vigencia, equipo objetivo y revisar el contenido generado.
@@ -422,8 +345,7 @@ export const AICourseGeneratorDialog: React.FC = () => {
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={handleClose}>Cerrar</Button>
               <Button onClick={handleViewCourse} className="gap-2">
-                <BookOpen className="w-4 h-4" />
-                Editar Curso
+                <BookOpen className="w-4 h-4" /> Editar Curso
               </Button>
             </div>
           </div>
