@@ -202,21 +202,38 @@ ${userContext}`;
     }
 
     // Single AI call — non-streaming to handle potential tool calls
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...messages,
-        ],
-        tools,
-      }),
-    });
+    const aiController = new AbortController();
+    const aiTimeoutId = setTimeout(() => aiController.abort(), 25000);
+
+    let aiResponse: Response;
+    try {
+      aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: [
+            { role: "system", content: systemPrompt },
+            ...messages,
+          ],
+          tools,
+        }),
+        signal: aiController.signal,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        return new Response(JSON.stringify({ error: "El asistente está tardando más de lo esperado. Intenta nuevamente." }), {
+          status: 504,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      throw error;
+    } finally {
+      clearTimeout(aiTimeoutId);
+    }
 
     if (!aiResponse.ok) {
       if (aiResponse.status === 429) {

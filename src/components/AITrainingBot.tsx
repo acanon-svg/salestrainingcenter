@@ -58,6 +58,9 @@ export const AITrainingBot: React.FC = () => {
       content: m.content,
     }));
 
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 35000);
+
     try {
       // Get the user's actual JWT for proper auth context
       const { data: { session } } = await supabase.auth.getSession();
@@ -70,6 +73,7 @@ export const AITrainingBot: React.FC = () => {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ messages: apiMessages }),
+        signal: controller.signal,
       });
 
       if (!resp.ok) {
@@ -90,14 +94,21 @@ export const AITrainingBot: React.FC = () => {
       ]);
     } catch (e) {
       console.error("AITrainingBot error:", e);
+      const message = e instanceof Error && e.name === "AbortError"
+        ? "La respuesta está tardando demasiado. Intenta de nuevo en unos segundos."
+        : e instanceof Error
+          ? e.message
+          : "Error al conectar con el asistente. Intenta de nuevo.";
+
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: `⚠️ ${e instanceof Error ? e.message : "Error al conectar con el asistente. Intenta de nuevo."}`,
+          content: `⚠️ ${message}`,
         },
       ]);
     } finally {
+      window.clearTimeout(timeoutId);
       setIsLoading(false);
     }
   };
