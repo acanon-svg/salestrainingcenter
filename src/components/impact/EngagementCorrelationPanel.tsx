@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { Info } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -197,6 +198,30 @@ export const EngagementCorrelationPanel: React.FC<Props> = ({ users, onExport })
           <Download className="h-4 w-4 mr-1" /> CSV
         </Button>
       </div>
+
+      {/* Explainer box */}
+      <Card className="border-muted bg-muted/30">
+        <CardContent className="pt-5 pb-4">
+          <div className="flex gap-3">
+            <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground">¿Cómo leer este gráfico?</p>
+              <p>
+                Cada <strong>punto</strong> representa a un hunter. Su posición horizontal indica qué tan activo es en la plataforma
+                (más a la derecha = más uso), y su posición vertical indica su resultado de negocio (más arriba = mejores resultados).
+              </p>
+              <p>
+                Si los puntos forman una <strong>tendencia hacia arriba-derecha</strong>, significa que quienes más usan la plataforma
+                tienden a tener mejores resultados. Si están dispersos sin patrón, no hay relación clara.
+              </p>
+              <p>
+                El valor <strong>r</strong> (coeficiente de correlación) va de -1 a 1: valores cercanos a <strong>1</strong> indican
+                correlación positiva fuerte, cercanos a <strong>0</strong> indican que no hay relación, y negativos indicarían relación inversa.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Scatter Plot */}
       <Card>
