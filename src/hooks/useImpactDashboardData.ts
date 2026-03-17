@@ -14,6 +14,11 @@ export interface UserTrainingData {
   courses_count: number;
   materials_count: number;
   ai_plan_usage: number;
+  // Engagement metrics
+  total_visits: number;
+  total_time_minutes: number;
+  sections_visited: number;
+  engagement_score: number; // composite 0-100
   // Business metrics (real data from hunter_business_metrics)
   signatures_month: number;
   originations_month: number;
