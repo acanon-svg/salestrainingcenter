@@ -203,6 +203,7 @@ const CreateCourse: React.FC = () => {
       title: "",
       type,
       content_url: "",
+      content_text: "",
     };
     setMaterials([...materials, newMaterial]);
   };
