@@ -6,13 +6,144 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// --- Helper: Call Anthropic Claude ---
+async function callClaude(apiKey: string, systemPrompt: string, userPrompt: string, tools?: any[], toolChoice?: any) {
+  const body: any = {
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 16000,
+    system: systemPrompt,
+    messages: [{ role: "user", content: userPrompt }],
+  };
+  if (tools) body.tools = tools;
+  if (toolChoice) body.tool_choice = toolChoice;
+
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": apiKey,
+      "anthropic-version": "2024-01-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    console.error("Claude API error:", res.status, errText);
+    if (res.status === 429) throw new Error("RATE_LIMIT");
+    if (res.status === 402 || res.status === 400) throw new Error("CREDITS_EXHAUSTED");
+    throw new Error(`Claude API error (${res.status})`);
+  }
+  return await res.json();
+}
+
+// --- Helper: Call Lovable AI Gateway (for web search via Gemini) ---
+async function searchWebWithLovable(lovableKey: string, query: string): Promise<string> {
+  try {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${lovableKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "system",
+            content: "Eres un investigador experto. Busca información actualizada, artículos, guías de ventas, documentación oficial y mejores prácticas sobre el tema solicitado. Responde en español con un resumen estructurado de toda la información encontrada, citando fuentes cuando sea posible. Incluye datos concretos, estadísticas y ejemplos reales.",
+          },
+          {
+            role: "user",
+            content: `Investiga a fondo sobre el siguiente tema para crear un curso de capacitación corporativa. Busca múltiples fuentes, artículos recientes, guías y mejores prácticas:\n\n${query}`,
+          },
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "web_search",
+              description: "Search the web for information",
+              parameters: {
+                type: "object",
+                properties: { query: { type: "string" } },
+                required: ["query"],
+              },
+            },
+          },
+        ],
+      }),
+    });
+
+    if (!res.ok) {
+      console.warn("Web search failed, continuing without:", res.status);
+      return "";
+    }
+
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content || "";
+  } catch (err) {
+    console.warn("Web search error, continuing without:", err);
+    return "";
+  }
+}
+
+// --- Helper: Generate cover image ---
+async function generateCoverImage(lovableKey: string, supabase: any, imagePrompt: string): Promise<string | null> {
+  try {
+    const imageResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${lovableKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image",
+        messages: [
+          {
+            role: "user",
+            content: `Create a professional, modern course cover image: ${imagePrompt}. Style: clean corporate training design, vibrant colors, no text overlay.`,
+          },
+        ],
+        modalities: ["image", "text"],
+      }),
+    });
+
+    if (imageResponse.ok) {
+      const imageData = await imageResponse.json();
+      const base64Image = imageData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      if (base64Image) {
+        const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, "");
+        const imageBytes = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0));
+        const fileName = `ai-generated-${Date.now()}.png`;
+        const { error: uploadError } = await supabase.storage
+          .from("course-covers")
+          .upload(fileName, imageBytes, { contentType: "image/png", upsert: true });
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage.from("course-covers").getPublicUrl(fileName);
+          return urlData.publicUrl;
+        }
+      }
+    }
+  } catch (imgErr) {
+    console.warn("Cover image generation failed:", imgErr);
+  }
+  return null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!ANTHROPIC_API_KEY) {
+      return new Response(
+        JSON.stringify({ error: "Anthropic API key no configurada. Agrégala en los secretos del proyecto." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -35,238 +166,173 @@ serve(async (req) => {
     const userRoles = (roles || []).map((r: any) => r.role);
     if (!userRoles.includes("admin") && !userRoles.includes("creator")) {
       return new Response(JSON.stringify({ error: "No autorizado" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const { prompt, provided_materials } = await req.json();
+    const { prompt, provided_materials, single_module_mode } = await req.json();
     if (!prompt || typeof prompt !== "string") {
       throw new Error("Se requiere un prompt para generar el curso");
     }
 
-    // Build materials context from user-provided content
+    // --- SINGLE MODULE MODE: Generate content for one module only ---
+    if (single_module_mode) {
+      console.log("Single module mode - generating content for:", prompt.substring(0, 80));
+
+      let webContext = "";
+      if (LOVABLE_API_KEY) {
+        webContext = await searchWebWithLovable(LOVABLE_API_KEY, prompt);
+      }
+
+      const claudeRes = await callClaude(
+        ANTHROPIC_API_KEY,
+        `Eres un diseñador instruccional experto especializado en capacitación comercial y ventas. Genera contenido educativo de alta calidad en HTML puro (sin markdown). El contenido debe tener mínimo 1200 palabras, ser práctico y orientado a ventas de Addi (fintech de crédito digital en Colombia). Usa etiquetas HTML: <h2>, <h3>, <p>, <ul>, <li>, <ol>, <strong>, <em>, <blockquote>, <table>, <tr>, <td>, <th>. Incluye ejemplos prácticos reales, tips accionables, casos de uso y datos concretos. Responde SOLO con el HTML del contenido, sin explicaciones adicionales.`,
+        `Genera el contenido educativo completo para un módulo sobre:\n\n${prompt}${webContext ? `\n\n=== INFORMACIÓN DE FUENTES EXTERNAS ===\n${webContext}` : ""}`
+      );
+
+      const content = claudeRes.content?.[0]?.text || "";
+      return new Response(
+        JSON.stringify({ success: true, content }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // --- FULL COURSE GENERATION ---
+
+    // Build user-provided materials context
     let materialsContext = "";
     if (provided_materials && Array.isArray(provided_materials) && provided_materials.length > 0) {
       materialsContext = "\n\n=== MATERIALES PROPORCIONADOS POR EL USUARIO ===\n";
       for (const mat of provided_materials) {
         materialsContext += `\n--- ${mat.title || "Material"} (${mat.type === "url" ? "URL: " + mat.content : "Texto"}) ---\n`;
-        if (mat.type === "text") {
-          materialsContext += mat.content + "\n";
-        } else {
-          materialsContext += `Referencia URL: ${mat.content}\n`;
-        }
+        materialsContext += mat.type === "text" ? mat.content + "\n" : `Referencia URL: ${mat.content}\n`;
       }
       materialsContext += "\n=== FIN DE MATERIALES ===\n";
     }
 
-    // Step 1: Generate course structure via AI using provided materials
-    console.log("Generating course with prompt:", prompt.substring(0, 100));
-    console.log("Materials provided:", provided_materials?.length || 0);
+    console.log("=== STEP 1: Web search for sources ===");
+    let webResearchContext = "";
+    if (LOVABLE_API_KEY) {
+      webResearchContext = await searchWebWithLovable(LOVABLE_API_KEY, prompt);
+      console.log("Web research completed, length:", webResearchContext.length);
+    } else {
+      console.warn("LOVABLE_API_KEY not available, skipping web search");
+    }
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: `Eres un diseñador instruccional experto. Genera cursos de capacitación completos y estructurados basándote en el prompt del usuario Y LOS MATERIALES QUE TE PROPORCIONAN. Los cursos deben ser prácticos, con objetivos claros y evaluaciones efectivas. Responde siempre en español.
+    // --- STEP 2: Generate course structure with Claude ---
+    console.log("=== STEP 2: Generating course structure with Claude ===");
 
-REGLAS IMPORTANTES:
-- DEBES usar los materiales proporcionados como BASE para crear el contenido de los módulos
-- Los materiales deben ser de tipo "documento" con contenido HTML rico y visualmente atractivo
-- El contenido de cada material DEBE estar en formato HTML con etiquetas como <h2>, <h3>, <p>, <ul>, <li>, <ol>, <strong>, <em>, <blockquote>, <table>, <tr>, <td>, <th>
-- Cada material debe tener al menos 5-8 secciones bien estructuradas con:
-  * Títulos y subtítulos con <h2> y <h3>
-  * Párrafos explicativos con <p>
-  * Listas de puntos clave con <ul><li> o listas numeradas con <ol><li>
-  * Palabras importantes resaltadas con <strong> o <em>
-  * Citas o datos relevantes con <blockquote>
-  * Tablas comparativas cuando sea apropiado con <table>
-  * Tips o consejos prácticos destacados
-- El contenido debe ser extenso, mínimo 800 palabras por material, con información educativa real y detallada
-- NO uses markdown, SOLO HTML válido
-- El quiz debe tener entre 5 y 10 preguntas variadas (multiple_choice y true_false) basadas en el contenido de los materiales
-- Cada pregunta multiple_choice debe tener exactamente 4 opciones, una correcta
-- Los puntos del curso deben ser entre 50 y 200
-- La duración estimada debe ser razonable (15-120 minutos)
-- Si hay URLs proporcionadas, menciónalas como recursos de referencia en el contenido`,
-          },
-          {
-            role: "user",
-            content: `Genera un curso completo basado en el siguiente prompt:\n\n${prompt}${materialsContext}`,
-          },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "create_course",
-              description: "Crea un curso completo con todos sus componentes",
-              parameters: {
+    const structureTools = [
+      {
+        name: "create_course",
+        description: "Crea la estructura completa de un curso de capacitación",
+        input_schema: {
+          type: "object",
+          properties: {
+            title: { type: "string", description: "Título del curso (máximo 80 caracteres)" },
+            description: { type: "string", description: "Descripción detallada del curso (2-4 oraciones)" },
+            dimension: { type: "string", enum: ["onboarding", "refuerzo", "taller", "entrenamiento"] },
+            difficulty: { type: "string", enum: ["basico", "medio", "avanzado"] },
+            points: { type: "number", description: "Puntos del curso (50-200)" },
+            estimated_duration_minutes: { type: "number" },
+            objectives: { type: "array", items: { type: "string" }, description: "3-5 objetivos de aprendizaje" },
+            cover_image_prompt: { type: "string", description: "Prompt en inglés para imagen de portada" },
+            module_titles: { type: "array", items: { type: "string" }, description: "3-6 títulos de módulos" },
+            module_summaries: { type: "array", items: { type: "string" }, description: "Resumen de cada módulo (1-2 oraciones)" },
+            quiz_questions: {
+              type: "array",
+              items: {
                 type: "object",
                 properties: {
-                  title: { type: "string", description: "Título del curso (máximo 80 caracteres)" },
-                  description: { type: "string", description: "Descripción detallada del curso (2-4 oraciones)" },
-                  dimension: {
-                    type: "string",
-                    enum: ["onboarding", "refuerzo", "taller", "entrenamiento"],
-                    description: "Dimensión del entrenamiento",
-                  },
-                  difficulty: {
-                    type: "string",
-                    enum: ["basico", "medio", "avanzado"],
-                    description: "Nivel de dificultad (basico, medio, avanzado)",
-                  },
-                  points: { type: "number", description: "Puntos del curso (50-200)" },
-                  estimated_duration_minutes: { type: "number", description: "Duración estimada en minutos" },
-                  objectives: {
-                    type: "array",
-                    items: { type: "string" },
-                    description: "3-5 objetivos de aprendizaje",
-                  },
-                  cover_image_prompt: {
-                    type: "string",
-                    description: "Prompt en inglés para generar la imagen de portada del curso. Debe ser descriptivo y profesional, orientado a educación corporativa.",
-                  },
-                  materials: {
+                  question: { type: "string" },
+                  question_type: { type: "string", enum: ["multiple_choice", "true_false"] },
+                  points: { type: "number" },
+                  options: {
                     type: "array",
                     items: {
                       type: "object",
                       properties: {
-                        title: { type: "string", description: "Título del material/módulo" },
-                        content: { type: "string", description: "Contenido educativo completo en formato HTML rico (usa <h2>, <h3>, <p>, <ul>, <li>, <ol>, <strong>, <em>, <blockquote>, <table>). Mínimo 800 palabras con secciones claras, ejemplos prácticos, tips y datos relevantes. DEBE estar basado en los materiales proporcionados. NO uses markdown, SOLO HTML." },
+                        text: { type: "string" },
+                        is_correct: { type: "boolean" },
                       },
-                      required: ["title", "content"],
-                      additionalProperties: false,
+                      required: ["text", "is_correct"],
                     },
-                    description: "3-6 módulos/materiales del curso",
-                  },
-                  quiz_questions: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        question: { type: "string" },
-                        question_type: { type: "string", enum: ["multiple_choice", "true_false"] },
-                        points: { type: "number", description: "Puntos de la pregunta (5-20)" },
-                        options: {
-                          type: "array",
-                          items: {
-                            type: "object",
-                            properties: {
-                              text: { type: "string" },
-                              is_correct: { type: "boolean" },
-                            },
-                            required: ["text", "is_correct"],
-                            additionalProperties: false,
-                          },
-                        },
-                      },
-                      required: ["question", "question_type", "points", "options"],
-                      additionalProperties: false,
-                    },
-                    description: "5-10 preguntas de evaluación basadas en los materiales proporcionados",
                   },
                 },
-                required: ["title", "description", "dimension", "difficulty", "points", "estimated_duration_minutes", "objectives", "cover_image_prompt", "materials", "quiz_questions"],
-                additionalProperties: false,
+                required: ["question", "question_type", "points", "options"],
               },
             },
           },
-        ],
-        tool_choice: { type: "function", function: { name: "create_course" } },
-      }),
-    });
+          required: ["title", "description", "dimension", "difficulty", "points", "estimated_duration_minutes", "objectives", "cover_image_prompt", "module_titles", "module_summaries", "quiz_questions"],
+        },
+      },
+    ];
 
-    if (!aiResponse.ok) {
-      if (aiResponse.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit excedido. Intenta más tarde." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (aiResponse.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos de IA agotados." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const errText = await aiResponse.text();
-      console.error("AI error:", aiResponse.status, errText);
-      throw new Error(`Error al generar el curso con IA (${aiResponse.status})`);
-    }
+    const structureRes = await callClaude(
+      ANTHROPIC_API_KEY,
+      `Eres un diseñador instruccional experto especializado en capacitación comercial para Addi (fintech colombiana de crédito digital). Crea estructuras de cursos prácticos, con objetivos claros y evaluaciones efectivas. Responde siempre en español. Usa la información de fuentes externas y materiales del usuario para crear contenido relevante y actualizado. El quiz debe tener 5-10 preguntas variadas (multiple_choice con 4 opciones, true_false con 2 opciones).`,
+      `Genera la estructura completa del curso basado en:\n\nPROMPT: ${prompt}${webResearchContext ? `\n\n=== INVESTIGACIÓN DE FUENTES EXTERNAS ===\n${webResearchContext}` : ""}${materialsContext}`,
+      structureTools,
+      { type: "tool", name: "create_course" }
+    );
 
-    const aiData = await aiResponse.json();
-    console.log("AI response received, processing tool call...");
-
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) {
-      console.error("No tool call in response:", JSON.stringify(aiData).substring(0, 500));
+    const toolUseBlock = structureRes.content?.find((b: any) => b.type === "tool_use");
+    if (!toolUseBlock) {
+      console.error("No tool_use in Claude response");
       throw new Error("No se recibió respuesta estructurada de la IA");
     }
 
-    const courseContent = JSON.parse(toolCall.function.arguments);
-    console.log("Course content parsed:", courseContent.title);
+    const courseStructure = toolUseBlock.input;
+    console.log("Course structure ready:", courseStructure.title, "Modules:", courseStructure.module_titles?.length);
 
-    // Step 2: Generate cover image
-    let coverImageUrl: string | null = null;
-    try {
-      const imageResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash-image",
-          messages: [
-            {
-              role: "user",
-              content: `Create a professional, modern course cover image: ${courseContent.cover_image_prompt}. Style: clean corporate training design, vibrant colors, no text overlay.`,
-            },
-          ],
-          modalities: ["image", "text"],
-        }),
-      });
+    // --- STEP 3: Generate deep content for each module with Claude ---
+    console.log("=== STEP 3: Generating deep module content ===");
 
-      if (imageResponse.ok) {
-        const imageData = await imageResponse.json();
-        const base64Image = imageData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    const moduleContents: string[] = [];
+    for (let i = 0; i < courseStructure.module_titles.length; i++) {
+      const moduleTitle = courseStructure.module_titles[i];
+      const moduleSummary = courseStructure.module_summaries?.[i] || "";
+      console.log(`Generating module ${i + 1}/${courseStructure.module_titles.length}: ${moduleTitle}`);
 
-        if (base64Image) {
-          const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, "");
-          const imageBytes = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0));
-          const fileName = `ai-generated-${Date.now()}.png`;
+      const moduleRes = await callClaude(
+        ANTHROPIC_API_KEY,
+        `Eres un diseñador instruccional experto. Genera contenido educativo completo en HTML puro (SIN markdown). Requisitos estrictos:
+- Mínimo 1200 palabras de contenido rico y educativo
+- Usa SOLO etiquetas HTML: <h2>, <h3>, <p>, <ul>, <li>, <ol>, <strong>, <em>, <blockquote>, <table>, <tr>, <td>, <th>
+- Incluye mínimo 5-8 secciones bien estructuradas
+- Agrega ejemplos prácticos REALES del contexto de ventas de Addi (fintech de crédito digital en Colombia)
+- Tips accionables y casos de uso concretos
+- Datos y estadísticas cuando sea relevante
+- Referencias a las fuentes encontradas
+- NO uses markdown (ni #, ni **, ni -), SOLO HTML válido
+- NO incluyas <html>, <head>, <body>. Solo el contenido interno.
+- Responde SOLO con el HTML, sin explicaciones.`,
+        `Genera el contenido educativo completo del módulo "${moduleTitle}" para el curso "${courseStructure.title}".\n\nResumen del módulo: ${moduleSummary}${webResearchContext ? `\n\n=== FUENTES EXTERNAS ===\n${webResearchContext.substring(0, 3000)}` : ""}${materialsContext ? `\n\n${materialsContext.substring(0, 3000)}` : ""}`
+      );
 
-          const { error: uploadError } = await supabase.storage
-            .from("course-covers")
-            .upload(fileName, imageBytes, { contentType: "image/png", upsert: true });
-
-          if (!uploadError) {
-            const { data: urlData } = supabase.storage.from("course-covers").getPublicUrl(fileName);
-            coverImageUrl = urlData.publicUrl;
-          }
-        }
-      }
-    } catch (imgErr) {
-      console.warn("Cover image generation failed, continuing without:", imgErr);
+      const moduleContent = moduleRes.content?.[0]?.text || `<h2>${moduleTitle}</h2><p>Contenido en proceso de generación.</p>`;
+      moduleContents.push(moduleContent);
     }
 
-    // Step 3: Insert course
+    // --- STEP 4: Generate cover image ---
+    console.log("=== STEP 4: Generating cover image ===");
+    let coverImageUrl: string | null = null;
+    if (LOVABLE_API_KEY) {
+      coverImageUrl = await generateCoverImage(LOVABLE_API_KEY, supabase, courseStructure.cover_image_prompt);
+    }
+
+    // --- STEP 5: Insert course ---
+    console.log("=== STEP 5: Saving course to database ===");
     const { data: course, error: courseError } = await supabase
       .from("courses")
       .insert({
-        title: courseContent.title,
-        description: courseContent.description,
-        dimension: courseContent.dimension,
-        difficulty: courseContent.difficulty,
-        points: courseContent.points,
-        estimated_duration_minutes: courseContent.estimated_duration_minutes,
-        objectives: courseContent.objectives,
+        title: courseStructure.title,
+        description: courseStructure.description,
+        dimension: courseStructure.dimension,
+        difficulty: courseStructure.difficulty,
+        points: courseStructure.points,
+        estimated_duration_minutes: courseStructure.estimated_duration_minutes,
+        objectives: courseStructure.objectives,
         cover_image_url: coverImageUrl,
         status: "draft",
         created_by: user.id,
@@ -276,7 +342,9 @@ REGLAS IMPORTANTES:
         ai_metadata: {
           source_prompt: prompt,
           provided_materials_count: provided_materials?.length || 0,
+          web_research_used: webResearchContext.length > 0,
           generated_at: new Date().toISOString(),
+          model: "claude-sonnet-4",
         },
       })
       .select()
@@ -287,37 +355,33 @@ REGLAS IMPORTANTES:
       throw courseError;
     }
 
-    console.log("Course created:", course.id);
-
-    // Step 4: Insert materials
+    // --- STEP 6: Insert materials ---
     let materialsInserted = 0;
-    if (courseContent.materials?.length > 0) {
-      const materialsToInsert = courseContent.materials.map((m: any, idx: number) => ({
-        course_id: course.id,
-        title: m.title,
-        type: "documento",
-        content_text: m.content,
-        content_url: null,
-        order_index: idx,
-        is_required: true,
-      }));
+    const materialsToInsert = courseStructure.module_titles.map((title: string, idx: number) => ({
+      course_id: course.id,
+      title,
+      type: "documento",
+      content_text: moduleContents[idx] || "",
+      content_url: null,
+      order_index: idx,
+      is_required: true,
+    }));
 
-      const { error: matError } = await supabase.from("course_materials").insert(materialsToInsert);
-      if (matError) {
-        console.error("Materials insert error:", matError);
-      } else {
-        materialsInserted = materialsToInsert.length;
-      }
+    const { error: matError } = await supabase.from("course_materials").insert(materialsToInsert);
+    if (matError) {
+      console.error("Materials insert error:", matError);
+    } else {
+      materialsInserted = materialsToInsert.length;
     }
 
-    // Step 5: Insert quiz
+    // --- STEP 7: Insert quiz ---
     let questionsInserted = 0;
-    if (courseContent.quiz_questions?.length > 0) {
+    if (courseStructure.quiz_questions?.length > 0) {
       const { data: quiz, error: quizError } = await supabase
         .from("quizzes")
         .insert({
           course_id: course.id,
-          title: `Quiz: ${courseContent.title}`,
+          title: `Quiz: ${courseStructure.title}`,
           description: "Evaluación generada automáticamente",
           passing_score: 70,
           order_index: 0,
@@ -326,7 +390,7 @@ REGLAS IMPORTANTES:
         .single();
 
       if (!quizError && quiz) {
-        const questionsToInsert = courseContent.quiz_questions.map((q: any, idx: number) => ({
+        const questionsToInsert = courseStructure.quiz_questions.map((q: any, idx: number) => ({
           quiz_id: quiz.id,
           question: q.question,
           question_type: q.question_type,
@@ -336,29 +400,44 @@ REGLAS IMPORTANTES:
         }));
 
         const { error: qError } = await supabase.from("quiz_questions").insert(questionsToInsert);
-        if (qError) {
-          console.error("Quiz questions insert error:", qError);
-        } else {
-          questionsInserted = questionsToInsert.length;
-        }
+        if (qError) console.error("Quiz questions insert error:", qError);
+        else questionsInserted = questionsToInsert.length;
       }
     }
 
     console.log(`Course generation complete: ${materialsInserted} materials, ${questionsInserted} questions`);
 
+    // Build module previews for the response
+    const modulePreviews = courseStructure.module_titles.map((title: string, idx: number) => {
+      const content = moduleContents[idx] || "";
+      const plainText = content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      return { title, preview: plainText.substring(0, 200) + (plainText.length > 200 ? "..." : "") };
+    });
+
     return new Response(
       JSON.stringify({
         success: true,
         course_id: course.id,
-        title: courseContent.title,
+        title: courseStructure.title,
         materials_count: materialsInserted,
         questions_count: questionsInserted,
         has_cover_image: !!coverImageUrl,
+        module_previews: modulePreviews,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (e) {
+  } catch (e: any) {
     console.error("create-ai-course error:", e);
+    if (e.message === "RATE_LIMIT") {
+      return new Response(JSON.stringify({ error: "Rate limit excedido. Intenta más tarde." }), {
+        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (e.message === "CREDITS_EXHAUSTED") {
+      return new Response(JSON.stringify({ error: "Créditos de IA agotados." }), {
+        status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Error desconocido" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
