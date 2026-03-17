@@ -229,13 +229,18 @@ export const useImpactDashboardData = (teamFilter: string, periodDays: number) =
         if (u) u.badges_earned++;
       });
 
-      // Aggregate days active & content breakdown from visits
+      // Aggregate days active, visits, time & content breakdown from visits
       const userDays: Record<string, Set<string>> = {};
+      const userSections: Record<string, Set<string>> = {};
       visits.forEach((v: any) => {
         const u = userMap.get(v.user_id);
         if (!u) return;
         if (!userDays[v.user_id]) userDays[v.user_id] = new Set();
+        if (!userSections[v.user_id]) userSections[v.user_id] = new Set();
         userDays[v.user_id].add(v.visited_at?.substring(0, 10));
+        userSections[v.user_id].add(v.section_key);
+        u.total_visits++;
+        u.total_time_minutes += Math.round((v.duration_seconds || 0) / 60);
         if (v.section_key === "materials" || v.section_key === "training_materials") u.materials_count++;
         if (v.section_key === "personalized_training") u.ai_plan_usage++;
       });
@@ -243,8 +248,33 @@ export const useImpactDashboardData = (teamFilter: string, periodDays: number) =
         const u = userMap.get(uid);
         if (u) u.days_active = days.size;
       });
+      Object.entries(userSections).forEach(([uid, sections]) => {
+        const u = userMap.get(uid);
+        if (u) u.sections_visited = sections.size;
+      });
 
-      const users = Array.from(userMap.values());
+      // Compute engagement score (composite 0-100)
+      // Normalize each dimension across all users, then weighted average
+      const allUsers = Array.from(userMap.values());
+      const maxDays = Math.max(1, ...allUsers.map(u => u.days_active));
+      const maxVisits = Math.max(1, ...allUsers.map(u => u.total_visits));
+      const maxTime = Math.max(1, ...allUsers.map(u => u.total_time_minutes));
+      const maxSections = Math.max(1, ...allUsers.map(u => u.sections_visited));
+      const maxModules = Math.max(1, ...allUsers.map(u => u.modules_completed));
+
+      allUsers.forEach(u => {
+        // Weights: days_active 25%, visits 20%, time 20%, sections 15%, modules 20%
+        const score = (
+          (u.days_active / maxDays) * 25 +
+          (u.total_visits / maxVisits) * 20 +
+          (u.total_time_minutes / maxTime) * 20 +
+          (u.sections_visited / maxSections) * 15 +
+          (u.modules_completed / maxModules) * 20
+        );
+        u.engagement_score = Math.round(score);
+      });
+
+      const users = allUsers;
 
       // --- Feature usage stats ---
       const featureMap: Record<string, { label: string; users: Set<string>; total: number; daily: Record<string, number> }> = {};
