@@ -80,8 +80,12 @@ const CreateCourse: React.FC = () => {
   });
 
   const [materials, setMaterials] = useState<
-    { id: string; title: string; type: string; content_url: string }[]
+    { id: string; title: string; type: string; content_url: string; content_text: string }[]
   >([]);
+
+  // AI module content generation state
+  const [aiModuleDialog, setAiModuleDialog] = useState<{ materialId: string; prompt: string } | null>(null);
+  const [aiModuleLoading, setAiModuleLoading] = useState(false);
 
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestionState[]>([]);
 
