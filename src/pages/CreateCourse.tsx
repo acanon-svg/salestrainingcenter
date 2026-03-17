@@ -581,37 +581,120 @@ const CreateCourse: React.FC = () => {
                   {materials.map((material, index) => (
                     <div
                       key={material.id}
-                      className="flex items-center gap-4 p-4 rounded-lg border border-border/50"
+                      className="flex flex-col gap-3 p-4 rounded-lg border border-border/50"
                     >
-                      <GripVertical className="w-5 h-5 text-muted-foreground cursor-move" />
-                      <div className="flex-1 grid gap-4 md:grid-cols-2">
-                        <Input
-                          placeholder="Título del material"
-                          value={material.title}
-                          onChange={(e) => {
-                            const updated = [...materials];
-                            updated[index].title = e.target.value;
-                            setMaterials(updated);
-                          }}
-                        />
-                        <Input
-                          placeholder="URL del contenido"
-                          value={material.content_url}
-                          onChange={(e) => {
-                            const updated = [...materials];
-                            updated[index].content_url = e.target.value;
-                            setMaterials(updated);
-                          }}
-                        />
+                      <div className="flex items-center gap-4">
+                        <GripVertical className="w-5 h-5 text-muted-foreground cursor-move" />
+                        <div className="flex-1 grid gap-4 md:grid-cols-2">
+                          <Input
+                            placeholder="Título del material"
+                            value={material.title}
+                            onChange={(e) => {
+                              const updated = [...materials];
+                              updated[index].title = e.target.value;
+                              setMaterials(updated);
+                            }}
+                          />
+                          <Input
+                            placeholder="URL del contenido"
+                            value={material.content_url}
+                            onChange={(e) => {
+                              const updated = [...materials];
+                              updated[index].content_url = e.target.value;
+                              setMaterials(updated);
+                            }}
+                          />
+                        </div>
+                        <Badge variant="outline">{material.type}</Badge>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveMaterial(material.id)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
                       </div>
-                      <Badge variant="outline">{material.type}</Badge>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleRemoveMaterial(material.id)}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
+
+                      {/* AI Content Generation */}
+                      {material.type === "documento" && (
+                        <div className="pl-9">
+                          {material.content_text ? (
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <CheckCircle2 className="w-3 h-3 text-green-500" />
+                                  Contenido generado ({material.content_text.replace(/<[^>]+>/g, " ").trim().split(/\s+/).length} palabras aprox.)
+                                </span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 text-xs gap-1 text-primary"
+                                  onClick={() => setAiModuleDialog({ materialId: material.id, prompt: "" })}
+                                >
+                                  <Sparkles className="w-3 h-3" /> Regenerar
+                                </Button>
+                              </div>
+                              <div className="text-xs text-muted-foreground bg-muted/50 rounded p-2 max-h-20 overflow-y-auto" dangerouslySetInnerHTML={{ __html: material.content_text.substring(0, 500) + "..." }} />
+                            </div>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-2 text-xs border-primary/30 text-primary hover:bg-primary/5"
+                              onClick={() => setAiModuleDialog({ materialId: material.id, prompt: "" })}
+                            >
+                              <Sparkles className="w-3.5 h-3.5" />
+                              Generar contenido con IA
+                            </Button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* AI Module Dialog Inline */}
+                      {aiModuleDialog?.materialId === material.id && (
+                        <div className="pl-9 border-t pt-3 space-y-2">
+                          <Label className="text-sm">¿Sobre qué debe tratar este módulo?</Label>
+                          <Textarea
+                            placeholder="Ej: Técnicas de manejo de objeciones en ventas de campo..."
+                            value={aiModuleDialog.prompt}
+                            onChange={(e) => setAiModuleDialog({ ...aiModuleDialog, prompt: e.target.value })}
+                            rows={2}
+                            className="resize-none text-sm"
+                          />
+                          <div className="flex gap-2 justify-end">
+                            <Button variant="ghost" size="sm" onClick={() => setAiModuleDialog(null)} disabled={aiModuleLoading}>
+                              Cancelar
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="gap-1"
+                              disabled={!aiModuleDialog.prompt.trim() || aiModuleLoading}
+                              onClick={async () => {
+                                setAiModuleLoading(true);
+                                try {
+                                  const { data, error } = await supabase.functions.invoke("create-ai-course", {
+                                    body: { prompt: aiModuleDialog.prompt.trim(), single_module_mode: true },
+                                  });
+                                  if (error) throw error;
+                                  if (data?.error) throw new Error(data.error);
+                                  const updated = [...materials];
+                                  updated[index].content_text = data.content;
+                                  setMaterials(updated);
+                                  setAiModuleDialog(null);
+                                  toast({ title: "Contenido generado", description: `El módulo "${material.title || "sin título"}" fue completado con IA.` });
+                                } catch (err: any) {
+                                  toast({ title: "Error", description: err.message || "No se pudo generar el contenido.", variant: "destructive" });
+                                } finally {
+                                  setAiModuleLoading(false);
+                                }
+                              }}
+                            >
+                              {aiModuleLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                              {aiModuleLoading ? "Generando..." : "Generar"}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
 
