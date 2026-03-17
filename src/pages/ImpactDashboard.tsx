@@ -2,10 +2,11 @@ import React, { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useImpactDashboardData } from "@/hooks/useImpactDashboardData";
 import { TrainingCorrelationPanel } from "@/components/impact/TrainingCorrelationPanel";
+import { EngagementCorrelationPanel } from "@/components/impact/EngagementCorrelationPanel";
 import { FeatureUsagePanel } from "@/components/impact/FeatureUsagePanel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, BarChart3, Users, Clock, BookOpen } from "lucide-react";
+import { Loader2, BarChart3, Users, Clock, BookOpen, Activity } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 const teamOptions = [
@@ -84,7 +85,7 @@ const ImpactDashboard: React.FC = () => {
         ) : (
           <>
             {/* Quick stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <Card>
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-3">
@@ -104,7 +105,7 @@ const ImpactDashboard: React.FC = () => {
                       <p className="text-2xl font-bold">
                         {users.length > 0 ? Math.round(users.reduce((s, u) => s + u.modules_completed, 0) / users.length) : 0}
                       </p>
-                      <p className="text-xs text-muted-foreground">Promedio módulos completados</p>
+                      <p className="text-xs text-muted-foreground">Prom. módulos completados</p>
                     </div>
                   </div>
                 </CardContent>
@@ -117,7 +118,7 @@ const ImpactDashboard: React.FC = () => {
                       <p className="text-2xl font-bold">
                         {users.length > 0 ? Math.round(users.reduce((s, u) => s + u.quiz_avg_score, 0) / users.length) : 0}%
                       </p>
-                      <p className="text-xs text-muted-foreground">Promedio quiz score</p>
+                      <p className="text-xs text-muted-foreground">Prom. quiz score</p>
                     </div>
                   </div>
                 </CardContent>
@@ -130,7 +131,20 @@ const ImpactDashboard: React.FC = () => {
                       <p className="text-2xl font-bold">
                         {users.length > 0 ? Math.round(users.reduce((s, u) => s + u.days_active, 0) / users.length) : 0}
                       </p>
-                      <p className="text-xs text-muted-foreground">Promedio días activos</p>
+                      <p className="text-xs text-muted-foreground">Prom. días activos</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <Activity className="h-5 w-5 text-primary" />
+                    <div>
+                      <p className="text-2xl font-bold">
+                        {users.length > 0 ? Math.round(users.reduce((s, u) => s + u.engagement_score, 0) / users.length) : 0}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Prom. engagement score</p>
                     </div>
                   </div>
                 </CardContent>
@@ -164,7 +178,34 @@ const ImpactDashboard: React.FC = () => {
 
             <Separator />
 
-            {/* Question 2 */}
+            {/* Question 2: Engagement vs Results */}
+            <div>
+              <h2 className="text-lg font-semibold mb-1">¿Los usuarios más activos en la plataforma tienen mejores resultados?</h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Correlación entre nivel de engagement (días activos, visitas, tiempo) y KPIs de negocio
+              </p>
+              <EngagementCorrelationPanel
+                users={users}
+                onExport={() => exportCSV(users.map(u => ({
+                  Nombre: u.user_name,
+                  Email: u.user_email,
+                  Equipo: u.team,
+                  "Engagement Score": u.engagement_score,
+                  "Días activos": u.days_active,
+                  "Total visitas": u.total_visits,
+                  "Tiempo total (min)": u.total_time_minutes,
+                  "Secciones visitadas": u.sections_visited,
+                  "Firmas promedio/mes": u.signatures_month,
+                  "GMV promedio/mes": u.gmv_month,
+                  "Cumplimiento Firmas %": u.cumplimiento_firmas,
+                  "Cumplimiento GMV %": u.cumplimiento_gmv,
+                })), "engagement-correlation")}
+              />
+            </div>
+
+            <Separator />
+
+            {/* Question 3 */}
             <div>
               <h2 className="text-lg font-semibold mb-1">¿Qué funcionalidades de la plataforma se usan realmente?</h2>
               <p className="text-sm text-muted-foreground mb-4">
