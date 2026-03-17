@@ -2,10 +2,11 @@ import React, { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useImpactDashboardData } from "@/hooks/useImpactDashboardData";
 import { TrainingCorrelationPanel } from "@/components/impact/TrainingCorrelationPanel";
+import { EngagementCorrelationPanel } from "@/components/impact/EngagementCorrelationPanel";
 import { FeatureUsagePanel } from "@/components/impact/FeatureUsagePanel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, BarChart3, Users, Clock, BookOpen } from "lucide-react";
+import { Loader2, BarChart3, Users, Clock, BookOpen, Activity } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 const teamOptions = [
