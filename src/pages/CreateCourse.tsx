@@ -38,6 +38,7 @@ import {
   Search,
   Timer,
   Sparkles,
+  CheckCircle2,
 } from "lucide-react";
 import { dimensionLabels, difficultyLabels, TrainingDimension, DifficultyLevel } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
