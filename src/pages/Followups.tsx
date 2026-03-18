@@ -21,7 +21,6 @@ const SectionFallback = () => (
 const Followups: React.FC = () => {
   const { hasRole } = useAuth();
   const syncMutation = useSyncFollowups();
-  const isCreatorOrAdmin = hasRole("creator") || hasRole("admin");
 
   return (
     <DashboardLayout>
@@ -31,21 +30,19 @@ const Followups: React.FC = () => {
             <h1 className="text-2xl font-bold text-foreground">Seguimientos</h1>
             <p className="text-muted-foreground">Seguimiento integral de desempeño y desarrollo - by Alexandra Cañon</p>
           </div>
-          {isCreatorOrAdmin && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => syncMutation.mutate(undefined)}
-              disabled={syncMutation.isPending}
-            >
-              {syncMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4 mr-2" />
-              )}
-              Sincronizar datos
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => syncMutation.mutate(undefined)}
+            disabled={syncMutation.isPending}
+          >
+            {syncMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            Sincronizar datos
+          </Button>
         </div>
 
         <Tabs defaultValue="dashboard" className="space-y-4">

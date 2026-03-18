@@ -44,9 +44,12 @@ const FeedbackCard: React.FC<{ item: FollowupUniversalFeedback }> = ({ item }) =
       return (
         <div className="space-y-3 text-sm">
           {item.hecho_observado && <div><span className="font-medium">Hecho observado:</span><p className="mt-1 text-muted-foreground whitespace-pre-wrap">{item.hecho_observado}</p></div>}
-          {item.regla_metrica && <div><span className="font-medium">Regla/Métrica:</span><p className="mt-1 text-muted-foreground">{item.regla_metrica}</p></div>}
+          {item.regla_metrica && <div><span className="font-medium">Regla/Métrica:</span><p className="mt-1 text-muted-foreground whitespace-pre-wrap">{item.regla_metrica}</p></div>}
+          {item.impacto_incumplimiento && <div><span className="font-medium">Impacto del incumplimiento:</span><p className="mt-1 text-muted-foreground whitespace-pre-wrap">{item.impacto_incumplimiento}</p></div>}
           {item.expectativa_clara && <div><span className="font-medium">Expectativa:</span><p className="mt-1 text-muted-foreground whitespace-pre-wrap">{item.expectativa_clara}</p></div>}
+          {item.plan_apoyo && <div><span className="font-medium">Plan de apoyo:</span><p className="mt-1 text-muted-foreground whitespace-pre-wrap">{item.plan_apoyo}</p></div>}
           {item.compromiso_colega && <div><span className="font-medium">Compromiso:</span><p className="mt-1 text-muted-foreground whitespace-pre-wrap">{item.compromiso_colega}</p></div>}
+          {item.consecuencia && <div><span className="font-medium">Consecuencia:</span><p className="mt-1 text-muted-foreground whitespace-pre-wrap">{item.consecuencia}</p></div>}
           {item.proxima_fecha_revision && <div><span className="font-medium">Próxima revisión:</span> <span className="text-muted-foreground">{item.proxima_fecha_revision}</span></div>}
         </div>
       );
@@ -54,16 +57,27 @@ const FeedbackCard: React.FC<{ item: FollowupUniversalFeedback }> = ({ item }) =
     if (["PDP Inicial", "PDP"].includes(item.feedback_type)) {
       return (
         <div className="space-y-3 text-sm">
+          {item.duracion_plan && <div><span className="font-medium">Duración del plan:</span><p className="mt-1 text-muted-foreground whitespace-pre-wrap">{item.duracion_plan}</p></div>}
           {item.diagnostico_desempeno && <div><span className="font-medium">Diagnóstico:</span><p className="mt-1 text-muted-foreground whitespace-pre-wrap">{item.diagnostico_desempeno}</p></div>}
-          {item.objetivo_metrica_exito && <div><span className="font-medium">Objetivo:</span><p className="mt-1 text-muted-foreground whitespace-pre-wrap">{item.objetivo_metrica_exito}</p></div>}
+          {item.objetivo_metrica_exito && <div><span className="font-medium">Objetivo y Métrica de Éxito:</span><p className="mt-1 text-muted-foreground whitespace-pre-wrap">{item.objetivo_metrica_exito}</p></div>}
           {item.plan_accion_semanas && <div><span className="font-medium">Plan de Acción:</span><p className="mt-1 text-muted-foreground whitespace-pre-wrap">{item.plan_accion_semanas}</p></div>}
+          {item.seguimiento_reuniones && <div><span className="font-medium">Seguimiento de Reuniones:</span><p className="mt-1 text-muted-foreground whitespace-pre-wrap">{item.seguimiento_reuniones}</p></div>}
+          {item.evaluacion_final && <div><span className="font-medium">Evaluación Final:</span><p className="mt-1 text-muted-foreground whitespace-pre-wrap">{item.evaluacion_final}</p></div>}
+          {item.conclusiones_plan && <div><span className="font-medium">Conclusiones:</span><p className="mt-1 text-muted-foreground whitespace-pre-wrap">{item.conclusiones_plan}</p></div>}
+          {item.acciones_resaltar && <div><span className="font-medium">Acciones a resaltar:</span><p className="mt-1 text-muted-foreground whitespace-pre-wrap">{item.acciones_resaltar}</p></div>}
         </div>
       );
     }
     return (
       <div className="space-y-3 text-sm">
-        {item.oportunidades_trabajar && <div><span className="font-medium">Oportunidades:</span><p className="mt-1 text-muted-foreground whitespace-pre-wrap">{item.oportunidades_trabajar}</p></div>}
+        {item.regla_metrica_seguimiento && <div><span className="font-medium">Regla/Métrica:</span><p className="mt-1 text-muted-foreground whitespace-pre-wrap">{item.regla_metrica_seguimiento}</p></div>}
+        {item.impacto_seguimiento && <div><span className="font-medium">Impacto:</span><p className="mt-1 text-muted-foreground whitespace-pre-wrap">{item.impacto_seguimiento}</p></div>}
+        {item.expectativa_seguimiento && <div><span className="font-medium">Expectativa:</span><p className="mt-1 text-muted-foreground whitespace-pre-wrap">{item.expectativa_seguimiento}</p></div>}
+        {item.plan_apoyo_seguimiento && <div><span className="font-medium">Plan de apoyo:</span><p className="mt-1 text-muted-foreground whitespace-pre-wrap">{item.plan_apoyo_seguimiento}</p></div>}
         {item.compromiso_seguimiento && <div><span className="font-medium">Compromiso:</span><p className="mt-1 text-muted-foreground whitespace-pre-wrap">{item.compromiso_seguimiento}</p></div>}
+        {item.consecuencia_seguimiento && <div><span className="font-medium">Consecuencia:</span><p className="mt-1 text-muted-foreground whitespace-pre-wrap">{item.consecuencia_seguimiento}</p></div>}
+        {item.proxima_fecha_feedback && <div><span className="font-medium">Próxima fecha de feedback:</span> <span className="text-muted-foreground">{item.proxima_fecha_feedback}</span></div>}
+        {item.oportunidades_trabajar && <div><span className="font-medium">Oportunidades a trabajar:</span><p className="mt-1 text-muted-foreground whitespace-pre-wrap">{item.oportunidades_trabajar}</p></div>}
       </div>
     );
   };
