@@ -30,7 +30,7 @@ const Followups: React.FC = () => {
             <h1 className="text-2xl font-bold text-foreground">Seguimientos</h1>
             <p className="text-muted-foreground">Seguimiento integral de desempeño y desarrollo - by Alexandra Cañon</p>
           </div>
-          {isCreatorOrAdmin && (
+          {true && (
             <Button
               variant="outline"
               size="sm"
