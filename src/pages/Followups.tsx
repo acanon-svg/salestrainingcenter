@@ -5,10 +5,18 @@ import { Button } from "@/components/ui/button";
 import { RefreshCw, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSyncFollowups } from "@/hooks/useFollowups";
-import { AccompanimentsSection } from "@/components/followups/AccompanimentsSection";
-import { UniversalFeedbackSection } from "@/components/followups/UniversalFeedbackSection";
-import { QualitySection } from "@/components/followups/QualitySection";
-import { FollowupsDashboard } from "@/components/followups/FollowupsDashboard";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+
+const AccompanimentsSection = React.lazy(() => import("@/components/followups/AccompanimentsSection").then(m => ({ default: m.AccompanimentsSection })));
+const UniversalFeedbackSection = React.lazy(() => import("@/components/followups/UniversalFeedbackSection").then(m => ({ default: m.UniversalFeedbackSection })));
+const QualitySection = React.lazy(() => import("@/components/followups/QualitySection").then(m => ({ default: m.QualitySection })));
+const FollowupsDashboard = React.lazy(() => import("@/components/followups/FollowupsDashboard").then(m => ({ default: m.FollowupsDashboard })));
+
+const SectionFallback = () => (
+  <div className="flex items-center justify-center py-12">
+    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+  </div>
+);
 
 const Followups: React.FC = () => {
   const { hasRole } = useAuth();
@@ -49,16 +57,32 @@ const Followups: React.FC = () => {
           </TabsList>
 
           <TabsContent value="dashboard">
-            <FollowupsDashboard />
+            <ErrorBoundary fallbackTitle="Error al cargar el Informe General">
+              <React.Suspense fallback={<SectionFallback />}>
+                <FollowupsDashboard />
+              </React.Suspense>
+            </ErrorBoundary>
           </TabsContent>
           <TabsContent value="accompaniments">
-            <AccompanimentsSection />
+            <ErrorBoundary fallbackTitle="Error al cargar Acompañamientos">
+              <React.Suspense fallback={<SectionFallback />}>
+                <AccompanimentsSection />
+              </React.Suspense>
+            </ErrorBoundary>
           </TabsContent>
           <TabsContent value="universal">
-            <UniversalFeedbackSection />
+            <ErrorBoundary fallbackTitle="Error al cargar Feedback Universal">
+              <React.Suspense fallback={<SectionFallback />}>
+                <UniversalFeedbackSection />
+              </React.Suspense>
+            </ErrorBoundary>
           </TabsContent>
           <TabsContent value="quality">
-            <QualitySection />
+            <ErrorBoundary fallbackTitle="Error al cargar Calidad">
+              <React.Suspense fallback={<SectionFallback />}>
+                <QualitySection />
+              </React.Suspense>
+            </ErrorBoundary>
           </TabsContent>
         </Tabs>
       </div>
