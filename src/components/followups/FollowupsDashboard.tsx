@@ -374,6 +374,8 @@ export const FollowupsDashboard: React.FC = () => {
     return <Card><CardContent className="py-8 text-center text-muted-foreground">No hay datos de seguimientos disponibles.</CardContent></Card>;
   }
 
+  console.log("FollowupsDashboard render", { totalFollowups, accLen: accByRegional.length, fbLen: fbByRegional.length, qLen: qualByRegional.length, regionals: allRegionals, chartLen: chartByRegional.length });
+
   return (
     <div className="space-y-6">
       {/* Regional Filter */}
