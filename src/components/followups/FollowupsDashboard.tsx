@@ -62,10 +62,15 @@ const avgCompScore = (item: any) => {
 
 export const FollowupsDashboard: React.FC = () => {
   const { profile, hasRole } = useAuth();
-  const { data: accompaniments, isLoading: loadingAcc } = useAccompaniments();
-  const { data: universalFb, isLoading: loadingFb } = useUniversalFeedback();
-  const { data: quality, isLoading: loadingQ } = useQualityEvaluations();
+  const { data: accompaniments, isLoading: loadingAcc, error: errorAcc } = useAccompaniments();
+  const { data: universalFb, isLoading: loadingFb, error: errorFb } = useUniversalFeedback();
+  const { data: quality, isLoading: loadingQ, error: errorQ } = useQualityEvaluations();
   const { data: teamEmails } = useLeaderTeamEmails();
+
+  // Log errors for debugging
+  if (errorAcc) console.error("Followups: accompaniments error", errorAcc);
+  if (errorFb) console.error("Followups: feedback error", errorFb);
+  if (errorQ) console.error("Followups: quality error", errorQ);
 
   const [selectedRegional, setSelectedRegional] = useState<string>("all");
   const [feedbackTypeFilter, setFeedbackTypeFilter] = useState<string>("all");
