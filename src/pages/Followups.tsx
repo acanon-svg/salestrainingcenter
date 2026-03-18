@@ -21,7 +21,6 @@ const SectionFallback = () => (
 const Followups: React.FC = () => {
   const { hasRole } = useAuth();
   const syncMutation = useSyncFollowups();
-  const isCreatorOrAdmin = hasRole("creator") || hasRole("admin");
 
   return (
     <DashboardLayout>
