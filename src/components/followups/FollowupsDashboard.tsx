@@ -386,7 +386,7 @@ export const FollowupsDashboard: React.FC = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas las regionales</SelectItem>
-            {allRegionals.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+            {allRegionals.filter(r => r !== "").map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
