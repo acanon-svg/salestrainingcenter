@@ -245,6 +245,124 @@ async function fetchGoogleSheetData(url: string): Promise<Record<string, string>
       return null;
     }
     
+  GTH) {
+      return { valid: false, error: `Mensaje ${i + 1} excede el límite de ${MAX_MESSAGE_LENGTH} caracteres.` };
+    }
+
+    if (msg.role === "user" && msg.content.trim().length === 0) {
+      return { valid: false, error: `El mensaje ${i + 1} no puede estar vacío.` };
+    }
+  }
+
+  return { valid: true };
+}
+
+function formatTeamDataForContext(teamData: TeamDataProcessed[]): string {
+  if (!teamData || teamData.length === 0) {
+    return "";
+  }
+
+  let context = "\n\n---\nDATOS DEL EQUIPO DISPONIBLES:\n";
+  
+  for (const data of teamData) {
+    context += `\n### ${data.data_name}`;
+    if (data.description) {
+      context += ` - ${data.description}`;
+    }
+    if (data.source_type === "google_sheet") {
+      context += ` (Fuente: Google Sheets)`;
+    }
+    context += `\n${JSON.stringify(data.data_content, null, 2)}\n`;
+  }
+  
+  context += "\n---\n";
+  context += "Puedes usar estos datos para responder preguntas sobre resultados, métricas y desempeño del equipo. ";
+  context += "Cuando el usuario pregunte sobre resultados o datos del equipo, usa esta información para dar respuestas precisas.\n";
+  
+  return context;
+}
+
+// Convert CSV text to array of objects
+function csvToJson(csvText: string): Record<string, string>[] {
+  const lines = csvText.trim().split("\n");
+  if (lines.length < 2) return [];
+  
+  // Parse headers - handle quoted values
+  const parseRow = (row: string): string[] => {
+    const result: string[] = [];
+    let current = "";
+    let inQuotes = false;
+    
+    for (let i = 0; i < row.length; i++) {
+      const char = row[i];
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === "," && !inQuotes) {
+        result.push(current.trim());
+        current = "";
+      } else {
+        current += char;
+      }
+    }
+    result.push(current.trim());
+    return result;
+  };
+  
+  const headers = parseRow(lines[0]);
+  const data: Record<string, string>[] = [];
+  
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const values = parseRow(lines[i]);
+    const row: Record<string, string> = {};
+    
+    headers.forEach((header, index) => {
+      row[header] = values[index] || "";
+    });
+    
+    data.push(row);
+  }
+  
+  return data;
+}
+
+// Extract Google Sheet ID from URL and generate CSV export URL
+function getGoogleSheetCsvUrl(url: string): string | null {
+  try {
+    const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) {
+      const sheetId = match[1];
+      // Try to extract gid (sheet tab id) if present
+      const gidMatch = url.match(/gid=(\d+)/);
+      const gid = gidMatch ? gidMatch[1] : "0";
+      return `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// Fetch and parse Google Sheet data
+async function fetchGoogleSheetData(url: string): Promise<Record<string, string>[] | null> {
+  try {
+    const csvUrl = getGoogleSheetCsvUrl(url);
+    if (!csvUrl) {
+      console.error("Could not extract Google Sheet ID from URL:", url);
+      return null;
+    }
+    
+    const response = await fetch(csvUrl, {
+      headers: {
+        "Accept": "text/csv",
+      },
+    });
+    
+    if (!response.ok) {
+      console.error("Failed to fetch Google Sheet:", response.status, response.statusText);
+      return null;
+    }
+    
     const csvText = await response.text();
     return csvToJson(csvText);
   } catch (error) {
@@ -488,10 +606,10 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+
+    if (!ANTHROPIC_API_KEY) {
+      throw new Error("ANTHROPIC_API_KEY is not configured");
     }
 
     // Fetch all context data in parallel - no limits to include ALL content
@@ -581,21 +699,18 @@ serve(async (req) => {
       content: msg.content.slice(0, MAX_MESSAGE_LENGTH),
     }));
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { 
-            role: "system", 
-            content: systemPrompt 
-          },
-          ...sanitizedMessages,
-        ],
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 4096,
+        system: systemPrompt,
+        messages: sanitizedMessages,
         stream: true,
       }),
     });
@@ -603,34 +718,43 @@ serve(async (req) => {
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(
-          JSON.stringify({ error: "Demasiadas solicitudes. Por favor, intenta de nuevo en unos momentos." }), 
-          {
-            status: 429,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Créditos de IA agotados. Contacta al administrador." }), 
-          {
-            status: 402,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
+          JSON.stringify({ error: "Demasiadas solicitudes. Por favor, intenta de nuevo en unos momentos." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
+      console.error("Anthropic API error:", response.status, errorText);
       return new Response(
-        JSON.stringify({ error: "Error al procesar la solicitud" }), 
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({ error: "Error al procesar la solicitud" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    return new Response(response.body, {
+    // Transform Anthropic SSE format to OpenAI-compatible SSE for the frontend
+    const transformStream = new TransformStream({
+      transform(chunk: Uint8Array, controller: TransformStreamDefaultController) {
+        const text = new TextDecoder().decode(chunk);
+        const lines = text.split("\n");
+        let result = "";
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (data.type === "content_block_delta" && data.delta?.type === "text_delta") {
+                result += `data: ${JSON.stringify({ choices: [{ delta: { content: data.delta.text }, index: 0 }] })}\n\n`;
+              } else if (data.type === "message_stop") {
+                result += "data: [DONE]\n\n";
+              }
+            } catch {
+              // ignore malformed events
+            }
+          }
+        }
+        if (result) controller.enqueue(new TextEncoder().encode(result));
+      },
+    });
+
+    return new Response(response.body!.pipeThrough(transformStream), {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (error) {

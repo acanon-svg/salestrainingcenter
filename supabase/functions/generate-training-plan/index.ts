@@ -10,8 +10,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is not configured");
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("No authorization header");
@@ -102,27 +102,22 @@ INSTRUCCIONES IMPORTANTES:
 - Si el usuario no está inscrito en un curso recomendado, usa el ID de la lista de "CURSOS DISPONIBLES" para que pueda inscribirse directamente.
 - Si el usuario ya está inscrito pero no ha terminado, usa el ID de "CURSOS EN PROGRESO".`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          {
-            role: "system",
-            content: "Eres un coach de entrenamiento de ventas experto. Responde SIEMPRE en español. Analiza el progreso del vendedor y genera recomendaciones accionables. Siempre incluye courseId cuando recomiendes un curso específico."
-          },
-          { role: "user", content: prompt }
-        ],
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 4096,
+        system: "Eres un coach de entrenamiento de ventas experto. Responde SIEMPRE en español. Analiza el progreso del vendedor y genera recomendaciones accionables. Siempre incluye courseId cuando recomiendes un curso específico.",
+        messages: [{ role: "user", content: prompt }],
         tools: [{
-          type: "function",
-          function: {
             name: "generate_training_plan",
             description: "Genera un plan de entrenamiento personalizado basado en el perfil del usuario",
-            parameters: {
+            input_schema: {
               type: "object",
               properties: {
                 summary: { type: "string", description: "Resumen breve del estado actual del usuario (2-3 oraciones)" },
@@ -144,7 +139,7 @@ INSTRUCCIONES IMPORTANTES:
                       priority: { type: "string", enum: ["alta", "media", "baja"] },
                       action: { type: "string", description: "Acción concreta a realizar" },
                       reason: { type: "string", description: "Por qué es importante" },
-                      estimatedTime: { type: "string", description: "Tiempo estimado, ej: 30 min, 1 hora" },
+                      estimatedTime: { type: "string", description: "Tiempo estimado, ez: 30 min, 1 hora" },
                       impact: { type: "string", description: "Impacto esperado" },
                       courseId: { type: "string", description: "UUID del curso relacionado. Obligatorio si la acción se refiere a un curso específico." }
                     },
@@ -157,10 +152,9 @@ INSTRUCCIONES IMPORTANTES:
               },
               required: ["summary", "strengths", "improvements", "weeklyPlan", "motivationalMessage"],
               additionalProperties: false
-            }
           }
         }],
-        tool_choice: { type: "function", function: { name: "generate_training_plan" } },
+        tool_choice: { type: "tool", name: "generate_training_plan" },
       }),
     });
 
@@ -170,21 +164,16 @@ INSTRUCCIONES IMPORTANTES:
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos de IA agotados." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
       const t = await response.text();
-      console.error("AI error:", response.status, t);
+      console.error("Anthropic API error:", response.status, t);
       throw new Error("Error al generar el plan");
     }
 
     const aiData = await response.json();
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) throw new Error("No tool call in AI response");
+    const toolUse = aiData.content?.find((c: any) => c.type === "tool_use");
+    if (!toolUse) throw new Error("No tool_use block in AI response");
 
-    const plan = JSON.parse(toolCall.function.arguments);
+    const plan = toolUse.input;
 
     // Build a map of enrolled course IDs for the frontend
     const enrolledMap: Record<string, boolean> = {};

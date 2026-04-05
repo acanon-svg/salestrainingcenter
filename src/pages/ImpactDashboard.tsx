@@ -4,9 +4,12 @@ import { useImpactDashboardData } from "@/hooks/useImpactDashboardData";
 import { TrainingCorrelationPanel } from "@/components/impact/TrainingCorrelationPanel";
 import { EngagementCorrelationPanel } from "@/components/impact/EngagementCorrelationPanel";
 import { FeatureUsagePanel } from "@/components/impact/FeatureUsagePanel";
+import { SalesforceVisitsPanel } from "@/components/visits/SalesforceVisitsPanel";
+import { DatabricksPanel } from "@/components/productivity/DatabricksPanel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, BarChart3, Users, Clock, BookOpen, Activity } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, BarChart3, Users, Clock, BookOpen, Activity, MapPin, Database } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 const teamOptions = [
@@ -54,178 +57,210 @@ const ImpactDashboard: React.FC = () => {
             <h1 className="text-2xl font-bold">Impact Dashboard</h1>
             <p className="text-muted-foreground">Mide el impacto real del entrenamiento en los resultados de negocio</p>
           </div>
-          <div className="flex gap-2">
-            <Select value={teamFilter} onValueChange={setTeamFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {teamOptions.map(t => (
-                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={period} onValueChange={setPeriod}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {periodOptions.map(p => (
-                  <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
         </div>
 
-        {isLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : (
-          <>
-            {/* Quick stats */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3">
-                    <Users className="h-5 w-5 text-primary" />
-                    <div>
-                      <p className="text-2xl font-bold">{users.length}</p>
-                      <p className="text-xs text-muted-foreground">Usuarios analizados</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3">
-                    <BookOpen className="h-5 w-5 text-primary" />
-                    <div>
-                      <p className="text-2xl font-bold">
-                        {users.length > 0 ? Math.round(users.reduce((s, u) => s + u.modules_completed, 0) / users.length) : 0}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Prom. módulos completados</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3">
-                    <BarChart3 className="h-5 w-5 text-primary" />
-                    <div>
-                      <p className="text-2xl font-bold">
-                        {users.length > 0 ? Math.round(users.reduce((s, u) => s + u.quiz_avg_score, 0) / users.length) : 0}%
-                      </p>
-                      <p className="text-xs text-muted-foreground">Prom. quiz score</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3">
-                    <Clock className="h-5 w-5 text-primary" />
-                    <div>
-                      <p className="text-2xl font-bold">
-                        {users.length > 0 ? Math.round(users.reduce((s, u) => s + u.days_active, 0) / users.length) : 0}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Prom. días activos</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3">
-                    <Activity className="h-5 w-5 text-primary" />
-                    <div>
-                      <p className="text-2xl font-bold">
-                        {users.length > 0 ? Math.round(users.reduce((s, u) => s + u.engagement_score, 0) / users.length) : 0}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Prom. engagement score</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+        <Tabs defaultValue="training" className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="training" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Impacto Training
+            </TabsTrigger>
+            <TabsTrigger value="visits" className="flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              Visitas Field Sales
+            </TabsTrigger>
+            <TabsTrigger value="productivity" className="flex items-center gap-2">
+              <Database className="h-4 w-4" />
+              Productividad
+            </TabsTrigger>
+          </TabsList>
+
+          {/* ── Tab 1: Training Impact ───────────────────────────────────────── */}
+          <TabsContent value="training" className="space-y-6">
+            {/* Team + period filters */}
+            <div className="flex gap-2">
+              <Select value={teamFilter} onValueChange={setTeamFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {teamOptions.map(t => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={period} onValueChange={setPeriod}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {periodOptions.map(p => (
+                    <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Question 1 */}
-            <div>
-              <h2 className="text-lg font-semibold mb-1">¿El entrenamiento realmente mueve las métricas de negocio?</h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Correlación entre consumo de la plataforma y desempeño comercial por usuario
-              </p>
-              <TrainingCorrelationPanel
-                users={users}
-                onExport={() => exportCSV(users.map(u => ({
-                  Nombre: u.user_name,
-                  Email: u.user_email,
-                  Equipo: u.team,
-                  "Módulos completados": u.modules_completed,
-                  "Quiz promedio": u.quiz_avg_score,
-                  Insignias: u.badges_earned,
-                  "Días activos": u.days_active,
-                  "Firmas promedio/mes": u.signatures_month,
-                  "Originaciones promedio/mes": u.originations_month,
-                  "GMV promedio/mes": u.gmv_month,
-                  "Cumplimiento Firmas %": u.cumplimiento_firmas,
-                  "Cumplimiento GMV %": u.cumplimiento_gmv,
-                })), "impact-correlation")}
-              />
-            </div>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <>
+                {/* Quick stats */}
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-3">
+                        <Users className="h-5 w-5 text-primary" />
+                        <div>
+                          <p className="text-2xl font-bold">{users.length}</p>
+                          <p className="text-xs text-muted-foreground">Usuarios analizados</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-3">
+                        <BookOpen className="h-5 w-5 text-primary" />
+                        <div>
+                          <p className="text-2xl font-bold">
+                            {users.length > 0 ? Math.round(users.reduce((s, u) => s + u.modules_completed, 0) / users.length) : 0}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Prom. módulos completados</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-3">
+                        <BarChart3 className="h-5 w-5 text-primary" />
+                        <div>
+                          <p className="text-2xl font-bold">
+                            {users.length > 0 ? Math.round(users.reduce((s, u) => s + u.quiz_avg_score, 0) / users.length) : 0}%
+                          </p>
+                          <p className="text-xs text-muted-foreground">Prom. quiz score</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-3">
+                        <Clock className="h-5 w-5 text-primary" />
+                        <div>
+                          <p className="text-2xl font-bold">
+                            {users.length > 0 ? Math.round(users.reduce((s, u) => s + u.days_active, 0) / users.length) : 0}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Prom. días activos</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-3">
+                        <Activity className="h-5 w-5 text-primary" />
+                        <div>
+                          <p className="text-2xl font-bold">
+                            {users.length > 0 ? Math.round(users.reduce((s, u) => s + u.engagement_score, 0) / users.length) : 0}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Prom. engagement score</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
 
-            <Separator />
+                {/* Question 1 */}
+                <div>
+                  <h2 className="text-lg font-semibold mb-1">¿El entrenamiento realmente mueve las métricas de negocio?</h2>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Correlación entre consumo de la plataforma y desempeño comercial pos usuario
+                  </p>
+                  <TrainingCorrelationPanel
+                    users={users}
+                    onExport={() => exportCSV(users.map(u => ({
+                      Nombre: u.user_name,
+                      Email: u.user_email,
+                      Equipo: u.team,
+                      "Módulos completados": u.modules_completed,
+                      "Quiz promedio": u.quiz_avg_score,
+                      Insignias: u.badges_earned,
+                      "Días activos": u.days_active,
+                      "Firmas promedio/mes": u.signatures_month,
+                      "Originaciones promedio/mes": u.originations_month,
+                      "GMV promedio/mes": u.gmv_month,
+                      "Cumplimiento Firmas %": u.cumplimiento_firmas,
+                      "Cumplimiento GMV %": u.cumplimiento_gmv,
+                    })), "impact-correlation")}
+                  />
+                </div>
 
-            {/* Question 2: Engagement vs Results */}
-            <div>
-              <h2 className="text-lg font-semibold mb-1">¿Los usuarios más activos en la plataforma tienen mejores resultados?</h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Correlación entre nivel de engagement (días activos, visitas, tiempo) y KPIs de negocio
-              </p>
-              <EngagementCorrelationPanel
-                users={users}
-                onExport={() => exportCSV(users.map(u => ({
-                  Nombre: u.user_name,
-                  Email: u.user_email,
-                  Equipo: u.team,
-                  "Engagement Score": u.engagement_score,
-                  "Días activos": u.days_active,
-                  "Total visitas": u.total_visits,
-                  "Tiempo total (min)": u.total_time_minutes,
-                  "Secciones visitadas": u.sections_visited,
-                  "Firmas promedio/mes": u.signatures_month,
-                  "GMV promedio/mes": u.gmv_month,
-                  "Cumplimiento Firmas %": u.cumplimiento_firmas,
-                  "Cumplimiento GMV %": u.cumplimiento_gmv,
-                })), "engagement-correlation")}
-              />
-            </div>
+                <Separator />
 
-            <Separator />
+                {/* Question 2: Engagement vs Results */}
+                <div>
+                  <h2 className="text-lg font-semibold mb-1">¿Los usuarios más activos en la plataforma tienen mejores resultados?</h2>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Correlación entre nivel de engagement (días activos, visitas, tiempo) y KPIs de negocio
+                  </p>
+                  <EngagementCorrelationPanel
+                    users={users}
+                    onExport={() => exportCSV(users.map(u => ({
+                      Nombre: u.user_name,
+                      Email: u.user_email,
+                      Equipo: u.team,
+                      "Engagement Score": u.engagement_score,
+                      "Días activos": u.days_active,
+                      "Total visitas": u.total_visits,
+                      "Tiempo total (min)": u.total_time_minutes,
+                      "Secciones visitadas": u.sections_visited,
+                      "Firmas promedio/mes": u.signatures_month,
+                      "GMV promedio/mes": u.gmv_month,
+                      "Cumplimiento Firmas %": u.cumplimiento_firmas,
+                      "Cumplimiento GMV %": u.cumplimiento_gmv,
+                    })), "engagement-correlation")}
+                  />
+                </div>
 
-            {/* Question 3 */}
-            <div>
-              <h2 className="text-lg font-semibold mb-1">¿Qué funcionalidades de la plataforma se usan realmente?</h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Heatmap de uso y engagement por funcionalidad del portal
-              </p>
-              <FeatureUsagePanel
-                featureStats={featureStats}
-                last7days={data?.last7days || []}
-                totalActiveUsers={data?.totalActiveUsers || 1}
-                onExport={() => exportCSV(featureStats.map(f => ({
-                  Funcionalidad: f.feature_label,
-                  "Total usos": f.total_uses,
-                  "Usuarios únicos": f.unique_users,
-                  "% usuarios activos": f.pct_active_users,
-                  "Baja adopción": f.is_dead ? "Sí" : "No",
-                })), "feature-usage")}
-              />
-            </div>
-          </>
-        )}
+                <Separator />
+
+                {/* Question 3 */}
+                <div>
+                  <h2 className="text-lg font-semibold mb-1">¿Qué funcionalidades de la plataforma se usan realmente?</h2>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Heatmap de uso y engagement por funcionalidad del portal
+                  </p>
+                  <FeatureUsagePanel
+                    featureStats={featureStats}
+                    last7days={data?.last7days || []}
+                    totalActiveUsers={data?.totalActiveUsers || 1}
+                    onExport={() => exportCSV(featureStats.map(f => ({
+                      Funcionalidad: f.feature_label,
+                      "Total usos": f.total_uses,
+                      "Usuarios únicos": f.unique_users,
+                      "% usuarios activos": f.pct_active_users,
+                      "Baja adopción": f.is_dead ? "Sí" : "No",
+                    })), "feature-usage")}
+                  />
+                </div>
+              </>
+            )}
+          </TabsContent>
+
+          {/* ── Tab 2: Salesforce Visits ─────────────────────────────────────── */}
+          <TabsContent value="visits">
+            <SalesforceVisitsPanel days={7} showHeader={true} />
+          </TabsContent>
+
+          {/* ── Tab 3: Databricks Productivity ──────────────────────────────── */}
+          <TabsContent value="productivity">
+            <DatabricksPanel showHeader={true} compact={false} />
+          </TabsContent>
+        </Tabs>
       </div>
     </DashboardLayout>
   );

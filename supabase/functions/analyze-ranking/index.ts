@@ -34,54 +34,41 @@ serve(async (req) => {
     const { topUsers } = await req.json();
     if (!topUsers || !Array.isArray(topUsers) || topUsers.length > 20) throw new Error("topUsers required (max 20)");
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
 
     const summary = topUsers.map((u: any, i: number) =>
       `#${i + 1} ${u.name}: ${u.compositeScore} pts compuestos (${u.completedCourses} cursos, ${u.avgQuiz}% quiz, ${u.badges} insignias)`
     ).join("\n");
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiResponse = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          {
-            role: "system",
-            content: "Eres un analista de ranking de entrenamiento corporativo. Analiza el top 5 y genera insights competitivos en español. Responde SOLO con la herramienta proporcionada."
-          },
-          {
-            role: "user",
-            content: `Analiza este ranking de entrenamiento:\n${summary}`
-          }
-        ],
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 1024,
+        system: "Eres un analista de ranking de entrenamiento corporativo. Analiza el top 5 y genera insights competitivos en español. Responde SOLO con la herramienta proporcionada.",
+        messages: [{ role: "user", content: `Analiza este ranking de entrenamiento:\n${summary}` }],
         tools: [{
-          type: "function",
-          function: {
-            name: "analyze_ranking",
-            description: "Analyze ranking data and return structured insights",
-            parameters: {
-              type: "object",
-              properties: {
-                leaderInsight: { type: "string", description: "Insight sobre el líder del ranking" },
-                competitionNote: { type: "string", description: "Nota sobre la competencia y brechas" },
-                risingStars: {
-                  type: "array",
-                  items: { type: "string" },
-                  description: "Nombres de usuarios con potencial de subir"
-                },
-                teamTrend: { type: "string", description: "Tendencia general del equipo" },
-                personalTip: { type: "string", description: "Consejo para mejorar en el ranking" }
-              },
-              required: ["leaderInsight", "competitionNote", "risingStars", "teamTrend", "personalTip"]
-            }
+          name: "analyze_ranking",
+          description: "Analyze ranking data and return structured insights",
+          input_schema: {
+            type: "object",
+            properties: {
+              leaderInsight: { type: "string", description: "Insight sobre el líder del ranking" },
+              competitionNote: { type: "string", description: "Nota sobre la competencia y brechas" },
+              risingStars: { type: "array", items: { type: "string" }, description: "Nombres de usuarios con potencial de subir" },
+              teamTrend: { type: "string", description: "Tendencia general del equipo" },
+              personalTip: { type: "string", description: "Consejo para mejorar en el ranking" }
+            },
+            required: ["leaderInsight", "competitionNote", "risingStars", "teamTrend", "personalTip"]
           }
         }],
-        tool_choice: { type: "function", function: { name: "analyze_ranking" } },
+        tool_choice: { type: "tool", name: "analyze_ranking" },
       }),
     });
 
@@ -92,19 +79,14 @@ serve(async (req) => {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
       }
-      if (status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos de IA agotados." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" }
-        });
-      }
-      throw new Error(`AI gateway error: ${status}`);
+      throw new Error(`Anthropic API error: ${status}`);
     }
 
     const aiData = await aiResponse.json();
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) throw new Error("No tool call in AI response");
+    const toolUseBlock = aiData.content?.find((c: any) => c.type === "tool_use");
+    if (!toolUseBlock) throw new Error("No tool use block in AI response");
 
-    const result = JSON.parse(toolCall.function.arguments);
+    const result = toolUseBlock.input;
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

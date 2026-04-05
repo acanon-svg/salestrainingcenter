@@ -10,8 +10,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is not configured");
 
     const body = await req.json().catch(() => ({}));
     const trigger: string = body.trigger || "manual";
@@ -106,20 +106,19 @@ ESTADÍSTICAS GENERALES:
 - Temas débiles identificados: ${weakTopics.length}
 `;
 
-    // 5. Call Lovable AI with tool calling
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // 5. Call Anthropic Claude with tool calling
+    const aiResponse = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "claude-sonnet-4-5",
+        max_tokens: 4096,
+        system: "Eres un diseñador instruccional experto en ventas. Analiza los datos de rendimiento y genera cursos que cubran las brechas identificadas. Responde siempre en español.",
         messages: [
-          {
-            role: "system",
-            content: "Eres un diseñador instruccional experto en ventas. Analiza los datos de rendimiento y genera cursos que cubran las brechas identificadas. Responde siempre en español.",
-          },
           {
             role: "user",
             content: `Basándote en el siguiente análisis de rendimiento del equipo de ventas, genera exactamente 3 cursos nuevos que aborden las brechas de conocimiento identificadas.\n\n${analysisContext}`,
@@ -127,41 +126,38 @@ ESTADÍSTICAS GENERALES:
         ],
         tools: [
           {
-            type: "function",
-            function: {
-              name: "generate_courses",
-              description: "Genera 3 cursos de entrenamiento basados en las brechas identificadas",
-              parameters: {
-                type: "object",
-                properties: {
-                  courses: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        title: { type: "string", description: "Título del curso" },
-                        description: { type: "string", description: "Descripción detallada del curso (2-3 oraciones)" },
-                        category: { type: "string", description: "Categoría: ventas, producto, procesos, habilidades_blandas" },
-                        priority: { type: "string", enum: ["alta", "media"] },
-                        target_audience: { type: "string", description: "Audiencia objetivo" },
-                        learning_objectives: { type: "array", items: { type: "string" }, description: "3-5 objetivos de aprendizaje" },
-                        suggested_modules: { type: "array", items: { type: "string" }, description: "3-5 módulos sugeridos" },
-                        gap_addressed: { type: "string", description: "Brecha de conocimiento que aborda" },
-                        expected_score_improvement: { type: "string", description: "Mejora esperada en scores" },
-                        estimated_duration_minutes: { type: "number", description: "Duración estimada en minutos" },
-                      },
-                      required: ["title", "description", "category", "priority", "target_audience", "learning_objectives", "suggested_modules", "gap_addressed", "expected_score_improvement", "estimated_duration_minutes"],
-                      additionalProperties: false,
+            name: "generate_courses",
+            description: "Genera 3 cursos de entrenamiento basados en las brechas identificadas",
+            input_schema: {
+              type: "object",
+              properties: {
+                courses: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      title: { type: "string", description: "Título del curso" },
+                      description: { type: "string", description: "Descripción detallada del curso (2-3 oraciones)" },
+                      category: { type: "string", description: "Categoría: ventas, producto, procesos, habilidades_blandas" },
+                      priority: { type: "string", enum: ["alta", "media"] },
+                      target_audience: { type: "string", description: "Audiencia objetivo" },
+                      learning_objectives: { type: "array", items: { type: "string" }, description: "3-5 objetivos de aprendizaje" },
+                      suggested_modules: { type: "array", items: { type: "string" }, description: "3-5 módulos sugeridos" },
+                      gap_addressed: { type: "string", description: "Brecha de conocimiento que aborda" },
+                      expected_score_improvement: { type: "string", description: "Mejora esperada en scores" },
+                      estimated_duration_minutes: { type: "number", description: "Duración estimada en minutos" },
                     },
+                    required: ["title", "description", "category", "priority", "target_audience", "learning_objectives", "suggested_modules", "gap_addressed", "expected_score_improvement", "estimated_duration_minutes"],
+                    additionalProperties: false,
                   },
                 },
-                required: ["courses"],
-                additionalProperties: false,
               },
+              required: ["courses"],
+              additionalProperties: false,
             },
           },
         ],
-        tool_choice: { type: "function", function: { name: "generate_courses" } },
+        tool_choice: { type: "tool", name: "generate_courses" },
       }),
     });
 
@@ -171,21 +167,16 @@ ESTADÍSTICAS GENERALES:
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (aiResponse.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos de IA agotados." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
       const errText = await aiResponse.text();
-      console.error("AI error:", aiResponse.status, errText);
+      console.error("Anthropic API error:", aiResponse.status, errText);
       throw new Error("Error al generar cursos con IA");
     }
 
     const aiData = await aiResponse.json();
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) throw new Error("No tool call in AI response");
+    const toolUseBlock = aiData.content?.find((c: any) => c.type === "tool_use");
+    if (!toolUseBlock) throw new Error("No tool use block in AI response");
 
-    const { courses: generatedCourses } = JSON.parse(toolCall.function.arguments);
+    const { courses: generatedCourses } = toolUseBlock.input;
 
     // 6. Insert generated courses
     const insertedIds: string[] = [];

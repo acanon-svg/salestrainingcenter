@@ -21,7 +21,7 @@ async function callClaude(apiKey: string, systemPrompt: string, userPrompt: stri
     method: "POST",
     headers: {
       "x-api-key": apiKey,
-      "anthropic-version": "2024-01-01",
+      "anthropic-version": "2023-06-01",
       "content-type": "application/json",
     },
     body: JSON.stringify(body),
@@ -37,25 +37,24 @@ async function callClaude(apiKey: string, systemPrompt: string, userPrompt: stri
   return await res.json();
 }
 
-// --- Helper: Call Lovable AI Gateway (for web search via Gemini) ---
+// --- Helper: Research topic using Claude's knowledge ---
 async function searchWebWithLovable(lovableKey: string, query: string): Promise<string> {
   try {
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${lovableKey}`,
+        "x-api-key": lovableKey,
+        "anthropic-version": "2023-06-01",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 2048,
+        system: "Eres un investigador experto en capacitación comercial. Proporciona información detallada, ejemplos reales, técnicas probadas y mejores prácticas. Responde siempre en español con información estructurada y accionable.",
         messages: [
           {
-            role: "system",
-            content: "Eres un investigador experto. Busca información actualizada, artículos, guías de ventas, documentación oficial y mejores prácticas sobre el tema solicitado. Responde en español con un resumen estructurado de toda la información encontrada, citando fuentes cuando sea posible. Incluye datos concretos, estadísticas y ejemplos reales.",
-          },
-          {
             role: "user",
-            content: `Investiga a fondo sobre el siguiente tema para crear un curso de capacitación corporativa. Busca múltiples fuentes, artículos recientes, guías y mejores prácticas:\n\n${query}`,
+            content: `Investiga a fondo sobre el siguiente tema para crear un curso de capacitación corporativa. Incluye técnicas, ejemplos reales, estadísticas relevantes y mejores prácticas:\n\n${query}`,
           },
         ],
         tools: [
@@ -81,53 +80,17 @@ async function searchWebWithLovable(lovableKey: string, query: string): Promise<
     }
 
     const data = await res.json();
-    return data.choices?.[0]?.message?.content || "";
+    return data.content?.find((c: any) => c.type === "text")?.text || "";
   } catch (err) {
     console.warn("Web search error, continuing without:", err);
     return "";
   }
 }
 
-// --- Helper: Generate cover image ---
-async function generateCoverImage(lovableKey: string, supabase: any, imagePrompt: string): Promise<string | null> {
-  try {
-    const imageResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${lovableKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
-        messages: [
-          {
-            role: "user",
-            content: `Create a professional, modern course cover image: ${imagePrompt}. Style: clean corporate training design, vibrant colors, no text overlay.`,
-          },
-        ],
-        modalities: ["image", "text"],
-      }),
-    });
-
-    if (imageResponse.ok) {
-      const imageData = await imageResponse.json();
-      const base64Image = imageData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-      if (base64Image) {
-        const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, "");
-        const imageBytes = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0));
-        const fileName = `ai-generated-${Date.now()}.png`;
-        const { error: uploadError } = await supabase.storage
-          .from("course-covers")
-          .upload(fileName, imageBytes, { contentType: "image/png", upsert: true });
-        if (!uploadError) {
-          const { data: urlData } = supabase.storage.from("course-covers").getPublicUrl(fileName);
-          return urlData.publicUrl;
-        }
-      }
-    }
-  } catch (imgErr) {
-    console.warn("Cover image generation failed:", imgErr);
-  }
+// --- Helper: Generate cover image (placeholder - returns null, cover can be set manually) ---
+async function generateCoverImage(_apiKey: string, _supabase: any, _imagePrompt: string): Promise<string | null> {
+  // Cover image generation via AI image models not available in this version
+  // Admins can upload a cover image manually from the course editor
   return null;
 }
 
@@ -229,7 +192,7 @@ serve(async (req) => {
         input_schema: {
           type: "object",
           properties: {
-            title: { type: "string", description: "Título del curso (máximo 80 caracteres)" },
+            title: { type: "string", description: "Týtulo del curso (máximo 80 caracteres)" },
             description: { type: "string", description: "Descripción detallada del curso (2-4 oraciones)" },
             dimension: { type: "string", enum: ["onboarding", "refuerzo", "taller", "entrenamiento"] },
             difficulty: { type: "string", enum: ["basico", "medio", "avanzado"] },
@@ -237,7 +200,7 @@ serve(async (req) => {
             estimated_duration_minutes: { type: "number" },
             objectives: { type: "array", items: { type: "string" }, description: "3-5 objetivos de aprendizaje" },
             cover_image_prompt: { type: "string", description: "Prompt en inglés para imagen de portada" },
-            module_titles: { type: "array", items: { type: "string" }, description: "3-6 títulos de módulos" },
+            module_titles: { type: "array", items: { type: "string" }, description: "3-6 týtulos de módulos" },
             module_summaries: { type: "array", items: { type: "string" }, description: "Resumen de cada módulo (1-2 oraciones)" },
             quiz_questions: {
               type: "array",

@@ -83,58 +83,49 @@ serve(async (req) => {
 
 Genera insights accionables en español.`;
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiResponse = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          {
-            role: "system",
-            content: "Eres un analista de entrenamiento corporativo. Responde SOLO con la herramienta proporcionada."
-          },
-          { role: "user", content: prompt }
-        ],
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 2048,
+        system: "Eres un analista de entrenamiento corporativo. Responde SOLO con la herramienta proporcionada.",
+        messages: [{ role: "user", content: prompt }],
         tools: [{
-          type: "function",
-          function: {
-            name: "generate_insights",
-            description: "Generate dashboard insights from training data",
-            parameters: {
-              type: "object",
-              properties: {
-                teamHealthScore: { type: "number", description: "Overall health score 0-100" },
-                insights: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      metric: { type: "string" },
-                      value: { type: "string" },
-                      trend: { type: "string", enum: ["up", "down", "neutral"] },
-                      alert: { type: "boolean" },
-                      description: { type: "string" }
-                    },
-                    required: ["metric", "value", "trend", "alert", "description"]
-                  }
-                },
-                needsAttention: {
-                  type: "array",
-                  items: { type: "string" }
-                },
-                recommendation: { type: "string" }
+          name: "generate_insights",
+          description: "Generate dashboard insights from training data",
+          input_schema: {
+            type: "object",
+            properties: {
+              teamHealthScore: { type: "number", description: "Overall health score 0-100" },
+              insights: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    metric: { type: "string" },
+                    value: { type: "string" },
+                    trend: { type: "string", enum: ["up", "down", "neutral"] },
+                    alert: { type: "boolean" },
+                    description: { type: "string" }
+                  },
+                  required: ["metric", "value", "trend", "alert", "description"]
+                }
               },
-              required: ["teamHealthScore", "insights", "needsAttention", "recommendation"]
-            }
+              needsAttention: { type: "array", items: { type: "string" } },
+              recommendation: { type: "string" }
+            },
+            required: ["teamHealthScore", "insights", "needsAttention", "recommendation"]
           }
         }],
-        tool_choice: { type: "function", function: { name: "generate_insights" } },
+        tool_choice: { type: "tool", name: "generate_insights" },
       }),
     });
 
@@ -145,19 +136,14 @@ Genera insights accionables en español.`;
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
       }
-      if (status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos de IA agotados." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" }
-        });
-      }
-      throw new Error(`AI gateway error: ${status}`);
+      throw new Error(`Anthropic API error: ${status}`);
     }
 
     const aiData = await aiResponse.json();
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) throw new Error("No tool call in response");
+    const toolUseBlock = aiData.content?.find((c: any) => c.type === "tool_use");
+    if (!toolUseBlock) throw new Error("No tool use block in response");
 
-    const result = JSON.parse(toolCall.function.arguments);
+    const result = toolUseBlock.input;
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
