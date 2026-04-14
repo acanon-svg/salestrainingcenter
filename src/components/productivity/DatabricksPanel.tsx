@@ -73,7 +73,7 @@ export const DatabricksPanel: React.FC<DatabricksPanelProps> = ({
   }, []);
 
   const isUnavailable = data?.source === "unavailable";
-  const metrics = data?.metrics || {};
+  const metrics: ProductivityMetrics = data?.metrics || { periodo: null };
 
   const formatNumber = (n: number | null | undefined) => {
     if (n == null) return "Ã¢â¬â";
