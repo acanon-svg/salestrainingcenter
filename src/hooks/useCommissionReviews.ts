@@ -62,6 +62,7 @@ export const calculateCommission = (
   }
 ) => {
   const metaFirmas = result.firmas_meta;
+  const month = overrides?.month ?? 0;
   let baseCommission = overrides?.base_comisional ?? 1500000;
 
   // Special override: Maria Camila Tabares gets $1,022,750 base for March 2026
@@ -69,7 +70,6 @@ export const calculateCommission = (
   if (userEmail === 'mtabares@addi.com' && month === 3) {
     baseCommission = 1022750;
   }
-  const month = overrides?.month ?? 0;
 
   const firmasCompliance =
     metaFirmas > 0
