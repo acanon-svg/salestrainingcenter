@@ -77,7 +77,7 @@ const findConfigForUser = (
   return configs.find((c) => c.is_default) || null;
 };
 
-/** Calculate accelerator bonus for an executive */
+/** Calculate accelerator multiplier for an executive */
 const calculateAcceleratorBonus = (
   accelerators: CommissionAccelerator[],
   firmasCompliancePct: number,
@@ -85,17 +85,16 @@ const calculateAcceleratorBonus = (
   totalPct: number,
   baseCommissionAmount: number
 ) => {
-  // Accelerators require BOTH weighted total >= 100% AND firmas compliance >= 100%
-  const eligible = totalPct >= 100 && firmasCompliancePct >= 100;
+  // Accelerators require firmas compliance >= 100%
+  const eligible = firmasCompliancePct >= 100;
   if (!eligible || accelerators.length === 0) {
-    return { eligible, totalBonus: 0, applied: [] as { min_firmas: number; bonus_percentage: number; description: string | null; amount: number }[] };
+    return { eligible, multiplier: 1, totalBonus: 0, applied: [] as { min_firmas: number; bonus_percentage: number; description: string | null; amount: number }[] };
   }
 
   const applied: { min_firmas: number; bonus_percentage: number; description: string | null; amount: number }[] = [];
 
   // Find the highest applicable accelerator
   // min_firmas is a PERCENTAGE threshold (e.g. 110 means 110% compliance of firmas)
-  // Compare the executive's firmas compliance % against the configured threshold %
   let bestAccelerator: CommissionAccelerator | null = null;
   accelerators.forEach((acc) => {
     if (firmasCompliancePct >= acc.min_firmas) {
@@ -105,20 +104,23 @@ const calculateAcceleratorBonus = (
     }
   });
 
+  let multiplier = 1;
   let totalBonus = 0;
   if (bestAccelerator) {
     const best = bestAccelerator as CommissionAccelerator;
-    const amount = (best.bonus_percentage / 100) * baseCommissionAmount;
-    totalBonus = amount;
+    // bonus_percentage represents the multiplier (e.g. 120 means multiply by 1.2)
+    multiplier = best.bonus_percentage / 100;
+    // The bonus is the difference: (multiplier - 1) * baseCommissionAmount
+    totalBonus = (multiplier - 1) * baseCommissionAmount;
     applied.push({
       min_firmas: best.min_firmas,
       bonus_percentage: best.bonus_percentage,
       description: best.description,
-      amount,
+      amount: totalBonus,
     });
   }
 
-  return { eligible, totalBonus, applied };
+  return { eligible, multiplier, totalBonus, applied };
 };
 
 const formatCOP = (value: number) =>
