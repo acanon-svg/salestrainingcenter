@@ -453,7 +453,7 @@ export const FieldSalesCommissions: React.FC = () => {
       "GMV Meta": exec.gmv_meta,
       "% GMV": `${exec.gmvPct.toFixed(1)}%`,
       "Indicadores Combinados": `${exec.totalPct.toFixed(1)}%`,
-      "Indicadores ≥85%": exec.indicatorsMet ? "Cumplido" : "No cumplido",
+      "Indicadores ≥85%": exec.candadoMet ? "Cumplido" : "No cumplido",
       "Comisión Calculada (COP)": exec.calculatedCommission,
       "Acelerador Firmas (COP)": exec.accelerator.totalBonus,
       "MB Income (+20%)": exec.hasMb ? "Sí" : "No",
@@ -763,13 +763,13 @@ export const FieldSalesCommissions: React.FC = () => {
                     <div
                       className={cn(
                         "p-3 rounded-lg border sm:col-span-3",
-                        exec.indicatorsMet
+                        exec.candadoMet
                           ? "bg-emerald-500/10 border-emerald-500/30"
                           : "bg-destructive/10 border-destructive/30"
                       )}
                     >
                       <div className="flex items-center gap-1.5 mb-1">
-                        {exec.indicatorsMet ? (
+                        {exec.candadoMet ? (
                           <CheckCircle className="h-4 w-4 text-emerald-600" />
                         ) : (
                           <XCircle className="h-4 w-4 text-destructive" />
@@ -779,12 +779,12 @@ export const FieldSalesCommissions: React.FC = () => {
                       <p
                         className={cn(
                           "text-sm font-medium",
-                          exec.indicatorsMet ? "text-emerald-600" : "text-destructive"
+                          exec.candadoMet ? "text-emerald-600" : "text-destructive"
                         )}
                       >
                         {exec.totalPct.toFixed(1)}%
-                        {!exec.indicatorsMet && " (mín. 85%)"}
-                        {exec.indicatorsMet && " ✓ Cumplido"}
+                        {!exec.candadoMet && " (mín. 85%)"}
+                        {exec.candadoMet && " ✓ Cumplido"}
                       </p>
                     </div>
                   </div>
