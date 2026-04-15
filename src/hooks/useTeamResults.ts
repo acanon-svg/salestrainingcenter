@@ -12,8 +12,12 @@ export interface TeamResult {
   firmas_meta: number;
   originaciones_real: number;
   originaciones_meta: number;
+  originaciones_m1_real: number;
+  originaciones_m1_meta: number;
   gmv_real: number;
   gmv_meta: number;
+  gmv_m1_real: number;
+  gmv_m1_meta: number;
   period_date: string;
   weeks_in_month: number;
   dias_habiles_transcurridos: number;

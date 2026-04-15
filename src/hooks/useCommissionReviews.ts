@@ -44,8 +44,12 @@ export const calculateCommission = (
     firmas_meta: number;
     originaciones_real: number;
     originaciones_meta: number;
+    originaciones_m1_real?: number;
+    originaciones_m1_meta?: number;
     gmv_real: number;
     gmv_meta: number;
+    gmv_m1_real?: number;
+    gmv_m1_meta?: number;
   },
   overrides?: {
     meta_firmas?: number;
@@ -57,10 +61,8 @@ export const calculateCommission = (
     month?: number;
   }
 ) => {
-  // Use overrides from monthly config if available, otherwise use team_results metas
-  const metaFirmas = overrides?.meta_firmas ?? result.firmas_meta;
-  const metaOrig = overrides?.meta_originaciones ?? result.originaciones_meta;
-  const metaGmv = overrides?.meta_gmv_usd ?? result.gmv_meta;
+  // Use team_results metas directly (per-user from sheet)
+  const metaFirmas = result.firmas_meta;
   const baseCommission = overrides?.base_comisional ?? 1500000;
   const month = overrides?.month ?? 0;
 
@@ -72,8 +74,16 @@ export const calculateCommission = (
 
   // For March+ (month >= 3), use 4x25% weights with M0/M1
   const useM1 = month >= 3;
-  const metaOrigM1 = overrides?.meta_originaciones_m1 ?? 0;
-  const metaGmvM1 = overrides?.meta_gmv_m1 ?? 0;
+
+  // M0 metas come from team_results directly
+  const metaOrig = result.originaciones_meta;
+  const metaGmv = result.gmv_meta;
+  // M1 metas come from team_results directly
+  const metaOrigM1 = result.originaciones_m1_meta ?? 0;
+  const metaGmvM1 = result.gmv_m1_meta ?? 0;
+  // M1 real values from team_results
+  const origM1Real = result.originaciones_m1_real ?? 0;
+  const gmvM1Real = result.gmv_m1_real ?? 0;
 
   let origPct: number;
   let gmvPct: number;
@@ -88,15 +98,15 @@ export const calculateCommission = (
     // M0: 25% each
     origPct = metaOrig > 0 ? (result.originaciones_real / metaOrig) * 100 : 0;
     origWeighted = origPct * 0.25;
-    origM1Pct = metaOrigM1 > 0 ? (result.originaciones_real / metaOrigM1) * 100 : 0;
+    origM1Pct = metaOrigM1 > 0 ? (origM1Real / metaOrigM1) * 100 : 0;
     origM1Weighted = origM1Pct * 0.25;
 
     gmvPct = metaGmv > 0 ? (result.gmv_real / metaGmv) * 100 : 0;
     gmvWeighted = gmvPct * 0.25;
-    gmvM1Pct = metaGmvM1 > 0 ? (result.gmv_real / metaGmvM1) * 100 : 0;
+    gmvM1Pct = metaGmvM1 > 0 ? (gmvM1Real / metaGmvM1) * 100 : 0;
     gmvM1Weighted = gmvM1Pct * 0.25;
   } else {
-    // Jan/Feb: 50% each (legacy)
+    // Jan/Feb or guaranteed users without M1: 50% each
     origPct = metaOrig > 0 ? (result.originaciones_real / metaOrig) * 100 : 0;
     gmvPct = metaGmv > 0 ? (result.gmv_real / metaGmv) * 100 : 0;
     origWeighted = origPct * 0.5;
@@ -105,15 +115,13 @@ export const calculateCommission = (
 
   const totalPct = origWeighted + gmvWeighted + origM1Weighted + gmvM1Weighted;
 
-  const indicatorsMet = totalPct >= 85;
-  const calculatedCommission = candadoMet && indicatorsMet
+  const calculatedCommission = candadoMet
     ? (totalPct / 100) * baseCommission
     : 0;
 
   return {
     firmasCompliance,
     candadoMet,
-    indicatorsMet,
     origPct,
     gmvPct,
     origWeighted,
