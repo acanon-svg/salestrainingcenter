@@ -743,7 +743,7 @@ export const FieldSalesCommissions: React.FC = () => {
                           <span className="text-xs font-semibold">GMV USD M1 (25%)</span>
                         </div>
                         <p className="text-lg font-bold">
-                          ${exec.gmv_real.toLocaleString("en-US")} / $
+                          ${(exec.gmv_m1_real ?? 0).toLocaleString("en-US")} / $
                           {(exec.effectiveGmvM1Meta ?? 0).toLocaleString("en-US")}
                         </p>
                         <p className="text-sm text-primary font-medium">
