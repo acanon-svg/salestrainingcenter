@@ -711,7 +711,7 @@ export const FieldSalesCommissions: React.FC = () => {
                           <span className="text-xs font-semibold">Originaciones M1 (25%)</span>
                         </div>
                         <p className="text-lg font-bold">
-                          {exec.originaciones_real.toLocaleString("es-CO")} /{" "}
+                          {(exec.originaciones_m1_real ?? 0).toLocaleString("es-CO")} /{" "}
                           {(exec.effectiveOrigM1Meta ?? 0).toLocaleString("es-CO")}
                         </p>
                         <p className="text-sm text-primary font-medium">
