@@ -719,28 +719,39 @@ export const FieldSalesCommissions: React.FC = () => {
                     <div
                       className={cn(
                         "p-3 rounded-lg border sm:col-span-3",
-                        exec.candadoMet
+                        exec.isGuaranteed
+                          ? "bg-amber-500/10 border-amber-500/30"
+                          : (exec.candadoMet && exec.indicatorsMet)
                           ? "bg-emerald-500/10 border-emerald-500/30"
                           : "bg-destructive/10 border-destructive/30"
                       )}
                     >
                       <div className="flex items-center gap-1.5 mb-1">
-                        {exec.candadoMet ? (
+                        {exec.isGuaranteed ? (
+                          <CheckCircle className="h-4 w-4 text-amber-600" />
+                        ) : (exec.candadoMet && exec.indicatorsMet) ? (
                           <CheckCircle className="h-4 w-4 text-emerald-600" />
                         ) : (
                           <XCircle className="h-4 w-4 text-destructive" />
                         )}
-                        <span className="text-xs font-semibold">Indicadores Combinados (Orig + GMV)</span>
+                        <span className="text-xs font-semibold">
+                          {exec.isGuaranteed ? 'Garantizado - Bono 100%' : 'Indicadores Combinados (Orig + GMV)'}
+                        </span>
                       </div>
                       <p
                         className={cn(
                           "text-sm font-medium",
-                          exec.candadoMet ? "text-emerald-600" : "text-destructive"
+                          exec.isGuaranteed
+                            ? "text-amber-600"
+                            : (exec.candadoMet && exec.indicatorsMet) ? "text-emerald-600" : "text-destructive"
                         )}
                       >
-                        {exec.totalPct.toFixed(1)}%
-                        {!exec.candadoMet && " (mín. 85%)"}
-                        {exec.candadoMet && " ✓ Cumplido"}
+                        {exec.isGuaranteed 
+                          ? `🛡️ Bono garantizado: ${formatCOP(exec.baseCommission)}`
+                          : `${exec.totalPct.toFixed(1)}%`}
+                        {!exec.isGuaranteed && !exec.indicatorsMet && " (mín. 85%)"}
+                        {!exec.isGuaranteed && exec.candadoMet && exec.indicatorsMet && " ✓ Cumplido"}
+                        {!exec.isGuaranteed && !exec.candadoMet && " | Firmas < 85%"}
                       </p>
                     </div>
                   </div>
