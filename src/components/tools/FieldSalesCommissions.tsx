@@ -77,7 +77,7 @@ const findConfigForUser = (
   return configs.find((c) => c.is_default) || null;
 };
 
-/** Calculate accelerator bonus for an executive */
+/** Calculate accelerator multiplier for an executive */
 const calculateAcceleratorBonus = (
   accelerators: CommissionAccelerator[],
   firmasCompliancePct: number,
@@ -85,17 +85,16 @@ const calculateAcceleratorBonus = (
   totalPct: number,
   baseCommissionAmount: number
 ) => {
-  // Accelerators require BOTH weighted total >= 100% AND firmas compliance >= 100%
-  const eligible = totalPct >= 100 && firmasCompliancePct >= 100;
+  // Accelerators require firmas compliance >= 100%
+  const eligible = firmasCompliancePct >= 100;
   if (!eligible || accelerators.length === 0) {
-    return { eligible, totalBonus: 0, applied: [] as { min_firmas: number; bonus_percentage: number; description: string | null; amount: number }[] };
+    return { eligible, multiplier: 1, totalBonus: 0, applied: [] as { min_firmas: number; bonus_percentage: number; description: string | null; amount: number }[] };
   }
 
   const applied: { min_firmas: number; bonus_percentage: number; description: string | null; amount: number }[] = [];
 
   // Find the highest applicable accelerator
   // min_firmas is a PERCENTAGE threshold (e.g. 110 means 110% compliance of firmas)
-  // Compare the executive's firmas compliance % against the configured threshold %
   let bestAccelerator: CommissionAccelerator | null = null;
   accelerators.forEach((acc) => {
     if (firmasCompliancePct >= acc.min_firmas) {
@@ -105,20 +104,23 @@ const calculateAcceleratorBonus = (
     }
   });
 
+  let multiplier = 1;
   let totalBonus = 0;
   if (bestAccelerator) {
     const best = bestAccelerator as CommissionAccelerator;
-    const amount = (best.bonus_percentage / 100) * baseCommissionAmount;
-    totalBonus = amount;
+    // bonus_percentage represents the multiplier (e.g. 120 means multiply by 1.2)
+    multiplier = best.bonus_percentage / 100;
+    // The bonus is the difference: (multiplier - 1) * baseCommissionAmount
+    totalBonus = (multiplier - 1) * baseCommissionAmount;
     applied.push({
       min_firmas: best.min_firmas,
       bonus_percentage: best.bonus_percentage,
       description: best.description,
-      amount,
+      amount: totalBonus,
     });
   }
 
-  return { eligible, totalBonus, applied };
+  return { eligible, multiplier, totalBonus, applied };
 };
 
 const formatCOP = (value: number) =>
@@ -209,13 +211,7 @@ export const FieldSalesCommissions: React.FC = () => {
     return map;
   }, [profiles]);
 
-  const guaranteedMap = useMemo(() => {
-    const map = new Map<string, boolean>();
-    profiles?.forEach((p) => {
-      map.set(p.email, p.is_guaranteed || false);
-    });
-    return map;
-  }, [profiles]);
+  // Guaranteed status determined by firmas_meta === 20 (no need for profile flag)
 
   // Map email -> { user_id, team } for config matching
   const profileInfoMap = useMemo(() => {
@@ -270,33 +266,33 @@ export const FieldSalesCommissions: React.FC = () => {
         hasMb: false,
         bonus: 0,
       };
-      const isGuaranteed = guaranteedMap.get(result.user_email) || false;
+      // Guaranteed = firmas_meta == 20
+      const isGuaranteed = result.firmas_meta === 20;
 
       const configAccelerators = matchedConfig && allAccelerators
         ? allAccelerators.filter((a) => a.config_id === matchedConfig.id)
         : [];
 
-      // Accelerator bonus is calculated on the calculated commission (base × compliance%)
-      const baseForAccelerator = isGuaranteed ? calc.baseCommission : calc.calculatedCommission;
+      // Accelerator: multiplier applied to the calculated commission
       const accelResult = calculateAcceleratorBonus(
         configAccelerators,
         calc.firmasCompliance,
         result.firmas_real,
         calc.totalPct,
-        baseForAccelerator
+        calc.calculatedCommission
       );
 
       let totalCommission: number;
       if (isGuaranteed) {
+        // Guaranteed users always get $1,500,000 regardless of calculations
         totalCommission = calc.baseCommission;
         if (adj.hasMb) totalCommission *= 1.2;
         totalCommission += adj.bonus;
       } else {
-        totalCommission = calc.calculatedCommission;
-        // Add accelerator bonus automatically
-        if (accelResult.eligible && accelResult.totalBonus > 0) {
-          totalCommission += accelResult.totalBonus;
-        }
+        // Apply accelerator multiplier to the calculated commission
+        totalCommission = accelResult.eligible && accelResult.multiplier > 1
+          ? calc.calculatedCommission * accelResult.multiplier
+          : calc.calculatedCommission;
         if (adj.hasMb) totalCommission *= 1.2;
         totalCommission += adj.bonus;
       }
@@ -313,7 +309,7 @@ export const FieldSalesCommissions: React.FC = () => {
         accelerator: accelResult,
       };
     });
-  }, [teamResults, existingReviews, adjustments, nameMap, guaranteedMap, profileInfoMap, commissionConfigs, allAccelerators, allMonthlyConfigs]);
+  }, [teamResults, existingReviews, adjustments, nameMap, profileInfoMap, commissionConfigs, allAccelerators, allMonthlyConfigs]);
 
   const buildReviewPayload = (exec: (typeof executiveData)[0]) => {
     // Rebuild overrides for this exec
@@ -346,7 +342,7 @@ export const FieldSalesCommissions: React.FC = () => {
 
     const calc = calculateCommission(exec, overrides);
     const adj = adjustments[exec.user_email] || { hasMb: false, bonus: 0 };
-    const isGuaranteed = guaranteedMap.get(exec.user_email) || false;
+    const isGuaranteed = exec.firmas_meta === 20;
     
     let total: number;
     if (isGuaranteed) {
@@ -358,7 +354,6 @@ export const FieldSalesCommissions: React.FC = () => {
       if (adj.hasMb) total *= 1.2;
       total += adj.bonus;
     }
-    // Accelerator bonus is informational only — not auto-added
 
     return {
       user_email: exec.user_email,
@@ -451,9 +446,9 @@ export const FieldSalesCommissions: React.FC = () => {
       "GMV Meta": exec.gmv_meta,
       "% GMV": `${exec.gmvPct.toFixed(1)}%`,
       "Indicadores Combinados": `${exec.totalPct.toFixed(1)}%`,
-      "Indicadores ≥85%": exec.indicatorsMet ? "Cumplido" : "No cumplido",
+      "Candado Firmas ≥85%": exec.candadoMet ? "Cumplido" : "No cumplido",
       "Comisión Calculada (COP)": exec.calculatedCommission,
-      "Acelerador Firmas (COP)": exec.accelerator.totalBonus,
+      "Acelerador (Multiplicador)": exec.accelerator.multiplier > 1 ? `x${exec.accelerator.multiplier}` : "N/A",
       "MB Income (+20%)": exec.hasMb ? "Sí" : "No",
       "Bonus Indicador (COP)": exec.bonus,
       "Total Comisión (COP)": exec.totalCommission,
@@ -761,13 +756,13 @@ export const FieldSalesCommissions: React.FC = () => {
                     <div
                       className={cn(
                         "p-3 rounded-lg border sm:col-span-3",
-                        exec.indicatorsMet
+                        exec.candadoMet
                           ? "bg-emerald-500/10 border-emerald-500/30"
                           : "bg-destructive/10 border-destructive/30"
                       )}
                     >
                       <div className="flex items-center gap-1.5 mb-1">
-                        {exec.indicatorsMet ? (
+                        {exec.candadoMet ? (
                           <CheckCircle className="h-4 w-4 text-emerald-600" />
                         ) : (
                           <XCircle className="h-4 w-4 text-destructive" />
@@ -777,12 +772,12 @@ export const FieldSalesCommissions: React.FC = () => {
                       <p
                         className={cn(
                           "text-sm font-medium",
-                          exec.indicatorsMet ? "text-emerald-600" : "text-destructive"
+                          exec.candadoMet ? "text-emerald-600" : "text-destructive"
                         )}
                       >
                         {exec.totalPct.toFixed(1)}%
-                        {!exec.indicatorsMet && " (mín. 85%)"}
-                        {exec.indicatorsMet && " ✓ Cumplido"}
+                        {!exec.candadoMet && " (mín. 85%)"}
+                        {exec.candadoMet && " ✓ Cumplido"}
                       </p>
                     </div>
                   </div>
@@ -794,19 +789,19 @@ export const FieldSalesCommissions: React.FC = () => {
                         <Zap className="h-4 w-4 text-amber-500" />
                         <span className="text-xs font-semibold">Acelerador de Firmas</span>
                         <Badge className="bg-amber-500 text-white text-xs ml-auto">
-                          +{formatCOP(exec.accelerator.totalBonus)}
+                          x{exec.accelerator.multiplier}
                         </Badge>
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {exec.accelerator.applied.map((a, i) => (
                           <Badge key={i} variant="outline" className="text-xs font-mono border-amber-500/50">
-                            ≥{a.min_firmas}% firmas → +{a.bonus_percentage}%
+                            ≥{a.min_firmas}% firmas → x{(a.bonus_percentage / 100).toFixed(1)}
                             {a.description && ` (${a.description})`}
                           </Badge>
                         ))}
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Cumple 100% en originaciones y GMV
+                        Cumple ≥100% en firmas
                       </p>
                     </div>
                   )}
