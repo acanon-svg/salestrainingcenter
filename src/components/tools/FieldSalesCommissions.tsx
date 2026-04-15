@@ -313,18 +313,10 @@ export const FieldSalesCommissions: React.FC = () => {
 
     const calc = calculateCommission(exec, overrides);
     const adj = adjustments[exec.user_email] || { hasMb: false, bonus: 0 };
-    const isGuaranteed = exec.firmas_meta === 20;
     
-    let total: number;
-    if (isGuaranteed) {
-      total = calc.baseCommission;
-      if (adj.hasMb) total *= 1.2;
-      total += adj.bonus;
-    } else {
-      total = calc.calculatedCommission;
-      if (adj.hasMb) total *= 1.2;
-      total += adj.bonus;
-    }
+    let total = calc.calculatedCommission;
+    if (adj.hasMb) total *= 1.2;
+    total += adj.bonus;
 
     return {
       user_email: exec.user_email,
