@@ -61,7 +61,6 @@ export const calculateCommission = (
     month?: number;
   }
 ) => {
-  // Use team_results metas directly (per-user from sheet)
   const metaFirmas = result.firmas_meta;
   const baseCommission = overrides?.base_comisional ?? 1500000;
   const month = overrides?.month ?? 0;
@@ -72,7 +71,6 @@ export const calculateCommission = (
       : 0;
   const candadoMet = firmasCompliance >= 85;
 
-  // For March+ (month >= 3), use 4x25% weights with M0/M1
   // Guaranteed users (firmas_meta === 20) always use 50/50 M0 only
   const isGuaranteed = metaFirmas === 20;
   const useM1 = month >= 3 && !isGuaranteed;
@@ -80,10 +78,10 @@ export const calculateCommission = (
   // M0 metas come from team_results directly
   const metaOrig = result.originaciones_meta;
   const metaGmv = result.gmv_meta;
-  // M1 metas come from team_results directly
+  // M1 metas from team_results
   const metaOrigM1 = result.originaciones_m1_meta ?? 0;
   const metaGmvM1 = result.gmv_m1_meta ?? 0;
-  // M1 real values from team_results
+  // M1 real values
   const origM1Real = result.originaciones_m1_real ?? 0;
   const gmvM1Real = result.gmv_m1_real ?? 0;
 
@@ -97,7 +95,7 @@ export const calculateCommission = (
   let gmvM1Weighted = 0;
 
   if (useM1 && (metaOrigM1 > 0 || metaGmvM1 > 0)) {
-    // M0: 25% each
+    // M0: 25% each, M1: 25% each
     origPct = metaOrig > 0 ? (result.originaciones_real / metaOrig) * 100 : 0;
     origWeighted = origPct * 0.25;
     origM1Pct = metaOrigM1 > 0 ? (origM1Real / metaOrigM1) * 100 : 0;
@@ -108,7 +106,7 @@ export const calculateCommission = (
     gmvM1Pct = metaGmvM1 > 0 ? (gmvM1Real / metaGmvM1) * 100 : 0;
     gmvM1Weighted = gmvM1Pct * 0.25;
   } else {
-    // Jan/Feb or guaranteed users without M1: 50% each
+    // 50% each for M0 only
     origPct = metaOrig > 0 ? (result.originaciones_real / metaOrig) * 100 : 0;
     gmvPct = metaGmv > 0 ? (result.gmv_real / metaGmv) * 100 : 0;
     origWeighted = origPct * 0.5;
@@ -117,13 +115,30 @@ export const calculateCommission = (
 
   const totalPct = origWeighted + gmvWeighted + origM1Weighted + gmvM1Weighted;
 
-  const calculatedCommission = candadoMet
-    ? (totalPct / 100) * baseCommission
-    : 0;
+  // Both conditions required: 85% firmas AND 85% indicators sum
+  const indicatorsMet = totalPct >= 85;
+
+  // Accelerator multiplier based on firmas compliance
+  let acceleratorMultiplier = 1.0;
+  if (firmasCompliance >= 140) acceleratorMultiplier = 1.5;
+  else if (firmasCompliance >= 130) acceleratorMultiplier = 1.4;
+  else if (firmasCompliance >= 120) acceleratorMultiplier = 1.3;
+  else if (firmasCompliance >= 110) acceleratorMultiplier = 1.2;
+
+  let calculatedCommission: number;
+  if (isGuaranteed) {
+    // Guaranteed users always get 100% of base commission
+    calculatedCommission = baseCommission;
+  } else if (candadoMet && indicatorsMet) {
+    calculatedCommission = (totalPct / 100) * baseCommission * acceleratorMultiplier;
+  } else {
+    calculatedCommission = 0;
+  }
 
   return {
     firmasCompliance,
     candadoMet,
+    indicatorsMet,
     origPct,
     gmvPct,
     origWeighted,
@@ -135,8 +150,9 @@ export const calculateCommission = (
     totalPct,
     baseCommission,
     calculatedCommission,
+    acceleratorMultiplier,
+    isGuaranteed,
     useM1,
-    // Return effective metas for display
     effectiveFirmasMeta: metaFirmas,
     effectiveOrigMeta: metaOrig,
     effectiveGmvMeta: metaGmv,
