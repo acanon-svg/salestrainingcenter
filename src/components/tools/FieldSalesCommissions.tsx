@@ -266,36 +266,9 @@ export const FieldSalesCommissions: React.FC = () => {
         hasMb: false,
         bonus: 0,
       };
-      // Guaranteed = firmas_meta == 20
-      const isGuaranteed = result.firmas_meta === 20;
-
-      const configAccelerators = matchedConfig && allAccelerators
-        ? allAccelerators.filter((a) => a.config_id === matchedConfig.id)
-        : [];
-
-      // Accelerator: multiplier applied to the calculated commission
-      const accelResult = calculateAcceleratorBonus(
-        configAccelerators,
-        calc.firmasCompliance,
-        result.firmas_real,
-        calc.totalPct,
-        calc.calculatedCommission
-      );
-
-      let totalCommission: number;
-      if (isGuaranteed) {
-        // Guaranteed users always get $1,500,000 regardless of calculations
-        totalCommission = calc.baseCommission;
-        if (adj.hasMb) totalCommission *= 1.2;
-        totalCommission += adj.bonus;
-      } else {
-        // Apply accelerator multiplier to the calculated commission
-        totalCommission = accelResult.eligible && accelResult.multiplier > 1
-          ? calc.calculatedCommission * accelResult.multiplier
-          : calc.calculatedCommission;
-        if (adj.hasMb) totalCommission *= 1.2;
-        totalCommission += adj.bonus;
-      }
+      let totalCommission = calc.calculatedCommission;
+      if (adj.hasMb) totalCommission *= 1.2;
+      totalCommission += adj.bonus;
 
       return {
         ...result,
@@ -304,9 +277,7 @@ export const FieldSalesCommissions: React.FC = () => {
         hasMb: adj.hasMb,
         bonus: adj.bonus,
         totalCommission,
-        isGuaranteed,
         review,
-        accelerator: accelResult,
       };
     });
   }, [teamResults, existingReviews, adjustments, nameMap, profileInfoMap, commissionConfigs, allAccelerators, allMonthlyConfigs]);
@@ -342,18 +313,10 @@ export const FieldSalesCommissions: React.FC = () => {
 
     const calc = calculateCommission(exec, overrides);
     const adj = adjustments[exec.user_email] || { hasMb: false, bonus: 0 };
-    const isGuaranteed = exec.firmas_meta === 20;
     
-    let total: number;
-    if (isGuaranteed) {
-      total = calc.baseCommission;
-      if (adj.hasMb) total *= 1.2;
-      total += adj.bonus;
-    } else {
-      total = calc.calculatedCommission;
-      if (adj.hasMb) total *= 1.2;
-      total += adj.bonus;
-    }
+    let total = calc.calculatedCommission;
+    if (adj.hasMb) total *= 1.2;
+    total += adj.bonus;
 
     return {
       user_email: exec.user_email,
@@ -368,11 +331,11 @@ export const FieldSalesCommissions: React.FC = () => {
       gmv_real: exec.gmv_real,
       gmv_meta: calc.effectiveGmvMeta,
       firmas_compliance: calc.firmasCompliance,
-      candado_met: isGuaranteed ? true : calc.candadoMet,
+      candado_met: calc.isGuaranteed ? true : calc.candadoMet,
       originaciones_weighted: calc.origWeighted,
       gmv_weighted: calc.gmvWeighted,
       base_commission: calc.baseCommission,
-      calculated_commission: isGuaranteed ? calc.baseCommission : calc.calculatedCommission,
+      calculated_commission: calc.calculatedCommission,
       has_mb_income: adj.hasMb,
       indicator_bonus: adj.bonus,
       total_commission: total,
@@ -448,7 +411,7 @@ export const FieldSalesCommissions: React.FC = () => {
       "Indicadores Combinados": `${exec.totalPct.toFixed(1)}%`,
       "Candado Firmas ≥85%": exec.candadoMet ? "Cumplido" : "No cumplido",
       "Comisión Calculada (COP)": exec.calculatedCommission,
-      "Acelerador (Multiplicador)": exec.accelerator.multiplier > 1 ? `x${exec.accelerator.multiplier}` : "N/A",
+      "Acelerador (Multiplicador)": exec.acceleratorMultiplier > 1 ? `x${exec.acceleratorMultiplier}` : "N/A",
       "MB Income (+20%)": exec.hasMb ? "Sí" : "No",
       "Bonus Indicador (COP)": exec.bonus,
       "Total Comisión (COP)": exec.totalCommission,
@@ -756,52 +719,55 @@ export const FieldSalesCommissions: React.FC = () => {
                     <div
                       className={cn(
                         "p-3 rounded-lg border sm:col-span-3",
-                        exec.candadoMet
+                        exec.isGuaranteed
+                          ? "bg-amber-500/10 border-amber-500/30"
+                          : (exec.candadoMet && exec.indicatorsMet)
                           ? "bg-emerald-500/10 border-emerald-500/30"
                           : "bg-destructive/10 border-destructive/30"
                       )}
                     >
                       <div className="flex items-center gap-1.5 mb-1">
-                        {exec.candadoMet ? (
+                        {exec.isGuaranteed ? (
+                          <CheckCircle className="h-4 w-4 text-amber-600" />
+                        ) : (exec.candadoMet && exec.indicatorsMet) ? (
                           <CheckCircle className="h-4 w-4 text-emerald-600" />
                         ) : (
                           <XCircle className="h-4 w-4 text-destructive" />
                         )}
-                        <span className="text-xs font-semibold">Indicadores Combinados (Orig + GMV)</span>
+                        <span className="text-xs font-semibold">
+                          {exec.isGuaranteed ? 'Garantizado - Bono 100%' : 'Indicadores Combinados (Orig + GMV)'}
+                        </span>
                       </div>
                       <p
                         className={cn(
                           "text-sm font-medium",
-                          exec.candadoMet ? "text-emerald-600" : "text-destructive"
+                          exec.isGuaranteed
+                            ? "text-amber-600"
+                            : (exec.candadoMet && exec.indicatorsMet) ? "text-emerald-600" : "text-destructive"
                         )}
                       >
-                        {exec.totalPct.toFixed(1)}%
-                        {!exec.candadoMet && " (mín. 85%)"}
-                        {exec.candadoMet && " ✓ Cumplido"}
+                        {exec.isGuaranteed 
+                          ? `🛡️ Bono garantizado: ${formatCOP(exec.baseCommission)}`
+                          : `${exec.totalPct.toFixed(1)}%`}
+                        {!exec.isGuaranteed && !exec.indicatorsMet && " (mín. 85%)"}
+                        {!exec.isGuaranteed && exec.candadoMet && exec.indicatorsMet && " ✓ Cumplido"}
+                        {!exec.isGuaranteed && !exec.candadoMet && " | Firmas < 85%"}
                       </p>
                     </div>
                   </div>
 
                   {/* Accelerator Section */}
-                  {exec.accelerator.applied.length > 0 && (
+                  {exec.acceleratorMultiplier > 1 && (
                     <div className="p-3 rounded-lg border border-amber-500/40 bg-amber-500/5">
                       <div className="flex items-center gap-1.5 mb-2">
                         <Zap className="h-4 w-4 text-amber-500" />
                         <span className="text-xs font-semibold">Acelerador de Firmas</span>
                         <Badge className="bg-amber-500 text-white text-xs ml-auto">
-                          x{exec.accelerator.multiplier}
+                          x{exec.acceleratorMultiplier}
                         </Badge>
                       </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {exec.accelerator.applied.map((a, i) => (
-                          <Badge key={i} variant="outline" className="text-xs font-mono border-amber-500/50">
-                            ≥{a.min_firmas}% firmas → x{(a.bonus_percentage / 100).toFixed(1)}
-                            {a.description && ` (${a.description})`}
-                          </Badge>
-                        ))}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Cumple ≥100% en firmas
+                      <p className="text-xs text-muted-foreground">
+                        Firmas al {exec.firmasCompliance.toFixed(0)}% → multiplicador x{exec.acceleratorMultiplier}
                       </p>
                     </div>
                   )}
