@@ -452,9 +452,9 @@ export const FieldSalesCommissions: React.FC = () => {
       "GMV Meta": exec.gmv_meta,
       "% GMV": `${exec.gmvPct.toFixed(1)}%`,
       "Indicadores Combinados": `${exec.totalPct.toFixed(1)}%`,
-      "Indicadores ≥85%": exec.candadoMet ? "Cumplido" : "No cumplido",
+      "Candado Firmas ≥85%": exec.candadoMet ? "Cumplido" : "No cumplido",
       "Comisión Calculada (COP)": exec.calculatedCommission,
-      "Acelerador Firmas (COP)": exec.accelerator.totalBonus,
+      "Acelerador (Multiplicador)": exec.accelerator.multiplier > 1 ? `x${exec.accelerator.multiplier}` : "N/A",
       "MB Income (+20%)": exec.hasMb ? "Sí" : "No",
       "Bonus Indicador (COP)": exec.bonus,
       "Total Comisión (COP)": exec.totalCommission,
@@ -795,19 +795,19 @@ export const FieldSalesCommissions: React.FC = () => {
                         <Zap className="h-4 w-4 text-amber-500" />
                         <span className="text-xs font-semibold">Acelerador de Firmas</span>
                         <Badge className="bg-amber-500 text-white text-xs ml-auto">
-                          +{formatCOP(exec.accelerator.totalBonus)}
+                          x{exec.accelerator.multiplier}
                         </Badge>
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {exec.accelerator.applied.map((a, i) => (
                           <Badge key={i} variant="outline" className="text-xs font-mono border-amber-500/50">
-                            ≥{a.min_firmas}% firmas → +{a.bonus_percentage}%
+                            ≥{a.min_firmas}% firmas → x{(a.bonus_percentage / 100).toFixed(1)}
                             {a.description && ` (${a.description})`}
                           </Badge>
                         ))}
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Cumple 100% en originaciones y GMV
+                        Cumple ≥100% en firmas
                       </p>
                     </div>
                   )}
