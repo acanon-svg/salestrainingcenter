@@ -211,13 +211,7 @@ export const FieldSalesCommissions: React.FC = () => {
     return map;
   }, [profiles]);
 
-  const guaranteedMap = useMemo(() => {
-    const map = new Map<string, boolean>();
-    profiles?.forEach((p) => {
-      map.set(p.email, p.is_guaranteed || false);
-    });
-    return map;
-  }, [profiles]);
+  // Guaranteed status determined by firmas_meta === 20 (no need for profile flag)
 
   // Map email -> { user_id, team } for config matching
   const profileInfoMap = useMemo(() => {
@@ -315,7 +309,7 @@ export const FieldSalesCommissions: React.FC = () => {
         accelerator: accelResult,
       };
     });
-  }, [teamResults, existingReviews, adjustments, nameMap, guaranteedMap, profileInfoMap, commissionConfigs, allAccelerators, allMonthlyConfigs]);
+  }, [teamResults, existingReviews, adjustments, nameMap, profileInfoMap, commissionConfigs, allAccelerators, allMonthlyConfigs]);
 
   const buildReviewPayload = (exec: (typeof executiveData)[0]) => {
     // Rebuild overrides for this exec
