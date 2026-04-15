@@ -272,33 +272,33 @@ export const FieldSalesCommissions: React.FC = () => {
         hasMb: false,
         bonus: 0,
       };
-      const isGuaranteed = guaranteedMap.get(result.user_email) || false;
+      // Guaranteed = firmas_meta == 20
+      const isGuaranteed = result.firmas_meta === 20;
 
       const configAccelerators = matchedConfig && allAccelerators
         ? allAccelerators.filter((a) => a.config_id === matchedConfig.id)
         : [];
 
-      // Accelerator bonus is calculated on the calculated commission (base × compliance%)
-      const baseForAccelerator = isGuaranteed ? calc.baseCommission : calc.calculatedCommission;
+      // Accelerator: multiplier applied to the calculated commission
       const accelResult = calculateAcceleratorBonus(
         configAccelerators,
         calc.firmasCompliance,
         result.firmas_real,
         calc.totalPct,
-        baseForAccelerator
+        calc.calculatedCommission
       );
 
       let totalCommission: number;
       if (isGuaranteed) {
+        // Guaranteed users always get $1,500,000 regardless of calculations
         totalCommission = calc.baseCommission;
         if (adj.hasMb) totalCommission *= 1.2;
         totalCommission += adj.bonus;
       } else {
-        totalCommission = calc.calculatedCommission;
-        // Add accelerator bonus automatically
-        if (accelResult.eligible && accelResult.totalBonus > 0) {
-          totalCommission += accelResult.totalBonus;
-        }
+        // Apply accelerator multiplier to the calculated commission
+        totalCommission = accelResult.eligible && accelResult.multiplier > 1
+          ? calc.calculatedCommission * accelResult.multiplier
+          : calc.calculatedCommission;
         if (adj.hasMb) totalCommission *= 1.2;
         totalCommission += adj.bonus;
       }
