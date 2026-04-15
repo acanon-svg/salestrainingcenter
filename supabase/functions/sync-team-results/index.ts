@@ -25,8 +25,12 @@ interface ParsedRow {
   firmas_meta: number;
   originaciones_real: number;
   originaciones_meta: number;
+  originaciones_m1_real?: number;
+  originaciones_m1_meta?: number;
   gmv_real: number;
   gmv_meta: number;
+  gmv_m1_real?: number;
+  gmv_m1_meta?: number;
   period_date: string;
   weeks_in_month: number;
   dias_habiles_transcurridos: number;
@@ -147,8 +151,12 @@ function parseResumeRows(rawRows: string[][]): { data: ParsedRow[]; errors: stri
       firmas_meta: firmasMetaMes,
       originaciones_real: origReal,
       originaciones_meta: origMetaMes,
+      originaciones_m1_real: 0,
+      originaciones_m1_meta: 0,
       gmv_real: gmvReal,
       gmv_meta: gmvMetaMes,
+      gmv_m1_real: 0,
+      gmv_m1_meta: 0,
       period_date: periodDate,
       weeks_in_month: 4,
       dias_habiles_transcurridos: diasHabilesTranscurridos,
@@ -210,16 +218,29 @@ function parseLegacyRows(rawRows: string[][], headers: string[]): { data: Parsed
     const diasTranscurridos = Number(row.dias_habiles_transcurridos) || 0;
     const diasMes = Number(row.dias_habiles_mes) || 0;
 
+    const originacionesM0Real = parseNum(row.originaciones_real || row.originaciones_m0);
+    const originacionesM0Meta = parseNum(row.originaciones_meta || row.originaciones_meta_m0);
+    const originacionesM1Real = parseNum(row.originaciones_m1_real || row.originaciones_m1);
+    const originacionesM1Meta = parseNum(row.originaciones_m1_meta || row.originaciones_meta_m1);
+    const gmvM0Real = parseNum(row.gmv_real || row.gmv_m0);
+    const gmvM0Meta = parseNum(row.gmv_meta || row.gmv_meta_m0);
+    const gmvM1Real = parseNum(row.gmv_m1_real || row.gmv_m1);
+    const gmvM1Meta = parseNum(row.gmv_m1_meta || row.gmv_meta_m1);
+
     data.push({
       user_email: String(email).trim().toLowerCase(),
       regional: row.regional || undefined,
       team: row.equipo || row.team || undefined,
-      firmas_real: Number(row.firmas_real) || 0,
-      firmas_meta: Number(row.firmas_meta) || 0,
-      originaciones_real: Number(row.originaciones_real) || 0,
-      originaciones_meta: Number(row.originaciones_meta) || 0,
-      gmv_real: Number(row.gmv_real) || 0,
-      gmv_meta: Number(row.gmv_meta) || 0,
+      firmas_real: parseNum(row.firmas_real),
+      firmas_meta: parseNum(row.firmas_meta),
+      originaciones_real: originacionesM0Real,
+      originaciones_meta: originacionesM0Meta,
+      originaciones_m1_real: originacionesM1Real,
+      originaciones_m1_meta: originacionesM1Meta,
+      gmv_real: gmvM0Real,
+      gmv_meta: gmvM0Meta,
+      gmv_m1_real: gmvM1Real,
+      gmv_m1_meta: gmvM1Meta,
       period_date: periodDate,
       weeks_in_month: weeksInMonth < 1 || weeksInMonth > 6 ? 4 : weeksInMonth,
       dias_habiles_transcurridos: diasTranscurridos,
