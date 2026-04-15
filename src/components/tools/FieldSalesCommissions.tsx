@@ -348,7 +348,7 @@ export const FieldSalesCommissions: React.FC = () => {
 
     const calc = calculateCommission(exec, overrides);
     const adj = adjustments[exec.user_email] || { hasMb: false, bonus: 0 };
-    const isGuaranteed = guaranteedMap.get(exec.user_email) || false;
+    const isGuaranteed = exec.firmas_meta === 20;
     
     let total: number;
     if (isGuaranteed) {
@@ -360,7 +360,6 @@ export const FieldSalesCommissions: React.FC = () => {
       if (adj.hasMb) total *= 1.2;
       total += adj.bonus;
     }
-    // Accelerator bonus is informational only — not auto-added
 
     return {
       user_email: exec.user_email,
