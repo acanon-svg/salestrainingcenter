@@ -73,7 +73,9 @@ export const calculateCommission = (
   const candadoMet = firmasCompliance >= 85;
 
   // For March+ (month >= 3), use 4x25% weights with M0/M1
-  const useM1 = month >= 3;
+  // Guaranteed users (firmas_meta === 20) always use 50/50 M0 only
+  const isGuaranteed = metaFirmas === 20;
+  const useM1 = month >= 3 && !isGuaranteed;
 
   // M0 metas come from team_results directly
   const metaOrig = result.originaciones_meta;
