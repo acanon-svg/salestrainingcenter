@@ -2232,9 +2232,13 @@ export type Database = {
           dias_habiles_transcurridos: number
           firmas_meta: number
           firmas_real: number
+          gmv_m1_meta: number
+          gmv_m1_real: number
           gmv_meta: number
           gmv_real: number
           id: string
+          originaciones_m1_meta: number
+          originaciones_m1_real: number
           originaciones_meta: number
           originaciones_real: number
           period_date: string
@@ -2252,9 +2256,13 @@ export type Database = {
           dias_habiles_transcurridos?: number
           firmas_meta?: number
           firmas_real?: number
+          gmv_m1_meta?: number
+          gmv_m1_real?: number
           gmv_meta?: number
           gmv_real?: number
           id?: string
+          originaciones_m1_meta?: number
+          originaciones_m1_real?: number
           originaciones_meta?: number
           originaciones_real?: number
           period_date: string
@@ -2272,9 +2280,13 @@ export type Database = {
           dias_habiles_transcurridos?: number
           firmas_meta?: number
           firmas_real?: number
+          gmv_m1_meta?: number
+          gmv_m1_real?: number
           gmv_meta?: number
           gmv_real?: number
           id?: string
+          originaciones_m1_meta?: number
+          originaciones_m1_real?: number
           originaciones_meta?: number
           originaciones_real?: number
           period_date?: string
