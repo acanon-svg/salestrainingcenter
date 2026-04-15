@@ -411,7 +411,7 @@ export const FieldSalesCommissions: React.FC = () => {
       "Indicadores Combinados": `${exec.totalPct.toFixed(1)}%`,
       "Candado Firmas ≥85%": exec.candadoMet ? "Cumplido" : "No cumplido",
       "Comisión Calculada (COP)": exec.calculatedCommission,
-      "Acelerador (Multiplicador)": exec.accelerator.multiplier > 1 ? `x${exec.accelerator.multiplier}` : "N/A",
+      "Acelerador (Multiplicador)": exec.acceleratorMultiplier > 1 ? `x${exec.acceleratorMultiplier}` : "N/A",
       "MB Income (+20%)": exec.hasMb ? "Sí" : "No",
       "Bonus Indicador (COP)": exec.bonus,
       "Total Comisión (COP)": exec.totalCommission,
@@ -746,25 +746,17 @@ export const FieldSalesCommissions: React.FC = () => {
                   </div>
 
                   {/* Accelerator Section */}
-                  {exec.accelerator.applied.length > 0 && (
+                  {exec.acceleratorMultiplier > 1 && (
                     <div className="p-3 rounded-lg border border-amber-500/40 bg-amber-500/5">
                       <div className="flex items-center gap-1.5 mb-2">
                         <Zap className="h-4 w-4 text-amber-500" />
                         <span className="text-xs font-semibold">Acelerador de Firmas</span>
                         <Badge className="bg-amber-500 text-white text-xs ml-auto">
-                          x{exec.accelerator.multiplier}
+                          x{exec.acceleratorMultiplier}
                         </Badge>
                       </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {exec.accelerator.applied.map((a, i) => (
-                          <Badge key={i} variant="outline" className="text-xs font-mono border-amber-500/50">
-                            ≥{a.min_firmas}% firmas → x{(a.bonus_percentage / 100).toFixed(1)}
-                            {a.description && ` (${a.description})`}
-                          </Badge>
-                        ))}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Cumple ≥100% en firmas
+                      <p className="text-xs text-muted-foreground">
+                        Firmas al {exec.firmasCompliance.toFixed(0)}% → multiplicador x{exec.acceleratorMultiplier}
                       </p>
                     </div>
                   )}
